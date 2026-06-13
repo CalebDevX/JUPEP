@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { allCourses, type Course, type Chapter } from "./data";
 import { downloadCourseDoc } from "./utils/docExport";
+import { CRSLogo, CRSLogomark } from "./components/Logo";
 
 function renderContent(text: string): React.ReactNode[] {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
@@ -110,7 +111,10 @@ function HomePage({ onSelectCourse }: { onSelectCourse: (code: string) => void }
   return (
     <div className="min-h-screen bg-[#f9f6f0]">
       {/* Title block */}
-      <div className="border-b-4 border-stone-800 bg-stone-900 text-amber-50 px-8 py-14 text-center">
+      <div className="border-b-4 border-amber-600 bg-stone-900 text-amber-50 px-8 py-14 text-center">
+        <div className="flex justify-center mb-5">
+          <CRSLogo size={96} />
+        </div>
         <p className="text-[11px] tracking-[0.3em] uppercase text-amber-400 mb-3 font-sans">
           University of Lagos · School of Foundation Studies
         </p>
@@ -318,6 +322,7 @@ function ChapterPage({
       {/* Sticky top bar */}
       <div className="sticky top-0 z-30 bg-stone-900 text-white shadow-md">
         <div className="flex items-center gap-3 px-4 py-2.5">
+          <CRSLogomark size={26} className="shrink-0 opacity-90" />
           <button
             onClick={onBack}
             className="text-stone-400 hover:text-white text-sm font-sans transition-colors flex items-center gap-1 shrink-0"
