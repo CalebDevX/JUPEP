@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { allCourses, type Course, type Chapter } from "./data";
+import { downloadCourseDoc } from "./utils/docExport";
 
 function renderContent(text: string): React.ReactNode[] {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
@@ -120,6 +121,21 @@ function HomePage({ onSelectCourse }: { onSelectCourse: (code: string) => void }
         <p className="text-stone-400 text-xs font-sans mt-4">
           Compiled from official JUPEB/UNILAG lecture notes · Dr. Falako, Francis O.
         </p>
+      </div>
+
+      {/* Download banner */}
+      <div className="bg-stone-100 border-b border-stone-300 px-6 md:px-8 py-4">
+        <div className="max-w-3xl mx-auto flex flex-wrap items-center gap-3 justify-between">
+          <p className="text-stone-600 text-sm font-sans">
+            Download the complete textbook as a Word document for printing and offline study.
+          </p>
+          <button
+            onClick={() => downloadCourseDoc()}
+            className="flex items-center gap-2 bg-stone-800 hover:bg-stone-900 text-white font-sans text-[12px] font-bold uppercase tracking-wider px-5 py-2.5 transition-colors shrink-0"
+          >
+            ↓ Download Complete Textbook (.doc)
+          </button>
+        </div>
       </div>
 
       {/* Preface */}
