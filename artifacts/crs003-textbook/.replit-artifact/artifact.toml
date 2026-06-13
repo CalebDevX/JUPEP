@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "JUPEB CRS 003 Textbook"
+version = "1.0.0"
+id = "artifacts/crs003-textbook"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24400
+
+[services.development]
+run = "pnpm --filter @workspace/crs003-textbook run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/crs003-textbook", "run", "build" ]
+publicDir = "artifacts/crs003-textbook/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24400"
+BASE_PATH = "/"
