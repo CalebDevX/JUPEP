@@ -6,10 +6,14 @@ import { eq } from "drizzle-orm";
 
 const router = Router();
 
-function getGemini() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
-  return new GoogleGenAI({ apiKey });
+function getAI() {
+  const apiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
+  const baseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
+  if (!apiKey || !baseUrl) throw new Error("AI integration not configured");
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: { apiVersion: "", baseUrl },
+  });
 }
 
 const JUPEB_SYSTEM_PROMPT = `You are LexBot, the official AI study assistant for JUPEB Law Prep — a smart exam preparation platform for UNILAG School of Foundation Studies students targeting 16 points (AAA+1) for Law admission.
@@ -48,8 +52,8 @@ router.post("/ai/chat", async (req, res) => {
     const { message, history = [] } = req.body;
     if (!message) return res.status(400).json({ error: "Message is required" });
 
-    const ai = getGemini();
-    
+    const ai = getAI();
+
     const contents = [
       ...history.map((m: { role: string; content: string }) => ({
         role: m.role === "assistant" ? "model" : "user",
@@ -64,7 +68,7 @@ router.post("/ai/chat", async (req, res) => {
     res.setHeader("X-Accel-Buffering", "no");
 
     const stream = await ai.models.generateContentStream({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       config: { systemInstruction: JUPEB_SYSTEM_PROMPT },
       contents,
     });
@@ -106,7 +110,7 @@ router.post("/ai/generate-notes", async (req, res) => {
       "004": "Mock Exam",
     };
 
-    const ai = getGemini();
+    const ai = getAI();
 
     const prompt = `Generate comprehensive, academically detailed JUPEB lecture notes for the following:
 
@@ -128,7 +132,7 @@ Requirements for the notes:
 Make these notes so comprehensive that a student reading them would be fully prepared for any JUPEB question on this topic.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       config: { systemInstruction: JUPEB_SYSTEM_PROMPT },
       contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
@@ -161,7 +165,7 @@ router.post("/ai/explain-question", async (req, res) => {
     const { questionText, options, correctAnswer, subject } = req.body;
     if (!questionText) return res.status(400).json({ error: "questionText is required" });
 
-    const ai = getGemini();
+    const ai = getAI();
 
     const prompt = `A JUPEB student needs help understanding this exam question:
 
@@ -180,7 +184,7 @@ Please:
 Keep it clear and educational.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       config: { systemInstruction: JUPEB_SYSTEM_PROMPT },
       contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
@@ -197,7 +201,7 @@ router.post("/ai/learn-from-source", async (req, res) => {
     const { type, content, fileBase64, fileMimeType, title, subject } = req.body;
     if (!type) return res.status(400).json({ error: "type is required" });
 
-    const ai = getGemini();
+    const ai = getAI();
 
     const noteTitle = title || (type === "youtube" ? "YouTube Video Notes" : type === "website" ? "Website Notes" : type === "file" ? "Uploaded Document Notes" : "Notes from Text");
 
@@ -263,7 +267,7 @@ Generate the notes now:`;
     }
 
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       contents: [{ role: "user", parts }],
     });
 
