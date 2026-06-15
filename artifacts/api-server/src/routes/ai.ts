@@ -284,6 +284,93 @@ Generate the notes now:`;
   }
 });
 
+router.post("/ai/tts", async (req, res) => {
+  try {
+    const { text, voice = "Kore" } = req.body;
+    if (!text?.trim()) return res.status(400).json({ error: "text is required" });
+
+    const ai = getAI();
+    const result = await ai.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      config: {
+        responseModalities: ["AUDIO"] as any,
+        speechConfig: {
+          voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } },
+        } as any,
+      },
+      contents: [{ parts: [{ text: text.substring(0, 4000) }] }],
+    });
+
+    const part = (result as any).candidates?.[0]?.content?.parts?.[0];
+    const audioData: string | undefined = part?.inlineData?.data;
+    const rawMime: string = part?.inlineData?.mimeType || "audio/wav";
+
+    if (!audioData) return res.status(500).json({ error: "No audio generated" });
+
+    const rateMatch = rawMime.match(/rate=(\d+)/);
+    const sampleRate = rateMatch ? parseInt(rateMatch[1]) : 24000;
+    const pcmBuf = Buffer.from(audioData, "base64");
+    const numChannels = 1, bitsPerSample = 16;
+    const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+    const blockAlign = numChannels * (bitsPerSample / 8);
+    const wavHeader = Buffer.alloc(44);
+    wavHeader.write("RIFF", 0); wavHeader.writeUInt32LE(36 + pcmBuf.length, 4);
+    wavHeader.write("WAVE", 8); wavHeader.write("fmt ", 12);
+    wavHeader.writeUInt32LE(16, 16); wavHeader.writeUInt16LE(1, 20);
+    wavHeader.writeUInt16LE(numChannels, 22); wavHeader.writeUInt32LE(sampleRate, 24);
+    wavHeader.writeUInt32LE(byteRate, 28); wavHeader.writeUInt16LE(blockAlign, 32);
+    wavHeader.writeUInt16LE(bitsPerSample, 34); wavHeader.write("data", 36);
+    wavHeader.writeUInt32LE(pcmBuf.length, 40);
+    const wavBase64 = Buffer.concat([wavHeader, pcmBuf]).toString("base64");
+
+    res.json({ audio: wavBase64, mimeType: "audio/wav" });
+  } catch (err: any) {
+    console.error("TTS error:", err);
+    res.status(500).json({ error: err?.message || "TTS generation failed" });
+  }
+});
+
+router.post("/ai/quiz-from-note", async (req, res) => {
+  try {
+    const { content, subject, count = 5 } = req.body;
+    if (!content?.trim()) return res.status(400).json({ error: "content is required" });
+
+    const ai = getAI();
+    const prompt = `Based on the following study notes, generate exactly ${Math.min(count, 10)} multiple-choice quiz questions to test a student's understanding. Each question must be exam-style (JUPEB standard).
+
+Return ONLY a valid JSON array (no markdown, no explanation) in this exact format:
+[
+  {
+    "question": "...",
+    "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+    "correct": "A",
+    "explanation": "..."
+  }
+]
+
+${subject ? `Subject: ${subject}` : ""}
+
+STUDY NOTES:
+${content.substring(0, 6000)}`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      config: { systemInstruction: JUPEB_SYSTEM_PROMPT },
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    });
+
+    const raw = response.text() || "";
+    const jsonMatch = raw.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) return res.status(500).json({ error: "Could not parse quiz response" });
+
+    const quiz = JSON.parse(jsonMatch[0]);
+    res.json({ quiz });
+  } catch (err: any) {
+    console.error("Quiz generation error:", err);
+    res.status(500).json({ error: err?.message || "Quiz generation failed" });
+  }
+});
+
 router.post("/ai/save-generated-note", async (req, res) => {
   try {
     const { subjectId, paper, title, content, tags } = req.body;

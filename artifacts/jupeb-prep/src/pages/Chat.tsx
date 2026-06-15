@@ -3,23 +3,15 @@ import { Shell } from "@/components/layout/Shell";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Send,
-  Sparkles,
-  RotateCcw,
-  BookOpen,
-  Brain,
-  Lightbulb,
-  GraduationCap,
-  ChevronDown,
-  Copy,
-  Check,
-  Zap,
-  Target,
-  FlaskConical,
-  StopCircle,
+  Send, Sparkles, RotateCcw, BookOpen, Brain, Lightbulb,
+  GraduationCap, ChevronDown, Copy, Check, Zap, Target,
+  FlaskConical, StopCircle, Volume2, Square, Pause, Play,
+  Mic, Save,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useReadAloud } from "@/hooks/useReadAloud";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Message {
   role: "user" | "assistant";
@@ -114,6 +106,64 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+function VoiceButton({ text, msgId, activeId, onSet }: {
+  text: string;
+  msgId: string;
+  activeId: string | null;
+  onSet: (id: string | null) => void;
+}) {
+  const { state, speak, pause, resume, stop } = useReadAloud();
+  const isThis = activeId === msgId;
+  const isPlaying = isThis && state === "playing";
+  const isPaused = isThis && state === "paused";
+  const isLoading = isThis && state === "loading";
+
+  const handleClick = () => {
+    if (!isThis) {
+      stop();
+      onSet(msgId);
+      speak(text, true);
+    } else if (isPlaying) {
+      pause();
+    } else if (isPaused) {
+      resume();
+    } else {
+      onSet(msgId);
+      speak(text, true);
+    }
+  };
+
+  useEffect(() => {
+    if (isThis && state === "idle") onSet(null);
+  }, [state, isThis]);
+
+  return (
+    <button
+      onClick={handleClick}
+      title="Read aloud"
+      className={cn(
+        "opacity-0 group-hover:opacity-100 transition-all duration-150 p-1.5 rounded-lg",
+        isLoading ? "text-amber-400/60 cursor-wait" :
+        isPlaying ? "text-amber-400 bg-amber-500/15" :
+        isPaused ? "text-blue-400 bg-blue-500/15" :
+        "hover:bg-white/10 text-white/30 hover:text-amber-400/80"
+      )}
+    >
+      {isLoading ? (
+        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
+          <Volume2 className="h-3.5 w-3.5" />
+        </motion.div>
+      ) : isPlaying ? (
+        <Pause className="h-3.5 w-3.5" />
+      ) : isPaused ? (
+        <Play className="h-3.5 w-3.5" />
+      ) : (
+        <Volume2 className="h-3.5 w-3.5" />
+      )}
+    </button>
+  );
+}
+
 function formatMarkdown(text: string): string {
   return text
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -136,7 +186,14 @@ function formatMarkdown(text: string): string {
     .replace(/<p[^>]*><\/p>/g, "");
 }
 
-function MessageBubble({ message, isLast }: { message: Message; isLast: boolean }) {
+function MessageBubble({
+  message, isLast, activeVoiceId, onVoiceSet,
+}: {
+  message: Message;
+  isLast: boolean;
+  activeVoiceId: string | null;
+  onVoiceSet: (id: string | null) => void;
+}) {
   const isUser = message.role === "user";
   const timeStr = message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
@@ -174,7 +231,6 @@ function MessageBubble({ message, isLast }: { message: Message; isLast: boolean 
               dangerouslySetInnerHTML={{ __html: formatMarkdown(message.content) }}
             />
           )}
-
           {!isUser && isLast && message.content && (
             <motion.span
               initial={{ opacity: 0 }}
@@ -189,7 +245,17 @@ function MessageBubble({ message, isLast }: { message: Message; isLast: boolean 
           isUser ? "flex-row-reverse" : "flex-row"
         )}>
           <span className="text-[10px] text-white/20">{timeStr}</span>
-          {!isUser && message.content && <CopyButton text={message.content} />}
+          {!isUser && message.content && (
+            <>
+              <CopyButton text={message.content} />
+              <VoiceButton
+                text={message.content}
+                msgId={message.id}
+                activeId={activeVoiceId}
+                onSet={onVoiceSet}
+              />
+            </>
+          )}
         </div>
       </div>
     </motion.div>
@@ -202,6 +268,7 @@ export default function Chat() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [showScroll, setShowScroll] = useState(false);
   const [charCount, setCharCount] = useState(0);
+  const [activeVoiceId, setActiveVoiceId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -353,9 +420,13 @@ export default function Chat() {
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+              <Volume2 className="h-3 w-3 text-amber-400/60" />
+              <span className="text-[10px] text-white/30">Hover AI replies to hear them</span>
+            </div>
             {messages.length > 0 && (
               <button
-                onClick={() => { setMessages([]); setInput(""); }}
+                onClick={() => { setMessages([]); setInput(""); setActiveVoiceId(null); }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs text-white/35 hover:text-white/65 hover:bg-white/5 transition-all"
               >
                 <RotateCcw className="h-3 w-3" />
@@ -381,7 +452,6 @@ export default function Chat() {
                 transition={{ duration: 0.35, ease: "easeOut" }}
                 className="flex flex-col items-center justify-center min-h-[62vh] text-center px-4"
               >
-                {/* Avatar */}
                 <motion.div
                   animate={{ y: [0, -7, 0] }}
                   transition={{ repeat: Infinity, duration: 3.8, ease: "easeInOut" }}
@@ -460,6 +530,8 @@ export default function Chat() {
                       key={msg.id}
                       message={msg}
                       isLast={i === messages.length - 1 && isStreaming}
+                      activeVoiceId={activeVoiceId}
+                      onVoiceSet={setActiveVoiceId}
                     />
                   ) : null
                 )}
@@ -550,7 +622,9 @@ export default function Chat() {
 
             <div className="flex items-center justify-between px-1">
               <p className="text-[10px] text-white/18 select-none">
-                Press <kbd className="px-1 py-0.5 rounded bg-white/8 text-white/30 font-mono text-[9px]">Enter</kbd> to send · <kbd className="px-1 py-0.5 rounded bg-white/8 text-white/30 font-mono text-[9px]">Shift+Enter</kbd> for new line
+                Press <kbd className="px-1 py-0.5 rounded bg-white/8 text-white/30 font-mono text-[9px]">Enter</kbd> to send ·{" "}
+                <kbd className="px-1 py-0.5 rounded bg-white/8 text-white/30 font-mono text-[9px]">Shift+Enter</kbd> new line ·{" "}
+                <Volume2 className="h-2.5 w-2.5 inline text-amber-400/40 mx-0.5" />hover replies to listen
               </p>
               {charCount > 0 && (
                 <span className={cn(

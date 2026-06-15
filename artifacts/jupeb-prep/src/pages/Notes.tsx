@@ -83,8 +83,9 @@ export default function Notes() {
         }),
       });
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to generate notes");
+        let errMsg = "Failed to generate notes";
+        try { const err = await res.json(); errMsg = err.error || errMsg; } catch {}
+        throw new Error(errMsg);
       }
       const newNote = await res.json();
       queryClient.invalidateQueries({ queryKey: ["listNotes"] });
