@@ -13,6 +13,7 @@ import Notes from "@/pages/Notes";
 import ProgressPage from "@/pages/Progress";
 import AdminPanel from "@/pages/Admin";
 import Chat from "@/pages/Chat";
+import Syllabus from "@/pages/Syllabus";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,6 +36,7 @@ function Router() {
       <Route path="/notes" component={Notes} />
       <Route path="/progress" component={ProgressPage} />
       <Route path="/chat" component={Chat} />
+      <Route path="/syllabus" component={Syllabus} />
       <Route path="/admin" component={AdminPanel} />
       <Route component={NotFound} />
     </Switch>

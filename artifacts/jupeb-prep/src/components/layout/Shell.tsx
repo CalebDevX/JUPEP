@@ -12,6 +12,7 @@ import {
   X,
   Sparkles,
   Target,
+  ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,7 +24,8 @@ interface ShellProps {
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, color: "text-violet-500" },
   { href: "/subjects", label: "Subjects", icon: Library, color: "text-blue-500" },
-  { href: "/questions", label: "Question Bank", icon: BookOpen, color: "text-emerald-500" },
+  { href: "/syllabus", label: "Syllabus", icon: ScrollText, color: "text-emerald-500" },
+  { href: "/questions", label: "Question Bank", icon: BookOpen, color: "text-teal-500" },
   { href: "/quiz", label: "Quiz Mode", icon: PenTool, color: "text-orange-500" },
   { href: "/notes", label: "Study Notes", icon: GraduationCap, color: "text-pink-500" },
   { href: "/progress", label: "Progress", icon: TrendingUp, color: "text-cyan-500" },
