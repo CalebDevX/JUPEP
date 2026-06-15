@@ -1,142 +1,194 @@
 import { useGetQuizSession } from "@workspace/api-client-react";
 import { useRoute, Link } from "wouter";
 import { Shell } from "@/components/layout/Shell";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, XCircle, ChevronRight, BarChart3, AlertCircle } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+import { motion } from "framer-motion";
+import {
+  CheckCircle2, XCircle, ChevronRight, BarChart3, AlertCircle,
+  RotateCcw, BookOpen, Trophy, Target,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function QuizResult() {
   const [, params] = useRoute("/quiz/result/:id");
   const id = Number(params?.id);
 
-  const { data: session, isLoading } = useGetQuizSession(id, {
-    query: { enabled: !!id }
-  });
+  const { data: session, isLoading } = useGetQuizSession(id, { query: { enabled: !!id } });
 
-  if (isLoading) {
-    return (
-      <Shell>
-        <div className="p-8 max-w-4xl mx-auto w-full space-y-6">
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-64 w-full" />
+  if (isLoading) return (
+    <Shell>
+      <div className="p-6 max-w-3xl mx-auto w-full space-y-5">
+        <Skeleton className="h-10 w-48 bg-white/5 rounded-2xl" />
+        <Skeleton className="h-44 w-full bg-white/5 rounded-2xl" />
+        <Skeleton className="h-64 w-full bg-white/5 rounded-2xl" />
+      </div>
+    </Shell>
+  );
+
+  if (!session || session.status !== "completed") return (
+    <Shell>
+      <div className="flex-1 flex flex-col items-center justify-center text-center p-8 gap-4">
+        <div className="w-14 h-14 rounded-2xl bg-red-500/15 flex items-center justify-center">
+          <AlertCircle className="h-7 w-7 text-red-400" />
         </div>
-      </Shell>
-    );
-  }
+        <h2 className="text-xl font-bold font-serif text-white">Result Not Available</h2>
+        <p className="text-white/40 text-sm">This quiz session hasn't been completed yet.</p>
+        <Link href="/quiz"><Button className="bg-violet-600 hover:bg-violet-500">Back to Quiz</Button></Link>
+      </div>
+    </Shell>
+  );
 
-  if (!session || session.status !== "completed") {
-    return (
-      <Shell>
-        <div className="p-8 flex flex-col items-center justify-center text-center">
-          <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-          <h2 className="text-2xl font-bold font-serif mb-2">Result Not Available</h2>
-          <p className="text-muted-foreground mb-6">This quiz session has not been completed yet.</p>
-          <Link href="/quiz">
-            <Button>Return to Quizzes</Button>
-          </Link>
-        </div>
-      </Shell>
-    );
-  }
-
-  // Calculate stats from questions since the API returns the result on session completion
-  // but we might need to derive some details if not fully attached (assuming basic info is attached or we show raw score).
   const score = session.score || 0;
   const total = session.totalMarks || session.questions.length;
-  const percentage = Math.round((score / total) * 100);
-  
-  let grade = "F";
-  let gradeColor = "text-red-500";
-  if (percentage >= 70) { grade = "A"; gradeColor = "text-green-500"; }
-  else if (percentage >= 60) { grade = "B"; gradeColor = "text-blue-500"; }
-  else if (percentage >= 50) { grade = "C"; gradeColor = "text-yellow-500"; }
-  else if (percentage >= 45) { grade = "D"; gradeColor = "text-orange-500"; }
-  else if (percentage >= 40) { grade = "E"; gradeColor = "text-orange-600"; }
+  const pct = Math.round((score / total) * 100);
+
+  const { grade, gradeColor, gradeBg, message } = (() => {
+    if (pct >= 70) return { grade: "A", gradeColor: "text-emerald-400", gradeBg: "bg-emerald-500/15 border-emerald-500/30", message: "Excellent! You're very well prepared." };
+    if (pct >= 60) return { grade: "B", gradeColor: "text-sky-400", gradeBg: "bg-sky-500/15 border-sky-500/30", message: "Good work. Keep pushing to clear A." };
+    if (pct >= 50) return { grade: "C", gradeColor: "text-amber-400", gradeBg: "bg-amber-500/15 border-amber-500/30", message: "Fair attempt. Review weak areas and try again." };
+    if (pct >= 45) return { grade: "D", gradeColor: "text-orange-400", gradeBg: "bg-orange-500/15 border-orange-500/30", message: "You need more practice. Don't give up!" };
+    return { grade: "F", gradeColor: "text-red-400", gradeBg: "bg-red-500/15 border-red-500/30", message: "Review your notes thoroughly and try again." };
+  })();
+
+  const PAPER_LABELS: Record<string, string> = {
+    "001": "1st Incourse", "002": "1st Semester Exam", "003": "2nd Incourse", "004": "Mock Exam", "mock": "Full Mock",
+  };
 
   return (
     <Shell>
-      <div className="p-8 max-w-4xl mx-auto w-full space-y-8">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-          <Link href="/"><span className="hover:text-foreground cursor-pointer">Dashboard</span></Link>
-          <ChevronRight className="h-4 w-4" />
-          <span>Quiz Result</span>
+      <div className="p-4 md:p-8 max-w-3xl mx-auto w-full space-y-6">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-1.5 text-xs text-white/35">
+          <Link href="/"><span className="hover:text-white/70 cursor-pointer transition-colors">Dashboard</span></Link>
+          <ChevronRight className="h-3 w-3" />
+          <Link href="/quiz"><span className="hover:text-white/70 cursor-pointer transition-colors">Quiz</span></Link>
+          <ChevronRight className="h-3 w-3" />
+          <span className="text-white/60">Result</span>
         </div>
 
-        <Card className="overflow-hidden border-t-4 shadow-lg" style={{ borderTopColor: 'hsl(var(--primary))' }}>
-          <CardContent className="p-0">
-            <div className="grid grid-cols-1 md:grid-cols-3">
-              <div className="p-8 bg-muted/30 flex flex-col items-center justify-center text-center border-b md:border-b-0 md:border-r">
-                <h3 className="font-serif text-xl font-bold mb-2">Final Grade</h3>
-                <div className={`text-7xl font-bold font-serif mb-4 ${gradeColor}`}>{grade}</div>
-                <div className="text-2xl font-bold">{percentage}%</div>
-                <div className="text-muted-foreground text-sm mt-1">{score} out of {total} points</div>
+        {/* Score card */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card overflow-hidden"
+        >
+          <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Grade */}
+            <div className={cn(
+              "flex flex-col items-center justify-center text-center p-6 rounded-2xl border",
+              gradeBg
+            )}>
+              <p className="text-xs font-bold text-white/40 uppercase tracking-widest mb-2">Final Grade</p>
+              <div className={cn("text-8xl font-black font-serif leading-none mb-2", gradeColor)}>{grade}</div>
+              <div className="text-2xl font-bold text-white">{pct}%</div>
+              <div className="text-xs text-white/40 mt-1">{score} / {total} marks</div>
+            </div>
+
+            {/* Details */}
+            <div className="md:col-span-2 flex flex-col justify-center gap-4">
+              <div>
+                <h2 className="text-xl font-bold font-serif text-white">{session.subjectName}</h2>
+                <p className="text-sm text-white/40 mt-0.5 capitalize">
+                  {PAPER_LABELS[session.paper] || `Paper ${session.paper}`} · {session.questionType} mode
+                </p>
               </div>
-              
-              <div className="p-8 col-span-2 flex flex-col justify-center space-y-6">
-                <div>
-                  <h2 className="text-2xl font-serif font-bold text-foreground">{session.subjectName}</h2>
-                  <p className="text-muted-foreground mt-1 capitalize">Paper: {session.paper} • {session.questionType} Mode</p>
+
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs text-white/50">
+                  <span>Performance</span><span className={gradeColor}>{pct}%</span>
                 </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm font-medium">
-                    <span>Performance</span>
-                    <span>{percentage}%</span>
+                <div className="h-2 rounded-full bg-white/8 overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pct}%` }}
+                    transition={{ duration: 1, ease: "easeOut", delay: 0.3 }}
+                    className={cn(
+                      "h-full rounded-full",
+                      pct >= 70 ? "bg-emerald-500" : pct >= 60 ? "bg-sky-500" : pct >= 50 ? "bg-amber-500" : "bg-red-500"
+                    )}
+                  />
+                </div>
+                <p className="text-xs text-white/40">{message}</p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 text-center">
+                {[
+                  { icon: Trophy, label: "Score", value: `${score}/${total}`, color: "text-amber-400" },
+                  { icon: Target, label: "Questions", value: session.questions.length, color: "text-violet-400" },
+                  { icon: BarChart3, label: "Mode", value: session.questionType === "objective" ? "MCQ" : "Theory", color: "text-sky-400" },
+                ].map(({ icon: Icon, label, value, color }) => (
+                  <div key={label} className="p-3 rounded-xl bg-white/4 border border-white/6">
+                    <Icon className={cn("h-4 w-4 mx-auto mb-1.5", color)} />
+                    <p className="text-sm font-bold text-white">{value}</p>
+                    <p className="text-[10px] text-white/35">{label}</p>
                   </div>
-                  <Progress value={percentage} className="h-2" />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {percentage >= 70 ? "Excellent work. You are well prepared for this section." :
-                     percentage >= 50 ? "Good effort, but there is room for improvement before the final exam." :
-                     "You need to dedicate more study time to this subject. Review the notes and try again."}
-                  </p>
-                </div>
-                
-                <div className="flex gap-4 pt-4">
-                  <Link href="/quiz">
-                    <Button variant="outline">Take Another Quiz</Button>
-                  </Link>
-                  <Link href={`/notes?subjectId=${session.subjectId}`}>
-                    <Button>Review Study Notes</Button>
-                  </Link>
-                </div>
+                ))}
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <Link href="/quiz">
+                  <Button variant="outline" size="sm" className="border-white/15 text-white/70 hover:bg-white/8 hover:text-white bg-transparent gap-1.5">
+                    <RotateCcw className="h-3.5 w-3.5" />Take Again
+                  </Button>
+                </Link>
+                <Link href={`/notes?subjectId=${session.subjectId}`}>
+                  <Button size="sm" className="bg-violet-600 hover:bg-violet-500 text-white gap-1.5">
+                    <BookOpen className="h-3.5 w-3.5" />Review Notes
+                  </Button>
+                </Link>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </motion.div>
 
-        <div className="space-y-6">
-          <div className="flex items-center gap-2 pb-2 border-b">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            <h3 className="text-xl font-serif font-bold">Review Questions</h3>
+        {/* Question review */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-white/40" />
+            <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">Question Review</h3>
           </div>
 
-          <div className="space-y-4">
-            {/* Note: The schema for session doesn't explicitly contain the selected answers after submission in the standard return, 
-                so we display the questions and their correct answers. If questionResults exist on the full result type, we'd map those.
-                For this implementation, we'll show the questions and marking guide as review material. */}
+          <div className="space-y-3">
             {session.questions.map((q, i) => (
-              <Card key={q.id} className="overflow-hidden">
-                <CardHeader className="bg-muted/10 py-3 px-6 border-b">
-                  <div className="font-medium text-sm text-muted-foreground">Question {i + 1}</div>
-                </CardHeader>
-                <CardContent className="p-6 space-y-4">
-                  <p className="font-medium text-base whitespace-pre-wrap">{q.questionText}</p>
-                  
+              <motion.div
+                key={q.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="glass-card overflow-hidden"
+              >
+                <div className="px-5 py-3 border-b border-white/6 flex items-center gap-2">
+                  <span className="text-xs font-bold text-white/40">Q{i + 1}</span>
+                  {q.questionType === "objective" && q.correctOption && (
+                    <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-lg">
+                      Answer: {q.correctOption}
+                    </span>
+                  )}
+                </div>
+                <div className="p-5 space-y-4">
+                  <p className="text-sm text-white/80 leading-relaxed font-medium">{q.questionText}</p>
+
                   {q.questionType === "objective" && q.options && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {q.options.map((opt, idx) => {
-                        const label = ['A', 'B', 'C', 'D'][idx];
+                        const label = ["A", "B", "C", "D"][idx];
                         const isCorrect = q.correctOption === label;
                         return (
-                          <div 
-                            key={idx} 
-                            className={`p-3 rounded border text-sm flex gap-3 ${isCorrect ? 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400' : 'bg-background border-border opacity-60'}`}
+                          <div
+                            key={idx}
+                            className={cn(
+                              "p-3 rounded-xl border text-xs flex items-start gap-2.5",
+                              isCorrect
+                                ? "bg-emerald-500/12 border-emerald-500/30 text-emerald-300"
+                                : "bg-white/3 border-white/6 text-white/45 opacity-70"
+                            )}
                           >
-                            <span className="font-bold">{label}.</span>
+                            <span className={cn("font-bold flex-shrink-0", isCorrect ? "text-emerald-400" : "text-white/30")}>
+                              {label}.
+                            </span>
                             <span>{opt}</span>
-                            {isCorrect && <CheckCircle2 className="h-4 w-4 ml-auto" />}
+                            {isCorrect && <CheckCircle2 className="h-3.5 w-3.5 ml-auto flex-shrink-0 text-emerald-400" />}
                           </div>
                         );
                       })}
@@ -144,20 +196,20 @@ export default function QuizResult() {
                   )}
 
                   {q.explanation && (
-                    <div className="mt-4 p-4 rounded-md bg-accent/50 text-sm border-l-2 border-primary">
-                      <strong className="block mb-1 font-serif">Explanation:</strong>
-                      <span className="whitespace-pre-wrap">{q.explanation}</span>
+                    <div className="p-4 rounded-xl bg-amber-500/8 border border-amber-500/20 text-xs leading-relaxed text-white/65 border-l-2 border-l-amber-400">
+                      <p className="font-semibold text-amber-400 mb-1">Explanation</p>
+                      <p className="whitespace-pre-wrap">{q.explanation}</p>
                     </div>
                   )}
 
                   {q.questionType === "theory" && q.markingGuide && (
-                    <div className="mt-4 p-4 rounded-md bg-accent/50 text-sm border-l-2 border-primary">
-                      <strong className="block mb-1 font-serif">Marking Guide ({q.marks} marks):</strong>
-                      <span className="whitespace-pre-wrap">{q.markingGuide}</span>
+                    <div className="p-4 rounded-xl bg-emerald-500/8 border border-emerald-500/20 text-xs leading-relaxed text-white/65 border-l-2 border-l-emerald-400">
+                      <p className="font-semibold text-emerald-400 mb-1">Marking Guide ({q.marks} marks)</p>
+                      <p className="whitespace-pre-wrap">{q.markingGuide}</p>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </motion.div>
             ))}
           </div>
         </div>

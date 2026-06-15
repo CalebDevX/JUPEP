@@ -7,6 +7,7 @@ import quizRouter from "./quiz";
 import dashboardRouter from "./dashboard";
 import aiRouter from "./ai";
 import communityRouter from "./community";
+import announcementsRouter from "./announcements";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(quizRouter);
 router.use(dashboardRouter);
 router.use(aiRouter);
 router.use(communityRouter);
+router.use(announcementsRouter);
 
 export default router;
