@@ -7,13 +7,16 @@ import { eq } from "drizzle-orm";
 const router = Router();
 
 function getAI() {
-  const apiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
+  const apiKey =
+    process.env.AI_INTEGRATIONS_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("AI API key not configured");
+
   const baseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
-  if (!apiKey || !baseUrl) throw new Error("AI integration not configured");
-  return new GoogleGenAI({
-    apiKey,
-    httpOptions: { apiVersion: "", baseUrl },
-  });
+  return new GoogleGenAI(
+    baseUrl
+      ? { apiKey, httpOptions: { apiVersion: "", baseUrl } }
+      : { apiKey }
+  );
 }
 
 const JUPEB_SYSTEM_PROMPT = `You are LexBot, the official AI study assistant for JUPEB Law Prep — a smart exam preparation platform for UNILAG School of Foundation Studies students targeting 16 points (AAA+1) for Law admission.
