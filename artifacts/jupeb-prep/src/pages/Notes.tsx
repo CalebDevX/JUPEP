@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { BookOpen, GraduationCap, Sparkles, Plus, FileText, Loader2, Search } from "lucide-react";
+import { BookOpen, GraduationCap, Sparkles, Plus, FileText, Loader2, Search, Volume2, Pause, Play, Square } from "lucide-react";
+import { useReadAloud } from "@/hooks/useReadAloud";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -37,6 +38,8 @@ export default function Notes() {
   const [genOpen, setGenOpen] = useState(false);
   const [genForm, setGenForm] = useState({ subjectId: "", paper: "001", topic: "", syllabus: "" });
   const [genError, setGenError] = useState("");
+  const [readingNoteId, setReadingNoteId] = useState<number | null>(null);
+  const { state: ttsState, speak, pause, resume, stop, isSupported: ttsSupported } = useReadAloud();
 
   const { data: subjects } = useListSubjects();
   const queryClient = useQueryClient();
@@ -329,6 +332,57 @@ export default function Notes() {
                       exit={{ opacity: 0, height: 0 }}
                       className="border-t border-white/5 px-5 pb-6 pt-4"
                     >
+                      {/* Read Aloud bar */}
+                      {ttsSupported && (
+                        <div className="flex items-center gap-2 mb-4">
+                          {readingNoteId === note.id && ttsState === "playing" ? (
+                            <>
+                              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-medium">
+                                <div className="flex gap-0.5 items-end h-4">
+                                  {[0,1,2].map(j => (
+                                    <motion.div key={j} className="w-0.5 rounded-full bg-amber-400"
+                                      animate={{ height: ["4px","12px","4px"] }}
+                                      transition={{ repeat: Infinity, duration: 0.7, delay: j*0.13 }}
+                                    />
+                                  ))}
+                                </div>
+                                Reading aloud…
+                              </div>
+                              <button onClick={() => { pause(); }}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white/60 text-xs hover:bg-white/10 transition-colors">
+                                <Pause className="h-3 w-3" /> Pause
+                              </button>
+                              <button onClick={() => { stop(); setReadingNoteId(null); }}
+                                className="w-7 h-7 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white/70 transition-colors">
+                                <Square className="h-3 w-3" />
+                              </button>
+                            </>
+                          ) : readingNoteId === note.id && ttsState === "paused" ? (
+                            <>
+                              <button onClick={() => resume()}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/25 text-blue-300 text-xs font-medium hover:bg-blue-500/25 transition-colors">
+                                <Play className="h-3 w-3" /> Resume
+                              </button>
+                              <button onClick={() => { stop(); setReadingNoteId(null); }}
+                                className="w-7 h-7 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white/70 transition-colors">
+                                <Square className="h-3 w-3" />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                if (readingNoteId !== null && readingNoteId !== note.id) stop();
+                                setReadingNoteId(note.id);
+                                speak(`${note.title}. ${note.content}`);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white/50 text-xs hover:bg-amber-500/10 hover:border-amber-500/20 hover:text-amber-300 transition-all"
+                            >
+                              <Volume2 className="h-3.5 w-3.5" /> Read Aloud
+                            </button>
+                          )}
+                          <span className="text-[10px] text-white/20 ml-1">Nigerian English</span>
+                        </div>
+                      )}
                       <div
                         className="prose prose-sm prose-invert max-w-none
                           prose-headings:font-serif prose-headings:text-violet-300 prose-headings:border-b prose-headings:border-white/5 prose-headings:pb-1

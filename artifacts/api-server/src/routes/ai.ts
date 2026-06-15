@@ -192,4 +192,118 @@ Keep it clear and educational.`;
   }
 });
 
+router.post("/ai/learn-from-source", async (req, res) => {
+  try {
+    const { type, content, fileBase64, fileMimeType, title, subject } = req.body;
+    if (!type) return res.status(400).json({ error: "type is required" });
+
+    const ai = getGemini();
+
+    const noteTitle = title || (type === "youtube" ? "YouTube Video Notes" : type === "website" ? "Website Notes" : type === "file" ? "Uploaded Document Notes" : "Notes from Text");
+
+    const generatePrompt = `You are an expert JUPEB academic tutor. Generate comprehensive, well-structured study notes from the content provided below.
+
+${subject ? `Subject context: ${subject}` : "Identify the most relevant JUPEB subject(s): Literature-in-English, Government, or CRS."}
+Note title: ${noteTitle}
+
+Requirements:
+1. Write at JUPEB foundation level — academically rigorous and exam-focused
+2. Structure: ## Introduction, ## Key Concepts, ## Main Content (with ### subsections), ## Summary, ## Exam Focus Points
+3. Use **bold** for key terms, bullet points for lists, numbered lists for steps/sequences
+4. Include Nigerian/West African context where relevant
+5. End with a "🎯 Exam Tips" section with 3-5 exam-ready tips
+6. Minimum 600 words — be thorough
+7. If the content is a video/lecture, extract the key teaching points and structure them as lecture notes
+
+Generate the notes now:`;
+
+    let parts: any[] = [];
+
+    if (type === "youtube") {
+      if (!content) return res.status(400).json({ error: "YouTube URL is required" });
+      const ytMatch = content.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+      if (!ytMatch) return res.status(400).json({ error: "Invalid YouTube URL" });
+
+      parts = [
+        { fileData: { mimeType: "video/mp4", fileUri: content.trim() } },
+        { text: generatePrompt },
+      ];
+    } else if (type === "website") {
+      if (!content) return res.status(400).json({ error: "URL is required" });
+      let pageText = "";
+      try {
+        const response = await fetch(content.trim(), {
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; JUPEBBot/1.0)" },
+          signal: AbortSignal.timeout(10000),
+        });
+        const html = await response.text();
+        pageText = html
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+          .replace(/<[^>]+>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 40000);
+      } catch (e: any) {
+        return res.status(400).json({ error: `Could not fetch URL: ${e?.message || "Network error"}` });
+      }
+      if (!pageText.trim()) return res.status(400).json({ error: "No readable text found at that URL" });
+      parts = [{ text: `${generatePrompt}\n\n--- WEBSITE CONTENT ---\n${pageText}` }];
+    } else if (type === "text") {
+      if (!content?.trim()) return res.status(400).json({ error: "Text content is required" });
+      parts = [{ text: `${generatePrompt}\n\n--- TEXT CONTENT ---\n${content.trim()}` }];
+    } else if (type === "file") {
+      if (!fileBase64 || !fileMimeType) return res.status(400).json({ error: "fileBase64 and fileMimeType are required" });
+      parts = [
+        { inlineData: { data: fileBase64, mimeType: fileMimeType } },
+        { text: generatePrompt },
+      ];
+    } else {
+      return res.status(400).json({ error: "type must be youtube, website, text, or file" });
+    }
+
+    const response = await ai.models.generateContent({
+      model: "gemini-1.5-flash",
+      contents: [{ role: "user", parts }],
+    });
+
+    const generatedContent = response.text();
+    if (!generatedContent) throw new Error("AI returned empty content");
+
+    res.json({ title: noteTitle, content: generatedContent, type });
+  } catch (err: any) {
+    console.error("Learn from source error:", err);
+    res.status(500).json({ error: err?.message || "Failed to generate notes from source" });
+  }
+});
+
+router.post("/ai/save-generated-note", async (req, res) => {
+  try {
+    const { subjectId, paper, title, content, tags } = req.body;
+    if (!subjectId || !paper || !title || !content) {
+      return res.status(400).json({ error: "subjectId, paper, title, and content are required" });
+    }
+    const [subject] = await db.select().from(subjectsTable).where(eq(subjectsTable.id, parseInt(subjectId)));
+    if (!subject) return res.status(404).json({ error: "Subject not found" });
+
+    const [note] = await db.insert(notesTable).values({
+      subjectId: parseInt(subjectId),
+      paper,
+      title,
+      content,
+      tags: tags || ["ai-generated", "learn-from-source"],
+    }).returning();
+
+    res.status(201).json({
+      ...note,
+      subjectName: subject.name,
+      createdAt: note.createdAt.toISOString(),
+      updatedAt: note.updatedAt.toISOString(),
+    });
+  } catch (err: any) {
+    console.error("Save note error:", err);
+    res.status(500).json({ error: err?.message || "Failed to save note" });
+  }
+});
+
 export default router;

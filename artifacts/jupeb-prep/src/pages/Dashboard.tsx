@@ -131,7 +131,7 @@ export default function Dashboard() {
                 <div className="space-y-4">
                   {[1,2,3].map(i => <Skeleton key={i} className="h-12 bg-white/5 rounded-xl" />)}
                 </div>
-              ) : summary?.subjectBreakdown.map((sub, i) => {
+              ) : (summary?.subjectBreakdown ?? []).map((sub, i) => {
                 const colors = subjectColors[sub.subjectName] || { bg: "bg-violet-500/10", text: "text-violet-400", dot: "bg-violet-500" };
                 const pct = Math.min(100, (sub.questionCount / (summary.totalQuestions || 1)) * 100);
                 return (
@@ -225,7 +225,7 @@ export default function Dashboard() {
                 <div className="space-y-3">
                   {[1,2,3].map(i => <Skeleton key={i} className="h-14 bg-white/5 rounded-xl" />)}
                 </div>
-              ) : !recentActivity?.length ? (
+              ) : !Array.isArray(recentActivity) || !recentActivity?.length ? (
                 <div className="text-center py-8">
                   <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-3">
                     <Clock className="h-5 w-5 text-white/30" />
@@ -235,7 +235,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {recentActivity?.slice(0, 6).map((act, i) => (
+                  {(Array.isArray(recentActivity) ? recentActivity : []).slice(0, 6).map((act, i) => (
                     <motion.div
                       key={i}
                       initial={{ opacity: 0, x: 10 }}

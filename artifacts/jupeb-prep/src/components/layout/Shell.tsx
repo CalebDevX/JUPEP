@@ -13,6 +13,7 @@ import {
   Sparkles,
   Target,
   ScrollText,
+  Wand2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/syllabus", label: "Syllabus", icon: ScrollText, color: "text-emerald-500" },
   { href: "/questions", label: "Question Bank", icon: BookOpen, color: "text-teal-500" },
   { href: "/quiz", label: "Quiz Mode", icon: PenTool, color: "text-orange-500" },
+  { href: "/learn", label: "AI Learn", icon: Wand2, color: "text-rose-500" },
   { href: "/notes", label: "Study Notes", icon: GraduationCap, color: "text-pink-500" },
   { href: "/progress", label: "Progress", icon: TrendingUp, color: "text-cyan-500" },
   { href: "/chat", label: "LexBot AI", icon: MessageCircle, color: "text-amber-500" },
