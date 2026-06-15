@@ -18,7 +18,10 @@ import {
   LogOut,
   ChevronUp,
   X,
+  Layers,
+  Flame,
 } from "lucide-react";
+import { getGamificationState, getLevel } from "@/lib/gamification";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -31,8 +34,9 @@ const navItems = [
   { href: "/subjects",  label: "Subjects",     icon: Library,         color: "text-blue-500"   },
   { href: "/syllabus",  label: "Syllabus",     icon: ScrollText,      color: "text-emerald-500"},
   { href: "/questions", label: "Question Bank",icon: BookOpen,        color: "text-teal-500"   },
-  { href: "/quiz",      label: "Quiz Mode",    icon: PenTool,         color: "text-orange-500" },
-  { href: "/community", label: "Community",    icon: Users,           color: "text-sky-500"    },
+  { href: "/quiz",       label: "Quiz Mode",    icon: PenTool,         color: "text-orange-500"  },
+  { href: "/flashcards", label: "Flashcards",  icon: Layers,          color: "text-fuchsia-500" },
+  { href: "/community",  label: "Community",   icon: Users,           color: "text-sky-500"     },
   { href: "/learn",     label: "AI Learn",     icon: Wand2,           color: "text-rose-500"   },
   { href: "/notes",     label: "Study Notes",  icon: GraduationCap,   color: "text-pink-500"   },
   { href: "/progress",  label: "Progress",     icon: TrendingUp,      color: "text-cyan-500"   },
@@ -40,9 +44,11 @@ const navItems = [
 ];
 
 function useProfile() {
-  const displayName = localStorage.getItem("jupeb_display_name") || "Scholar";
+  const displayName = localStorage.getItem("jupeb_display_name") || localStorage.getItem("user_display_name") || "Scholar";
   const initial = displayName.trim().charAt(0).toUpperCase() || "S";
-  return { displayName, initial };
+  const profilePic = localStorage.getItem("jupeb_profile_picture");
+  const gState = getGamificationState();
+  return { displayName, initial, profilePic, streak: gState.streak, xp: gState.xp };
 }
 
 function ProfileDropdown({
@@ -159,7 +165,7 @@ export function Shell({ children }: ShellProps) {
   const [mobileProfileOpen, setMobileProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const mobileProfileRef = useRef<HTMLDivElement>(null);
-  const { displayName, initial } = useProfile();
+  const { displayName, initial, profilePic, streak, xp } = useProfile();
 
   const activeItem = useMemo(
     () => navItems.find(item =>
@@ -215,13 +221,28 @@ export function Shell({ children }: ShellProps) {
         )}
       </div>
 
-      {/* Goal banner */}
-      <div className="mx-4 mt-4 mb-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <Target className="h-4 w-4 text-amber-400 flex-shrink-0" />
-          <div>
-            <p className="text-[10px] text-white/50">Your Goal</p>
-            <p className="text-xs font-bold text-amber-400">16 Points — AAA+1</p>
+      {/* Goal + streak banner */}
+      <div className="mx-4 mt-4 mb-2 flex-shrink-0 space-y-1.5">
+        <div className="px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+          <div className="flex items-center gap-2">
+            <Target className="h-4 w-4 text-amber-400 flex-shrink-0" />
+            <div>
+              <p className="text-[10px] text-white/50">Your Goal</p>
+              <p className="text-xs font-bold text-amber-400">16 Points — AAA+1</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-1.5">
+          <div className={cn(
+            "flex-1 px-2.5 py-1.5 rounded-lg border flex items-center gap-1.5",
+            streak > 0 ? "bg-orange-500/10 border-orange-500/20" : "bg-white/4 border-white/8"
+          )}>
+            <Flame className={cn("h-3 w-3 flex-shrink-0", streak > 0 ? "text-orange-400" : "text-white/20")} />
+            <span className={cn("text-xs font-bold", streak > 0 ? "text-orange-300" : "text-white/30")}>{streak}d</span>
+          </div>
+          <div className="flex-1 px-2.5 py-1.5 rounded-lg bg-white/4 border border-white/8 flex items-center gap-1.5">
+            <span className="text-[10px]">⚡</span>
+            <span className="text-xs font-bold text-white/50">{xp} XP</span>
           </div>
         </div>
       </div>

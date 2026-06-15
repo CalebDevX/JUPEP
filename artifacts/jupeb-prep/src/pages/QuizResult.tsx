@@ -1,20 +1,45 @@
+import { useEffect, useState } from "react";
 import { useGetQuizSession } from "@workspace/api-client-react";
 import { useRoute, Link } from "wouter";
 import { Shell } from "@/components/layout/Shell";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  CheckCircle2, XCircle, ChevronRight, BarChart3, AlertCircle,
-  RotateCcw, BookOpen, Trophy, Target,
+  CheckCircle2, ChevronRight, BarChart3, AlertCircle,
+  RotateCcw, BookOpen, Trophy, Target, Zap, Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Confetti, StarBurst } from "@/components/Confetti";
+import { recordQuizComplete } from "@/lib/gamification";
 
 export default function QuizResult() {
   const [, params] = useRoute("/quiz/result/:id");
   const id = Number(params?.id);
+  const [xpGained, setXpGained] = useState(0);
+  const [showXPBanner, setShowXPBanner] = useState(false);
+  const [confettiActive, setConfettiActive] = useState(false);
 
   const { data: session, isLoading } = useGetQuizSession(id, { query: { enabled: !!id } });
+
+  useEffect(() => {
+    if (!session || session.status !== "completed") return;
+    const score = session.score || 0;
+    const total = session.totalMarks || session.questions.length;
+    const pct = Math.round((score / total) * 100);
+    const alreadyRecorded = sessionStorage.getItem(`quiz_result_${id}`);
+    if (!alreadyRecorded) {
+      sessionStorage.setItem(`quiz_result_${id}`, "1");
+      const { xpGained: gained } = recordQuizComplete(score, total);
+      setXpGained(gained);
+      setTimeout(() => setShowXPBanner(true), 600);
+      setTimeout(() => setShowXPBanner(false), 4000);
+      if (pct >= 70) {
+        setTimeout(() => setConfettiActive(true), 300);
+        setTimeout(() => setConfettiActive(false), 6000);
+      }
+    }
+  }, [session, id]);
 
   if (isLoading) return (
     <Shell>
@@ -43,12 +68,12 @@ export default function QuizResult() {
   const total = session.totalMarks || session.questions.length;
   const pct = Math.round((score / total) * 100);
 
-  const { grade, gradeColor, gradeBg, message } = (() => {
-    if (pct >= 70) return { grade: "A", gradeColor: "text-emerald-400", gradeBg: "bg-emerald-500/15 border-emerald-500/30", message: "Excellent! You're very well prepared." };
-    if (pct >= 60) return { grade: "B", gradeColor: "text-sky-400", gradeBg: "bg-sky-500/15 border-sky-500/30", message: "Good work. Keep pushing to clear A." };
-    if (pct >= 50) return { grade: "C", gradeColor: "text-amber-400", gradeBg: "bg-amber-500/15 border-amber-500/30", message: "Fair attempt. Review weak areas and try again." };
-    if (pct >= 45) return { grade: "D", gradeColor: "text-orange-400", gradeBg: "bg-orange-500/15 border-orange-500/30", message: "You need more practice. Don't give up!" };
-    return { grade: "F", gradeColor: "text-red-400", gradeBg: "bg-red-500/15 border-red-500/30", message: "Review your notes thoroughly and try again." };
+  const { grade, gradeColor, gradeBg, message, gradeEmoji } = (() => {
+    if (pct >= 70) return { grade: "A", gradeColor: "text-emerald-400", gradeBg: "bg-emerald-500/15 border-emerald-500/30", message: "Excellent! You're very well prepared.", gradeEmoji: "🏆" };
+    if (pct >= 60) return { grade: "B", gradeColor: "text-sky-400", gradeBg: "bg-sky-500/15 border-sky-500/30", message: "Good work. Keep pushing to clear A.", gradeEmoji: "⚡" };
+    if (pct >= 50) return { grade: "C", gradeColor: "text-amber-400", gradeBg: "bg-amber-500/15 border-amber-500/30", message: "Fair attempt. Review weak areas and try again.", gradeEmoji: "📚" };
+    if (pct >= 45) return { grade: "D", gradeColor: "text-orange-400", gradeBg: "bg-orange-500/15 border-orange-500/30", message: "You need more practice. Don't give up!", gradeEmoji: "💪" };
+    return { grade: "F", gradeColor: "text-red-400", gradeBg: "bg-red-500/15 border-red-500/30", message: "Review your notes thoroughly and try again.", gradeEmoji: "📖" };
   })();
 
   const PAPER_LABELS: Record<string, string> = {
@@ -57,6 +82,7 @@ export default function QuizResult() {
 
   return (
     <Shell>
+      <Confetti active={confettiActive} />
       <div className="p-4 md:p-8 max-w-3xl mx-auto w-full space-y-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-1.5 text-xs text-white/35">
@@ -67,6 +93,27 @@ export default function QuizResult() {
           <span className="text-white/60">Result</span>
         </div>
 
+        {/* XP banner */}
+        <AnimatePresence>
+          {showXPBanner && xpGained > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -16, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.97 }}
+              className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500/15 border border-amber-500/30"
+            >
+              <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                <Zap className="h-4 w-4 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-amber-300">+{xpGained} XP earned!</p>
+                <p className="text-xs text-amber-400/60">Keep studying to level up</p>
+              </div>
+              <Star className="h-5 w-5 text-amber-400 ml-auto" style={{ animation: "spin 3s linear infinite" }} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Score card */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -76,13 +123,22 @@ export default function QuizResult() {
           <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Grade */}
             <div className={cn(
-              "flex flex-col items-center justify-center text-center p-6 rounded-2xl border",
+              "flex flex-col items-center justify-center text-center p-6 rounded-2xl border relative overflow-hidden",
               gradeBg
             )}>
-              <p className="text-xs font-bold text-white/40 uppercase tracking-widest mb-2">Final Grade</p>
-              <div className={cn("text-8xl font-black font-serif leading-none mb-2", gradeColor)}>{grade}</div>
-              <div className="text-2xl font-bold text-white">{pct}%</div>
-              <div className="text-xs text-white/40 mt-1">{score} / {total} marks</div>
+              {pct >= 70 && <StarBurst count={10} />}
+              <p className="text-xs font-bold text-white/40 uppercase tracking-widest mb-2 relative z-10">Final Grade</p>
+              <motion.div
+                initial={{ scale: 0, rotate: -10 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.2 }}
+                className={cn("text-8xl font-black font-serif leading-none mb-2 relative z-10", gradeColor)}
+              >
+                {grade}
+              </motion.div>
+              <div className="text-2xl font-bold text-white relative z-10">{pct}%</div>
+              <div className="text-xs text-white/40 mt-1 relative z-10">{score} / {total} marks</div>
+              <div className="text-2xl mt-2 relative z-10">{gradeEmoji}</div>
             </div>
 
             {/* Details */}

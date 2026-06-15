@@ -41,7 +41,8 @@ export default function Notes() {
   const [readingNoteId, setReadingNoteId] = useState<number | null>(null);
   const { state: ttsState, speak, pause, resume, stop, isSupported: ttsSupported } = useReadAloud();
 
-  const { data: subjects } = useListSubjects();
+  const { data: subjectsRaw } = useListSubjects();
+  const subjects = Array.isArray(subjectsRaw) ? subjectsRaw : [];
   const queryClient = useQueryClient();
   const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -52,15 +53,16 @@ export default function Notes() {
 
   const { data: notes, isLoading } = useListNotes(queryParams);
 
+  const notesArr = Array.isArray(notes) ? notes : [];
   const filteredNotes = useMemo(() => {
-    if (!search.trim()) return notes;
+    if (!search.trim()) return notesArr;
     const q = search.toLowerCase();
-    return notes?.filter(n =>
+    return notesArr.filter(n =>
       n.title.toLowerCase().includes(q) ||
       n.content.toLowerCase().includes(q) ||
       n.subjectName?.toLowerCase().includes(q)
     );
-  }, [notes, search]);
+  }, [notesArr, search]);
 
   const handleGenerate = async () => {
     if (!genForm.subjectId || !genForm.topic.trim()) {

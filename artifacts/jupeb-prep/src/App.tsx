@@ -17,6 +17,7 @@ import Syllabus from "@/pages/Syllabus";
 import LearnFromSource from "@/pages/LearnFromSource";
 import Community from "@/pages/Community";
 import Settings from "@/pages/Settings";
+import Flashcards from "@/pages/Flashcards";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/syllabus" component={Syllabus} />
       <Route path="/learn" component={LearnFromSource} />
       <Route path="/community" component={Community} />
+      <Route path="/flashcards" component={Flashcards} />
       <Route path="/admin" component={AdminPanel} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />

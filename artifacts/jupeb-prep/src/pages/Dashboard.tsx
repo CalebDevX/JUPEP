@@ -7,10 +7,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpen, Trophy, PenTool, GraduationCap, TrendingUp, MessageCircle,
   Sparkles, Target, Zap, Clock, ChevronRight, Megaphone,
-  Pin, ChevronLeft, X, CheckCircle2, Circle,
+  Pin, ChevronLeft, X, CheckCircle2, Circle, Flame, Calendar, Layers,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import {
+  getGamificationState, getLevel, getXPToNextLevel,
+  recordDailyLogin, isDailyChallengeCompleted, recordDailyChallenge,
+} from "@/lib/gamification";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -114,6 +118,46 @@ export default function Dashboard() {
   const { data: summary, isLoading: loadingSummary } = useGetDashboardSummary();
   const { data: recentActivity, isLoading: loadingActivity } = useGetRecentActivity();
 
+  const [gState, setGState] = useState(() => getGamificationState());
+  const [dailyQ, setDailyQ] = useState<any>(null);
+  const [dailyAnswer, setDailyAnswer] = useState<string | null>(null);
+  const [dailyRevealed, setDailyRevealed] = useState(false);
+  const [dailyDone, setDailyDone] = useState(() => isDailyChallengeCompleted());
+  const [dailyXP, setDailyXP] = useState(0);
+
+  const examDate = typeof window !== "undefined" ? localStorage.getItem("jupeb_exam_date") : null;
+  const daysToExam = examDate
+    ? Math.max(0, Math.ceil((new Date(examDate).getTime() - Date.now()) / 86400000))
+    : null;
+
+  useEffect(() => {
+    recordDailyLogin();
+    setGState(getGamificationState());
+    fetch(`${BASE}/api/daily-challenge`)
+      .then(r => r.ok ? r.json() : null)
+      .then(q => { if (q?.id) setDailyQ(q); })
+      .catch(() => {});
+  }, []);
+
+  const handleDailyAnswer = (opt: string) => {
+    if (dailyRevealed) return;
+    setDailyAnswer(opt);
+    setDailyRevealed(true);
+    if (!dailyDone && dailyQ?.correctOption === opt) {
+      const { xpGained } = recordDailyChallenge();
+      setDailyXP(xpGained);
+      setDailyDone(true);
+      setGState(getGamificationState());
+    } else if (!dailyDone) {
+      recordDailyChallenge();
+      setDailyDone(true);
+      setGState(getGamificationState());
+    }
+  };
+
+  const level = getLevel(gState.xp);
+  const xpNext = getXPToNextLevel(gState.xp);
+
   const stats = [
     { icon: Trophy,       label: "Avg Score",     value: `${(summary?.averageScore ?? 0).toFixed(0)}%`,  color: "bg-amber-500/12 text-amber-400"   },
     { icon: PenTool,      label: "Quizzes Done",  value: summary?.totalQuizzes ?? 0,                     color: "bg-violet-500/12 text-violet-400" },
@@ -143,6 +187,87 @@ export default function Dashboard() {
             <Target className="h-3.5 w-3.5 text-amber-400" />
             <span className="text-xs font-semibold text-amber-400 whitespace-nowrap">16 Points</span>
           </div>
+        </motion.div>
+
+        {/* ── XP / Streak bar ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-3"
+        >
+          {/* Streak */}
+          <div className={cn(
+            "flex items-center gap-2.5 px-4 py-3 rounded-2xl border",
+            gState.streak >= 3 ? "bg-orange-500/10 border-orange-500/25" : "bg-white/4 border-white/8"
+          )}>
+            <Flame className={cn("h-5 w-5 flex-shrink-0", gState.streak >= 3 ? "text-orange-400" : "text-white/30")} />
+            <div>
+              <p className={cn("text-lg font-black leading-none", gState.streak >= 1 ? "text-orange-300" : "text-white/40")}>{gState.streak}</p>
+              <p className="text-[10px] text-white/40">Day Streak</p>
+            </div>
+          </div>
+
+          {/* XP + Level */}
+          <div className={cn("flex items-center gap-2.5 px-4 py-3 rounded-2xl border col-span-1", level.bg, level.border)}>
+            <span className="text-xl flex-shrink-0">{level.emoji}</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <p className={cn("text-xs font-bold leading-none", level.color)}>{level.name}</p>
+                <p className="text-[10px] text-white/40">{gState.xp} XP</p>
+              </div>
+              <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mt-1.5">
+                <motion.div
+                  className={cn("h-full rounded-full", level.bg.replace("/20", ""))}
+                  style={{ width: `${xpNext.progress}%`, backgroundColor: undefined }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${xpNext.progress}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Exam countdown */}
+          {daysToExam !== null ? (
+            <div className={cn(
+              "flex items-center gap-2.5 px-4 py-3 rounded-2xl border",
+              daysToExam <= 7 ? "bg-rose-500/10 border-rose-500/25" :
+              daysToExam <= 30 ? "bg-amber-500/10 border-amber-500/25" :
+              "bg-white/4 border-white/8"
+            )}>
+              <Calendar className={cn("h-5 w-5 flex-shrink-0",
+                daysToExam <= 7 ? "text-rose-400" : daysToExam <= 30 ? "text-amber-400" : "text-white/40"
+              )} />
+              <div>
+                <p className={cn("text-lg font-black leading-none",
+                  daysToExam <= 7 ? "text-rose-300" : daysToExam <= 30 ? "text-amber-300" : "text-white/70"
+                )}>{daysToExam}</p>
+                <p className="text-[10px] text-white/40">Days to Exam</p>
+              </div>
+            </div>
+          ) : (
+            <Link href="/settings">
+              <div className="flex items-center gap-2.5 px-4 py-3 rounded-2xl border bg-white/4 border-white/8 cursor-pointer hover:bg-white/6 transition-colors">
+                <Calendar className="h-5 w-5 text-white/30 flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-white/50">Set exam date</p>
+                  <p className="text-[10px] text-white/25">Track countdown</p>
+                </div>
+              </div>
+            </Link>
+          )}
+
+          {/* Flashcards shortcut */}
+          <Link href="/flashcards">
+            <div className="flex items-center gap-2.5 px-4 py-3 rounded-2xl border bg-fuchsia-500/10 border-fuchsia-500/20 cursor-pointer hover:bg-fuchsia-500/15 transition-colors">
+              <Layers className="h-5 w-5 text-fuchsia-400 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-fuchsia-300">Flashcards</p>
+                <p className="text-[10px] text-white/30">Flip to recall</p>
+              </div>
+            </div>
+          </Link>
         </motion.div>
 
         {/* ── Announcements ── */}
@@ -217,6 +342,78 @@ export default function Dashboard() {
             })}
           </div>
         </div>
+
+        {/* ── Daily Challenge ── */}
+        {dailyQ && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={cn(
+              "glass-card overflow-hidden border",
+              dailyDone ? "border-emerald-500/20" : "border-amber-500/20"
+            )}
+          >
+            <div className={cn(
+              "px-5 py-3 border-b flex items-center justify-between",
+              dailyDone ? "border-emerald-500/15 bg-emerald-500/5" : "border-amber-500/15 bg-amber-500/5"
+            )}>
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">{dailyDone ? "✅" : "⚡"}</span>
+                <div>
+                  <p className="text-sm font-bold text-white">Daily Challenge</p>
+                  <p className="text-[11px] text-white/40">
+                    {dailyDone ? "Completed today! Come back tomorrow." : `Answer correctly for +30 XP · ${dailyQ.subjectName}`}
+                  </p>
+                </div>
+              </div>
+              {!dailyDone && (
+                <span className="text-[10px] px-2 py-1 rounded-lg bg-amber-500/15 border border-amber-500/25 text-amber-300 font-bold">+30 XP</span>
+              )}
+              {dailyDone && dailyXP > 0 && (
+                <span className="text-[10px] px-2 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 font-bold">+{dailyXP} XP earned!</span>
+              )}
+            </div>
+            <div className="p-5">
+              <p className="text-sm text-white/85 font-medium leading-relaxed mb-4">{dailyQ.questionText}</p>
+              {dailyQ.options && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {dailyQ.options.map((opt: string, idx: number) => {
+                    const label = ["A","B","C","D"][idx];
+                    const isCorrect = dailyQ.correctOption === label;
+                    const isChosen = dailyAnswer === label;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => handleDailyAnswer(label)}
+                        disabled={dailyRevealed}
+                        className={cn(
+                          "text-left px-4 py-3 rounded-xl border text-xs flex items-start gap-2.5 transition-all",
+                          dailyRevealed
+                            ? isCorrect
+                              ? "bg-emerald-500/15 border-emerald-500/35 text-emerald-300"
+                              : isChosen && !isCorrect
+                              ? "bg-red-500/15 border-red-500/30 text-red-300/70"
+                              : "bg-white/2 border-white/5 text-white/30"
+                            : "bg-white/5 border-white/10 text-white/70 hover:bg-white/8 hover:border-white/20 cursor-pointer"
+                        )}
+                      >
+                        <span className={cn("font-bold flex-shrink-0 text-[11px]",
+                          dailyRevealed && isCorrect ? "text-emerald-400" :
+                          dailyRevealed && isChosen ? "text-red-400" :
+                          "text-white/40"
+                        )}>
+                          {label}.
+                        </span>
+                        <span className="leading-snug">{opt}</span>
+                        {dailyRevealed && isCorrect && <CheckCircle2 className="h-3.5 w-3.5 ml-auto flex-shrink-0 text-emerald-400 mt-0.5" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
 
         {/* ── Quick actions + subject breakdown ── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

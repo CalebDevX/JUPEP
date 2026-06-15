@@ -88,7 +88,8 @@ const COMING_SOON_TRACKS: ComingSoonTrack[] = [
 ];
 
 export default function Subjects() {
-  const { data: subjects, isLoading } = useListSubjects();
+  const { data: subjectsRaw, isLoading } = useListSubjects();
+  const subjects = Array.isArray(subjectsRaw) ? subjectsRaw : [];
 
   return (
     <Shell>

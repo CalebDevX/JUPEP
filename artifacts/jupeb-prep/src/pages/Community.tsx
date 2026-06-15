@@ -62,8 +62,20 @@ function avatarColor(name: string) {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
-function Avatar({ name, size = "sm" }: { name: string; size?: "sm" | "md" | "lg" }) {
+function getMyProfilePic(): string | null {
+  try { return localStorage.getItem("jupeb_profile_picture"); } catch { return null; }
+}
+
+function Avatar({ name, size = "sm", isMe = false }: { name: string; size?: "sm" | "md" | "lg"; isMe?: boolean }) {
   const sz = size === "lg" ? "w-10 h-10 text-sm" : size === "md" ? "w-8 h-8 text-xs" : "w-7 h-7 text-[10px]";
+  const pic = isMe ? getMyProfilePic() : null;
+  if (pic) {
+    return (
+      <div className={cn("rounded-xl overflow-hidden flex-shrink-0", sz)}>
+        <img src={pic} alt={name} className="w-full h-full object-cover" />
+      </div>
+    );
+  }
   return (
     <div className={cn("rounded-xl flex items-center justify-center font-bold text-white flex-shrink-0", sz, avatarColor(name))}>
       {getInitials(name)}
@@ -196,7 +208,7 @@ function PostCard({ post, slug, myName }: { post: Post; slug: string; myName: st
 
               {myName ? (
                 <div className="flex items-center gap-2 pt-1">
-                  <Avatar name={myName} size="sm" />
+                  <Avatar name={myName} size="sm" isMe={true} />
                   <div className="flex-1 flex items-center gap-2">
                     <Input
                       value={newComment}
@@ -354,7 +366,7 @@ function CommunityView({ slug, onBack, myName }: { slug: string; onBack: () => v
           {myName ? (
             <div className="glass-card p-4">
               <div className="flex items-start gap-3">
-                <Avatar name={myName} size="md" />
+                <Avatar name={myName} size="md" isMe={true} />
                 <div className="flex-1 space-y-3">
                   <Textarea
                     value={newPost}

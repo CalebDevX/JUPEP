@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Shell } from "@/components/layout/Shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,9 +6,9 @@ import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import {
-  User, Target, BookOpen, Bell, Shield, Info,
-  Trash2, ChevronRight, CheckCircle2, GraduationCap,
-  Moon, Palette, LogOut,
+  User, Target, Bell, Shield, Info,
+  Trash2, ChevronRight, CheckCircle2,
+  LogOut, Camera, Calendar, Clock,
 } from "lucide-react";
 
 const GOAL_OPTIONS = [
@@ -47,6 +47,7 @@ function Section({ icon: Icon, title, children, color = "text-violet-400", bg = 
 
 export default function Settings() {
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [displayName, setDisplayName] = useState(
     () => localStorage.getItem("user_display_name") || ""
@@ -57,11 +58,44 @@ export default function Settings() {
   const [notifications, setNotifications] = useState(
     () => localStorage.getItem("notif_enabled") !== "false"
   );
+  const [profilePic, setProfilePic] = useState<string | null>(
+    () => localStorage.getItem("jupeb_profile_picture")
+  );
+  const [examDate, setExamDate] = useState(
+    () => localStorage.getItem("jupeb_exam_date") || ""
+  );
+
+  const handlePicUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 150; canvas.height = 150;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        const size = Math.min(img.width, img.height);
+        const sx = (img.width - size) / 2;
+        const sy = (img.height - size) / 2;
+        ctx.drawImage(img, sx, sy, size, size, 0, 0, 150, 150);
+        const b64 = canvas.toDataURL("image/jpeg", 0.85);
+        setProfilePic(b64);
+        localStorage.setItem("jupeb_profile_picture", b64);
+        toast({ title: "Photo updated!", description: "Your profile picture has been saved." });
+      };
+      img.src = ev.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const saveProfile = () => {
     localStorage.setItem("user_display_name", displayName.trim());
     localStorage.setItem("user_goal", goal);
     localStorage.setItem("notif_enabled", String(notifications));
+    if (examDate) localStorage.setItem("jupeb_exam_date", examDate);
+    else localStorage.removeItem("jupeb_exam_date");
     toast({ title: "Settings saved!", description: "Your preferences have been updated." });
   };
 
@@ -99,9 +133,32 @@ export default function Settings() {
         <Section icon={User} title="Your Profile" color="text-violet-400" bg="bg-violet-500/15">
           <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl flex-shrink-0 shadow-lg">
-                {displayName ? displayName.charAt(0).toUpperCase() : "S"}
+              {/* Profile picture */}
+              <div className="relative flex-shrink-0 group">
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-16 h-16 rounded-2xl overflow-hidden cursor-pointer ring-2 ring-white/10 hover:ring-violet-500/40 transition-all relative"
+                >
+                  {profilePic ? (
+                    <img src={profilePic} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl">
+                      {displayName ? displayName.charAt(0).toUpperCase() : "S"}
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Camera className="h-5 w-5 text-white" />
+                  </div>
+                </div>
+                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePicUpload} />
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-violet-600 border-2 border-[#1a1a2e] flex items-center justify-center cursor-pointer hover:bg-violet-500 transition-colors"
+                >
+                  <Camera className="h-3 w-3 text-white" />
+                </div>
               </div>
+
               <div className="flex-1 space-y-1.5">
                 <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Display Name</label>
                 <Input
@@ -113,6 +170,14 @@ export default function Settings() {
                 />
               </div>
             </div>
+            {profilePic && (
+              <button
+                onClick={() => { setProfilePic(null); localStorage.removeItem("jupeb_profile_picture"); }}
+                className="text-xs text-white/30 hover:text-red-400 transition-colors"
+              >
+                Remove photo
+              </button>
+            )}
           </div>
         </Section>
 
@@ -147,6 +212,32 @@ export default function Settings() {
               <div className="flex items-center gap-2 text-xs text-amber-400/70 bg-amber-500/8 border border-amber-500/15 rounded-xl px-3 py-2">
                 <Target className="h-3.5 w-3.5 flex-shrink-0" />
                 Current goal: <span className="font-bold">{selectedGoal.label} — {selectedGoal.points}</span>
+              </div>
+            )}
+          </div>
+        </Section>
+
+        {/* Exam Date */}
+        <Section icon={Calendar} title="Exam & Countdown" color="text-rose-400" bg="bg-rose-500/15">
+          <div className="space-y-3">
+            <p className="text-xs text-white/40">Set your exam date to see a countdown on the dashboard.</p>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Mock / Final Exam Date</label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 pointer-events-none" />
+                <input
+                  type="date"
+                  value={examDate}
+                  onChange={e => setExamDate(e.target.value)}
+                  className="w-full pl-10 pr-4 h-11 bg-white/5 border border-white/10 text-white rounded-xl text-sm outline-none focus:border-rose-500/40 transition-colors [color-scheme:dark]"
+                  min={new Date().toISOString().slice(0, 10)}
+                />
+              </div>
+            </div>
+            {examDate && (
+              <div className="flex items-center gap-2 text-xs text-rose-400/70 bg-rose-500/8 border border-rose-500/15 rounded-xl px-3 py-2">
+                <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
+                {Math.max(0, Math.ceil((new Date(examDate).getTime() - Date.now()) / 86400000))} days remaining
               </div>
             )}
           </div>

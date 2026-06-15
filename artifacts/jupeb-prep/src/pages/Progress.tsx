@@ -60,10 +60,10 @@ export default function ProgressPage() {
                 {
                   icon: Trophy,
                   label: "Average Score",
-                  value: `${progress.averageScore.toFixed(1)}%`,
-                  unit: progress.averageScore >= 70 ? "Great job!" : progress.averageScore >= 50 ? "Keep pushing" : "Needs work",
-                  color: progress.averageScore >= 70 ? "bg-emerald-500/15 text-emerald-400" : progress.averageScore >= 50 ? "bg-amber-500/15 text-amber-400" : "bg-red-500/15 text-red-400",
-                  border: progress.averageScore >= 70 ? "border-emerald-500/20" : progress.averageScore >= 50 ? "border-amber-500/20" : "border-red-500/20",
+                  value: `${(progress.averageScore ?? 0).toFixed(1)}%`,
+                  unit: (progress.averageScore ?? 0) >= 70 ? "Great job!" : (progress.averageScore ?? 0) >= 50 ? "Keep pushing" : "Needs work",
+                  color: (progress.averageScore ?? 0) >= 70 ? "bg-emerald-500/15 text-emerald-400" : (progress.averageScore ?? 0) >= 50 ? "bg-amber-500/15 text-amber-400" : "bg-red-500/15 text-red-400",
+                  border: (progress.averageScore ?? 0) >= 70 ? "border-emerald-500/20" : (progress.averageScore ?? 0) >= 50 ? "border-amber-500/20" : "border-red-500/20",
                 },
                 {
                   icon: Zap,
@@ -104,9 +104,9 @@ export default function ProgressPage() {
                 <h2 className="text-sm font-semibold text-white/70 mb-1">Performance by Subject</h2>
                 <p className="text-xs text-white/30 mb-5">Average score across all papers</p>
                 <div className="h-[240px]">
-                  {progress.subjectProgress.length > 0 ? (
+                  {(progress.subjectProgress ?? []).length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={progress.subjectProgress} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
+                      <BarChart data={progress.subjectProgress ?? []} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                         <XAxis
                           dataKey="subjectName"
@@ -156,9 +156,9 @@ export default function ProgressPage() {
                 <h2 className="text-sm font-semibold text-white/70 mb-1">Performance by Paper</h2>
                 <p className="text-xs text-white/30 mb-5">How you perform across different exam formats</p>
                 <div className="h-[240px]">
-                  {progress.paperProgress.length > 0 ? (
+                  {(progress.paperProgress ?? []).length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={progress.paperProgress} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
+                      <AreaChart data={progress.paperProgress ?? []} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
                         <defs>
                           <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
@@ -202,7 +202,7 @@ export default function ProgressPage() {
             </div>
 
             {/* Subject breakdown table */}
-            {progress.subjectProgress.length > 0 && (
+            {(progress.subjectProgress ?? []).length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -211,7 +211,7 @@ export default function ProgressPage() {
               >
                 <h2 className="text-sm font-semibold text-white/70 mb-4">Subject Detail</h2>
                 <div className="space-y-3">
-                  {progress.subjectProgress.map((sub, i) => {
+                  {(progress.subjectProgress ?? []).map((sub, i) => {
                     const scoreColor = sub.averageScore >= 70 ? "text-emerald-400" : sub.averageScore >= 50 ? "text-amber-400" : "text-red-400";
                     const barColor = sub.averageScore >= 70 ? "bg-emerald-500" : sub.averageScore >= 50 ? "bg-amber-500" : "bg-red-500";
                     return (

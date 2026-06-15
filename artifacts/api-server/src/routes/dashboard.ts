@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { questionsTable, notesTable, quizSessionsTable, subjectsTable } from "@workspace/db";
-import { eq, sql, avg, count, desc } from "drizzle-orm";
+import { eq, sql, avg, count, desc, and } from "drizzle-orm";
 
 const router = Router();
 
@@ -19,10 +19,8 @@ router.get("/dashboard/summary", async (req, res) => {
     const [{ totalQuizzes }] = await db.select({ totalQuizzes: count() }).from(quizSessionsTable).where(eq(quizSessionsTable.status, "completed"));
     const [{ avgScore }] = await db.select({ avgScore: avg(quizSessionsTable.percentage) }).from(quizSessionsTable).where(eq(quizSessionsTable.status, "completed"));
 
-    // recent score (last quiz)
     const [lastQuiz] = await db.select({ percentage: quizSessionsTable.percentage }).from(quizSessionsTable).where(eq(quizSessionsTable.status, "completed")).orderBy(desc(quizSessionsTable.completedAt)).limit(1);
 
-    // per-subject question/note count
     const subjects = await db.select().from(subjectsTable);
     const subjectBreakdown = await Promise.all(subjects.map(async (s) => {
       const [{ qCount }] = await db.select({ qCount: count() }).from(questionsTable).where(eq(questionsTable.subjectId, s.id));
@@ -30,7 +28,6 @@ router.get("/dashboard/summary", async (req, res) => {
       return { subjectName: s.name, questionCount: Number(qCount), noteCount: Number(nCount), color: s.color };
     }));
 
-    // per-paper question count
     const papers = ["001", "002", "003", "004"];
     const paperBreakdown = await Promise.all(papers.map(async (p) => {
       const [{ qCount }] = await db.select({ qCount: count() }).from(questionsTable).where(eq(questionsTable.paper, p));
@@ -114,9 +111,6 @@ router.get("/progress", async (req, res) => {
     }));
 
     const papers = ["001", "002", "003", "004"];
-    const PAPER_LABELS: Record<string, string> = {
-      "001": "1st Incourse", "002": "1st Semester Exam", "003": "2nd Incourse", "004": "Mock Exam",
-    };
     const paperProgress = await Promise.all(papers.map(async (p) => {
       const sessions = await db.select().from(quizSessionsTable).where(eq(quizSessionsTable.paper, p));
       const completed = sessions.filter(s => s.status === "completed");
@@ -147,6 +141,80 @@ router.get("/progress", async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch progress" });
+  }
+});
+
+router.get("/daily-challenge", async (req, res) => {
+  try {
+    const [{ total }] = await db.select({ total: count() }).from(questionsTable).where(eq(questionsTable.questionType, "objective"));
+    const totalCount = Number(total);
+    if (totalCount === 0) return res.status(404).json({ error: "No questions available" });
+
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const idx = parseInt(today) % totalCount;
+
+    const [question] = await db
+      .select({
+        id: questionsTable.id,
+        subjectId: questionsTable.subjectId,
+        subjectName: subjectsTable.name,
+        paper: questionsTable.paper,
+        year: questionsTable.year,
+        questionType: questionsTable.questionType,
+        questionText: questionsTable.questionText,
+        options: questionsTable.options,
+        correctOption: questionsTable.correctOption,
+        explanation: questionsTable.explanation,
+        marks: questionsTable.marks,
+      })
+      .from(questionsTable)
+      .leftJoin(subjectsTable, eq(questionsTable.subjectId, subjectsTable.id))
+      .where(eq(questionsTable.questionType, "objective"))
+      .orderBy(questionsTable.id)
+      .limit(1)
+      .offset(idx);
+
+    if (!question) return res.status(404).json({ error: "No question found" });
+    res.json(question);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch daily challenge" });
+  }
+});
+
+router.get("/leaderboard", async (req, res) => {
+  try {
+    const topSessions = await db
+      .select({
+        id: quizSessionsTable.id,
+        subjectName: subjectsTable.name,
+        paper: quizSessionsTable.paper,
+        questionType: quizSessionsTable.questionType,
+        score: quizSessionsTable.score,
+        totalMarks: quizSessionsTable.totalMarks,
+        percentage: quizSessionsTable.percentage,
+        completedAt: quizSessionsTable.completedAt,
+      })
+      .from(quizSessionsTable)
+      .leftJoin(subjectsTable, eq(quizSessionsTable.subjectId, subjectsTable.id))
+      .where(and(eq(quizSessionsTable.status, "completed"), sql`${quizSessionsTable.percentage} IS NOT NULL`))
+      .orderBy(desc(quizSessionsTable.percentage))
+      .limit(20);
+
+    const results = topSessions.map((s, i) => ({
+      rank: i + 1,
+      subjectName: s.subjectName ?? "Unknown",
+      paper: s.paper,
+      paperLabel: PAPER_LABELS[s.paper] ?? s.paper,
+      questionType: s.questionType,
+      score: s.score,
+      totalMarks: s.totalMarks,
+      percentage: s.percentage,
+      completedAt: s.completedAt ? s.completedAt.toISOString() : null,
+    }));
+
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch leaderboard" });
   }
 });
 
