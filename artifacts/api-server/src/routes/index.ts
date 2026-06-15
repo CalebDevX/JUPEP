@@ -6,6 +6,7 @@ import notesRouter from "./notes";
 import quizRouter from "./quiz";
 import dashboardRouter from "./dashboard";
 import aiRouter from "./ai";
+import communityRouter from "./community";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(notesRouter);
 router.use(quizRouter);
 router.use(dashboardRouter);
 router.use(aiRouter);
+router.use(communityRouter);
 
 export default router;

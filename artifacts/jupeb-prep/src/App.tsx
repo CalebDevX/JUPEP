@@ -15,6 +15,7 @@ import AdminPanel from "@/pages/Admin";
 import Chat from "@/pages/Chat";
 import Syllabus from "@/pages/Syllabus";
 import LearnFromSource from "@/pages/LearnFromSource";
+import Community from "@/pages/Community";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/chat" component={Chat} />
       <Route path="/syllabus" component={Syllabus} />
       <Route path="/learn" component={LearnFromSource} />
+      <Route path="/community" component={Community} />
       <Route path="/admin" component={AdminPanel} />
       <Route component={NotFound} />
     </Switch>

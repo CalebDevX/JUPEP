@@ -1,0 +1,14 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "Hnr-0TPCDjVIsnwSKvPYQ"
+uri = "file://artifacts/jupeb-prep/public/logo.png"
+type = "image"
+title = "jupeb prep logo star J"
+
+[[generated]]
+id = "isVV4R2EqZoNQWjtVFhB4"
+uri = "file://artifacts/jupeb-prep/public/favicon-gen.png"
+type = "image"
+title = "jupeb favicon icon J star"

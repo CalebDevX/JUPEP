@@ -14,6 +14,7 @@ import {
   Target,
   ScrollText,
   Wand2,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/syllabus", label: "Syllabus", icon: ScrollText, color: "text-emerald-500" },
   { href: "/questions", label: "Question Bank", icon: BookOpen, color: "text-teal-500" },
   { href: "/quiz", label: "Quiz Mode", icon: PenTool, color: "text-orange-500" },
+  { href: "/community", label: "Community", icon: Users, color: "text-sky-500" },
   { href: "/learn", label: "AI Learn", icon: Wand2, color: "text-rose-500" },
   { href: "/notes", label: "Study Notes", icon: GraduationCap, color: "text-pink-500" },
   { href: "/progress", label: "Progress", icon: TrendingUp, color: "text-cyan-500" },
@@ -49,8 +51,8 @@ export function Shell({ children }: ShellProps) {
     <>
       <div className="flex h-16 items-center px-5 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg">
-            <GraduationCap className="h-5 w-5 text-white" />
+          <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center shadow-lg bg-[#0f172a]">
+            <img src="/logo.png" alt="JUPEB Prep" className="w-9 h-9 object-cover" />
           </div>
           <div>
             <h1 className="font-bold text-sm text-white leading-tight">JUPEB Prep</h1>
