@@ -1,22 +1,33 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: JUPEB Law Prep API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: subjects
+    description: JUPEB subjects
+  - name: questions
+    description: Past questions (objective and theory)
+  - name: notes
+    description: Study notes
+  - name: quiz
+    description: Quiz sessions
+  - name: progress
+    description: Student progress tracking
+  - name: dashboard
+    description: Dashboard summaries
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +35,378 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /subjects:
+    get:
+      operationId: listSubjects
+      tags: [subjects]
+      summary: List all JUPEB subjects
+      responses:
+        "200":
+          description: List of subjects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subject"
+
+  /subjects/{subjectId}:
+    get:
+      operationId: getSubject
+      tags: [subjects]
+      summary: Get a subject by ID
+      parameters:
+        - name: subjectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Subject details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subject"
+        "404":
+          description: Not found
+
+  /questions:
+    get:
+      operationId: listQuestions
+      tags: [questions]
+      summary: List questions with optional filters
+      parameters:
+        - name: subjectId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: paper
+          in: query
+          schema:
+            type: ["string", "null"]
+            enum: ["001", "002", "003", "004", null]
+        - name: questionType
+          in: query
+          schema:
+            type: ["string", "null"]
+            enum: ["objective", "theory", null]
+        - name: year
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: offset
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: List of questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Question"
+    post:
+      operationId: createQuestion
+      tags: [questions]
+      summary: Create a new question
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuestionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+
+  /questions/{questionId}:
+    get:
+      operationId: getQuestion
+      tags: [questions]
+      summary: Get a question by ID
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Question details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateQuestion
+      tags: [questions]
+      summary: Update a question
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuestionUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+    delete:
+      operationId: deleteQuestion
+      tags: [questions]
+      summary: Delete a question
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /notes:
+    get:
+      operationId: listNotes
+      tags: [notes]
+      summary: List study notes
+      parameters:
+        - name: subjectId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: paper
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: List of notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Note"
+    post:
+      operationId: createNote
+      tags: [notes]
+      summary: Create a study note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+
+  /notes/{noteId}:
+    get:
+      operationId: getNote
+      tags: [notes]
+      summary: Get a note by ID
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Note details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateNote
+      tags: [notes]
+      summary: Update a note
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+    delete:
+      operationId: deleteNote
+      tags: [notes]
+      summary: Delete a note
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /quiz/start:
+    post:
+      operationId: startQuiz
+      tags: [quiz]
+      summary: Start a new quiz session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuizStartInput"
+      responses:
+        "201":
+          description: Quiz session created with questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizSession"
+
+  /quiz/sessions:
+    get:
+      operationId: listQuizSessions
+      tags: [quiz]
+      summary: List recent quiz sessions
+      responses:
+        "200":
+          description: List of quiz sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuizSession"
+
+  /quiz/sessions/{sessionId}:
+    get:
+      operationId: getQuizSession
+      tags: [quiz]
+      summary: Get a quiz session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quiz session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizSession"
+        "404":
+          description: Not found
+
+  /quiz/sessions/{sessionId}/submit:
+    post:
+      operationId: submitQuiz
+      tags: [quiz]
+      summary: Submit a quiz and get score
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuizSubmission"
+      responses:
+        "200":
+          description: Quiz result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizResult"
+
+  /progress:
+    get:
+      operationId: getProgress
+      tags: [progress]
+      summary: Get student progress summary
+      responses:
+        "200":
+          description: Progress data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Progress"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary (question counts, recent scores, subject breakdown)
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent quiz activity
+      responses:
+        "200":
+          description: Recent activity items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +417,378 @@ components:
       required:
         - status
 
+    Subject:
+      type: object
+      required: [id, name, code, description, paperCount]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+        paperCount:
+          type: integer
+        color:
+          type: ["string", "null"]
+
+    Question:
+      type: object
+      required: [id, subjectId, paper, year, questionType, questionText, createdAt]
+      properties:
+        id:
+          type: integer
+        subjectId:
+          type: integer
+        subjectName:
+          type: ["string", "null"]
+        paper:
+          type: string
+          enum: ["001", "002", "003", "004"]
+        year:
+          type: integer
+        questionType:
+          type: string
+          enum: ["objective", "theory"]
+        questionText:
+          type: string
+        options:
+          type: ["array", "null"]
+          items:
+            type: string
+        correctOption:
+          type: ["string", "null"]
+        explanation:
+          type: ["string", "null"]
+        markingGuide:
+          type: ["string", "null"]
+        marks:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+
+    QuestionInput:
+      type: object
+      required: [subjectId, paper, year, questionType, questionText]
+      properties:
+        subjectId:
+          type: integer
+        paper:
+          type: string
+          enum: ["001", "002", "003", "004"]
+        year:
+          type: integer
+        questionType:
+          type: string
+          enum: ["objective", "theory"]
+        questionText:
+          type: string
+        options:
+          type: ["array", "null"]
+          items:
+            type: string
+        correctOption:
+          type: ["string", "null"]
+        explanation:
+          type: ["string", "null"]
+        markingGuide:
+          type: ["string", "null"]
+        marks:
+          type: ["integer", "null"]
+
+    QuestionUpdate:
+      type: object
+      properties:
+        questionText:
+          type: ["string", "null"]
+        options:
+          type: ["array", "null"]
+          items:
+            type: string
+        correctOption:
+          type: ["string", "null"]
+        explanation:
+          type: ["string", "null"]
+        markingGuide:
+          type: ["string", "null"]
+        marks:
+          type: ["integer", "null"]
+
+    Note:
+      type: object
+      required: [id, subjectId, paper, title, content, createdAt]
+      properties:
+        id:
+          type: integer
+        subjectId:
+          type: integer
+        subjectName:
+          type: ["string", "null"]
+        paper:
+          type: string
+          enum: ["001", "002", "003", "004"]
+        title:
+          type: string
+        content:
+          type: string
+        tags:
+          type: ["array", "null"]
+          items:
+            type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    NoteInput:
+      type: object
+      required: [subjectId, paper, title, content]
+      properties:
+        subjectId:
+          type: integer
+        paper:
+          type: string
+          enum: ["001", "002", "003", "004"]
+        title:
+          type: string
+        content:
+          type: string
+        tags:
+          type: ["array", "null"]
+          items:
+            type: string
+
+    NoteUpdate:
+      type: object
+      properties:
+        title:
+          type: ["string", "null"]
+        content:
+          type: ["string", "null"]
+        tags:
+          type: ["array", "null"]
+          items:
+            type: string
+
+    QuizStartInput:
+      type: object
+      required: [subjectId, paper, questionType]
+      properties:
+        subjectId:
+          type: integer
+        paper:
+          type: string
+          enum: ["001", "002", "003", "004", "mock"]
+        questionType:
+          type: string
+          enum: ["objective", "theory", "mixed"]
+        year:
+          type: ["integer", "null"]
+        questionCount:
+          type: ["integer", "null"]
+        timedMinutes:
+          type: ["integer", "null"]
+
+    QuizSession:
+      type: object
+      required: [id, subjectId, paper, questionType, questions, status, createdAt]
+      properties:
+        id:
+          type: integer
+        subjectId:
+          type: integer
+        subjectName:
+          type: ["string", "null"]
+        paper:
+          type: string
+        questionType:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Question"
+        status:
+          type: string
+          enum: ["in_progress", "completed"]
+        score:
+          type: ["integer", "null"]
+        totalMarks:
+          type: ["integer", "null"]
+        timedMinutes:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+        completedAt:
+          type: ["string", "null"]
+
+    QuizSubmission:
+      type: object
+      required: [answers]
+      properties:
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Answer"
+
+    Answer:
+      type: object
+      required: [questionId]
+      properties:
+        questionId:
+          type: integer
+        selectedOption:
+          type: ["string", "null"]
+        theoryAnswer:
+          type: ["string", "null"]
+
+    QuizResult:
+      type: object
+      required: [sessionId, score, totalMarks, percentage, grade, feedback]
+      properties:
+        sessionId:
+          type: integer
+        score:
+          type: integer
+        totalMarks:
+          type: integer
+        percentage:
+          type: number
+        grade:
+          type: string
+        feedback:
+          type: string
+        questionResults:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionResult"
+
+    QuestionResult:
+      type: object
+      required: [questionId, isCorrect, correctAnswer]
+      properties:
+        questionId:
+          type: integer
+        isCorrect:
+          type: boolean
+        selectedOption:
+          type: ["string", "null"]
+        correctAnswer:
+          type: ["string", "null"]
+        explanation:
+          type: ["string", "null"]
+
+    Progress:
+      type: object
+      required: [totalQuizzes, averageScore, subjectProgress, paperProgress]
+      properties:
+        totalQuizzes:
+          type: integer
+        averageScore:
+          type: number
+        subjectProgress:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubjectProgress"
+        paperProgress:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaperProgress"
+        streakDays:
+          type: integer
+        totalQuestionsAnswered:
+          type: integer
+
+    SubjectProgress:
+      type: object
+      required: [subjectId, subjectName, averageScore, quizzesTaken, questionsAnswered]
+      properties:
+        subjectId:
+          type: integer
+        subjectName:
+          type: string
+        averageScore:
+          type: number
+        quizzesTaken:
+          type: integer
+        questionsAnswered:
+          type: integer
+
+    PaperProgress:
+      type: object
+      required: [paper, paperLabel, averageScore, quizzesTaken]
+      properties:
+        paper:
+          type: string
+        paperLabel:
+          type: string
+        averageScore:
+          type: number
+        quizzesTaken:
+          type: integer
+
+    DashboardSummary:
+      type: object
+      required: [totalQuestions, totalNotes, totalQuizzes, averageScore, subjectBreakdown, recentScore]
+      properties:
+        totalQuestions:
+          type: integer
+        totalNotes:
+          type: integer
+        totalQuizzes:
+          type: integer
+        averageScore:
+          type: number
+        recentScore:
+          type: ["number", "null"]
+        subjectBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubjectBreakdown"
+        paperBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaperBreakdown"
+
+    SubjectBreakdown:
+      type: object
+      required: [subjectName, questionCount, noteCount]
+      properties:
+        subjectName:
+          type: string
+        questionCount:
+          type: integer
+        noteCount:
+          type: integer
+        color:
+          type: ["string", "null"]
+
+    PaperBreakdown:
+      type: object
+      required: [paper, paperLabel, questionCount]
+      properties:
+        paper:
+          type: string
+        paperLabel:
+          type: string
+        questionCount:
+          type: integer
+
+    ActivityItem:
+      type: object
+      required: [id, type, description, score, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: ["quiz_completed", "note_added", "question_added"]
+        description:
+          type: string
+        score:
+          type: ["number", "null"]
+        grade:
+          type: ["string", "null"]
+        createdAt:
+          type: string

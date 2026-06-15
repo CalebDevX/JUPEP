@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "JUPEB Law Prep"
+version = "1.0.0"
+id = "artifacts/jupeb-prep"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22717
+
+[services.development]
+run = "pnpm --filter @workspace/jupeb-prep run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/jupeb-prep", "run", "build" ]
+publicDir = "artifacts/jupeb-prep/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22717"
+BASE_PATH = "/"

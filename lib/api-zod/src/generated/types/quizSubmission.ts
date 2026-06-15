@@ -5,7 +5,8 @@
  * JUPEB Law Prep API
  * OpenAPI spec version: 0.1.0
  */
+import type { Answer } from './answer';
 
-export interface HealthStatus {
-  status: string;
+export interface QuizSubmission {
+  answers: Answer[];
 }
