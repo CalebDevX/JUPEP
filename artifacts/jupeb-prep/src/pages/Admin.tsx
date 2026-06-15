@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Shell } from "@/components/layout/Shell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Plus, Trash2, Edit, Upload, Megaphone, Pin, CheckCircle2 } from "lucide-react";
+import { Lock, Plus, Trash2, Edit, Upload, Megaphone, Pin, CheckCircle2, Sparkles, X, ImagePlus, User } from "lucide-react";
 import { useListQuestions, useListSubjects, useCreateQuestion, useDeleteQuestion } from "@workspace/api-client-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
@@ -37,7 +37,7 @@ export default function AdminPanel() {
   const [isAuthenticated, setIsAuthenticated] = useState(localStorage.getItem("admin_auth") === "true");
   const [pin, setPin] = useState("");
   const { toast } = useToast();
-  const [tab, setTab] = useState<"questions" | "manage" | "announcements" | "bulk">("announcements");
+  const [tab, setTab] = useState<"questions" | "manage" | "announcements" | "bulk" | "branding">("announcements");
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,6 +98,7 @@ export default function AdminPanel() {
     { id: "questions",     label: "Add Question" },
     { id: "manage",        label: "Manage Questions" },
     { id: "bulk",          label: "Bulk Upload" },
+    { id: "branding",      label: "🎨 Branding" },
   ] as const;
 
   return (
@@ -156,9 +157,136 @@ export default function AdminPanel() {
               </Section>
             </motion.div>
           )}
+          {tab === "branding" && (
+            <motion.div key="branding" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <BrandingTab />
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
     </Shell>
+  );
+}
+
+function BrandingTab() {
+  const { toast } = useToast();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [botImage, setBotImage] = useState<string | null>(() => localStorage.getItem("jupeb_bot_image"));
+
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "Image too large", description: "Please use an image under 2 MB.", variant: "destructive" });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const b64 = reader.result as string;
+      localStorage.setItem("jupeb_bot_image", b64);
+      setBotImage(b64);
+      toast({ title: "Bot image updated", description: "LexBot will now use this image across the app." });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleClear = () => {
+    localStorage.removeItem("jupeb_bot_image");
+    setBotImage(null);
+    if (fileRef.current) fileRef.current.value = "";
+    toast({ title: "Bot image removed" });
+  };
+
+  return (
+    <div className="space-y-6">
+      <Section title="LexBot Identity Image">
+        <p className="text-xs text-white/40 leading-relaxed -mt-2">
+          Upload a custom image for LexBot — it will appear in the chat header, message bubbles, and AI generate dialogs across the entire app.
+          Recommended: square image, at least 128 × 128 px, under 2 MB.
+        </p>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Upload control */}
+          <div className="space-y-3">
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+            <button
+              onClick={() => fileRef.current?.click()}
+              className={cn(
+                "w-full flex flex-col items-center justify-center gap-3 py-10 rounded-2xl border-2 border-dashed transition-all",
+                botImage
+                  ? "border-violet-500/30 bg-violet-500/5 hover:border-violet-400/50"
+                  : "border-white/10 bg-white/3 hover:border-white/20 hover:bg-white/5"
+              )}
+            >
+              <div className="w-12 h-12 rounded-2xl bg-white/8 flex items-center justify-center">
+                <ImagePlus className="h-5 w-5 text-white/40" />
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-semibold text-white/60">{botImage ? "Replace image" : "Upload bot image"}</p>
+                <p className="text-xs text-white/30 mt-0.5">PNG, JPG, WebP · Max 2 MB</p>
+              </div>
+            </button>
+
+            {botImage && (
+              <button
+                onClick={handleClear}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm text-red-400/70 hover:text-red-400 hover:bg-red-500/8 border border-red-500/15 hover:border-red-500/30 transition-all"
+              >
+                <X className="h-3.5 w-3.5" />
+                Remove image
+              </button>
+            )}
+          </div>
+
+          {/* Preview */}
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-white/40 uppercase tracking-wider">Preview</p>
+            <div className="glass-card p-4 space-y-4">
+              {/* Chat header preview */}
+              <div className="flex items-center gap-3 pb-3 border-b border-white/8">
+                <div className="w-10 h-10 rounded-2xl overflow-hidden flex items-center justify-center bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/20 flex-shrink-0">
+                  {botImage
+                    ? <img src={botImage} alt="LexBot" className="w-full h-full object-cover" />
+                    : <Sparkles className="h-5 w-5 text-white" />
+                  }
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white">LexBot</p>
+                  <p className="text-[10px] text-white/35">JUPEB Study Assistant · Online</p>
+                </div>
+              </div>
+              {/* Message bubble preview */}
+              <div className="flex gap-2.5 items-start">
+                <div className="w-8 h-8 rounded-2xl overflow-hidden flex items-center justify-center bg-gradient-to-br from-amber-400 to-orange-500 flex-shrink-0">
+                  {botImage
+                    ? <img src={botImage} alt="LexBot" className="w-full h-full object-cover" />
+                    : <Sparkles className="h-3.5 w-3.5 text-white" />
+                  }
+                </div>
+                <div className="bg-white/[0.06] border border-white/[0.08] rounded-2xl rounded-tl-sm px-3 py-2">
+                  <p className="text-xs text-white/70">Hey! I'm LexBot, your JUPEB study assistant 🎓</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      <Section title="User Appearance">
+        <div className="flex items-start gap-4 py-2">
+          <div className="w-10 h-10 rounded-2xl bg-violet-500/15 flex items-center justify-center flex-shrink-0 border border-violet-500/20">
+            <User className="h-5 w-5 text-violet-400" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white/80">User Profile Pictures</p>
+            <p className="text-xs text-white/40 mt-1 leading-relaxed">
+              Students manage their own profile picture from the <span className="text-violet-400">Settings</span> page.
+              Profile photos appear in the sidebar, chat bubbles, and community posts automatically.
+            </p>
+          </div>
+        </div>
+      </Section>
+    </div>
   );
 }
 

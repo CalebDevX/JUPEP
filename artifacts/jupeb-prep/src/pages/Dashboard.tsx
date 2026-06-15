@@ -157,6 +157,8 @@ export default function Dashboard() {
 
   const level = getLevel(gState.xp);
   const xpNext = getXPToNextLevel(gState.xp);
+  const displayName = localStorage.getItem("jupeb_display_name") || localStorage.getItem("user_display_name") || "Scholar";
+  const firstName = displayName.split(" ")[0];
 
   const stats = [
     { icon: Trophy,       label: "Avg Score",     value: `${(summary?.averageScore ?? 0).toFixed(0)}%`,  color: "bg-amber-500/12 text-amber-400"   },
@@ -167,25 +169,36 @@ export default function Dashboard() {
 
   return (
     <Shell>
-      <div className="p-4 md:p-6 max-w-5xl mx-auto w-full space-y-5">
+      <div className="p-5 md:p-8 max-w-5xl mx-auto w-full space-y-6">
 
-        {/* ── Greeting ── */}
+        {/* ── Editorial Hero ── */}
         <motion.div
-          initial={{ opacity: 0, y: -8 }}
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between gap-3"
+          className="pb-6 border-b border-white/[0.07]"
         >
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold text-white">
-              Good {getTimeOfDay()} 👋
-            </h1>
-            <p className="text-white/45 text-xs md:text-sm mt-0.5">
-              Keep pushing — your 16 points are within reach.
-            </p>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/20 flex-shrink-0">
-            <Target className="h-3.5 w-3.5 text-amber-400" />
-            <span className="text-xs font-semibold text-amber-400 whitespace-nowrap">16 Points</span>
+          <p className="ed-label mb-3 flex items-center gap-2">
+            <span>{format(new Date(), "EEEE, MMMM d")}</span>
+            <span className="opacity-40">·</span>
+            <span>JUPEB Law Prep</span>
+          </p>
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h1 className="ed-display text-[2.6rem] md:text-[3.5rem] text-white">
+                Good {getTimeOfDay()},
+                <br />
+                <span className="italic text-amber-200/85">{firstName}.</span>
+              </h1>
+              <p className="text-white/35 text-sm font-light mt-3 leading-relaxed max-w-md">
+                Every question you practise brings you closer to{" "}
+                <span className="text-amber-400/75 font-normal">16 points</span> and UNILAG Law.
+              </p>
+            </div>
+            <div className="hidden md:flex flex-col items-end gap-0.5 flex-shrink-0 pb-1">
+              <span className="ed-label">Target</span>
+              <span className="ed-stat text-3xl text-amber-400/60 mt-1.5">AAA+1</span>
+              <span className="text-[10px] text-amber-400/35 mt-0.5 tracking-wide">16 Points</span>
+            </div>
           </div>
         </motion.div>
 
@@ -294,8 +307,8 @@ export default function Dashboard() {
                   <s.icon className="h-4 w-4" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-lg font-bold text-white leading-tight">{s.value}</p>
-                  <p className="text-[11px] text-white/45 leading-tight truncate">{s.label}</p>
+                  <p className="ed-stat text-[1.6rem] text-white">{s.value}</p>
+                  <p className="ed-label mt-0.5 truncate">{s.label}</p>
                 </div>
               </motion.div>
             ))}
@@ -304,7 +317,7 @@ export default function Dashboard() {
 
         {/* ── Paper tracker ── */}
         <div className="glass-card p-4">
-          <p className="text-[11px] font-semibold text-white/45 uppercase tracking-wider mb-3">Exam Papers</p>
+          <p className="ed-label mb-3">Exam Papers</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
             {PAPERS.map((paper, i) => {
               const paperData = summary?.paperBreakdown?.find(p => p.paper === paper.code);
@@ -420,7 +433,7 @@ export default function Dashboard() {
 
           {/* Quick actions */}
           <div className="md:col-span-1 space-y-2.5">
-            <p className="text-[11px] font-semibold text-white/45 uppercase tracking-wider">Quick Actions</p>
+            <p className="ed-label">Quick Actions</p>
 
             <Link href="/quiz">
               <motion.div
@@ -496,7 +509,7 @@ export default function Dashboard() {
 
             {/* Subject breakdown */}
             <div className="glass-card p-4">
-              <p className="text-[11px] font-semibold text-white/45 uppercase tracking-wider mb-3">Subjects</p>
+              <p className="ed-label mb-3">Subjects</p>
               {loadingSummary ? (
                 <div className="space-y-3">
                   {[1,2,3].map(i => <Skeleton key={i} className="h-10 bg-white/5 rounded-xl" />)}
@@ -544,8 +557,8 @@ export default function Dashboard() {
             {/* Recent activity */}
             <div className="glass-card p-4">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[11px] font-semibold text-white/45 uppercase tracking-wider flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" /> Recent Activity
+                <p className="ed-label flex items-center gap-1.5">
+                  <Clock className="h-3 w-3" /> Recent Activity
                 </p>
                 {Array.isArray(recentActivity) && recentActivity.length > 0 && (
                   <Link href="/progress">

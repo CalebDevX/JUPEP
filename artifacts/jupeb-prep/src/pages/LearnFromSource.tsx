@@ -312,7 +312,7 @@ export default function LearnFromSource() {
                   <Wand2 className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl md:text-2xl font-bold text-white leading-tight">AI Learn</h1>
+                  <h1 className="text-xl md:text-2xl font-serif font-light text-white leading-tight">AI Learn</h1>
                   <p className="text-[11px] text-white/35 leading-none mt-0.5">JUPEB study notes from any source</p>
                 </div>
               </div>

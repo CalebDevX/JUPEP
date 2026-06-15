@@ -77,7 +77,7 @@ router.post("/ai/chat", async (req, res) => {
     });
 
     for await (const chunk of stream) {
-      const text = chunk.text();
+      const text = chunk.text;
       if (text) {
         res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
       }
@@ -140,7 +140,7 @@ Make these notes so comprehensive that a student reading them would be fully pre
       contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
 
-    const content = response.text();
+    const content = response.text;
     if (!content) throw new Error("AI returned empty content");
 
     const [note] = await db.insert(notesTable).values({
@@ -192,7 +192,7 @@ Keep it clear and educational.`;
       contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
 
-    res.json({ explanation: response.text() });
+    res.json({ explanation: response.text });
   } catch (err: any) {
     console.error("Explain question error:", err);
     res.status(500).json({ error: err?.message || "Failed to explain question" });
@@ -274,7 +274,7 @@ Generate the notes now:`;
       contents: [{ role: "user", parts }],
     });
 
-    const generatedContent = response.text();
+    const generatedContent = response.text;
     if (!generatedContent) throw new Error("AI returned empty content");
 
     res.json({ title: noteTitle, content: generatedContent, type });
@@ -359,7 +359,7 @@ ${content.substring(0, 6000)}`;
       contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
 
-    const raw = response.text() || "";
+    const raw = response.text || "";
     const jsonMatch = raw.match(/\[[\s\S]*\]/);
     if (!jsonMatch) return res.status(500).json({ error: "Could not parse quiz response" });
 

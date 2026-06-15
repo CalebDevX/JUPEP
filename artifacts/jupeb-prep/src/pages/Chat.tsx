@@ -204,16 +204,8 @@ function MessageBubble({
       transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
       className={cn("flex gap-3 group", isUser ? "flex-row-reverse" : "flex-row")}
     >
-      <div className={cn(
-        "w-8 h-8 rounded-2xl flex items-center justify-center flex-shrink-0 mt-0.5 shadow-lg",
-        isUser
-          ? "bg-gradient-to-br from-violet-500 to-indigo-600"
-          : "bg-gradient-to-br from-amber-400 to-orange-500 shadow-amber-500/20"
-      )}>
-        {isUser
-          ? <span className="text-[10px] font-bold text-white tracking-wide">YOU</span>
-          : <Sparkles className="h-3.5 w-3.5 text-white" />
-        }
+      <div className="mt-0.5">
+        {isUser ? <UserBubbleAvatar /> : <BotAvatar size="md" />}
       </div>
 
       <div className={cn("flex flex-col gap-1.5 max-w-[80%]", isUser && "items-end")}>
@@ -259,6 +251,38 @@ function MessageBubble({
         </div>
       </div>
     </motion.div>
+  );
+}
+
+function BotAvatar({ size = "md", className }: { size?: "sm" | "md" | "lg"; className?: string }) {
+  const botImage = localStorage.getItem("jupeb_bot_image");
+  const sz = size === "sm" ? "w-7 h-7" : size === "lg" ? "w-[88px] h-[88px]" : "w-8 h-8";
+  const iconSz = size === "lg" ? "h-10 w-10" : size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5";
+  const rounded = size === "lg" ? "rounded-3xl" : "rounded-2xl";
+  if (botImage) {
+    return <img src={botImage} alt="LexBot" className={cn(sz, rounded, "object-cover flex-shrink-0", className)} />;
+  }
+  return (
+    <div className={cn(
+      sz, rounded, "bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/20",
+      className
+    )}>
+      <Sparkles className={cn(iconSz, "text-white")} />
+    </div>
+  );
+}
+
+function UserBubbleAvatar() {
+  const pic = localStorage.getItem("jupeb_profile_picture");
+  const name = localStorage.getItem("jupeb_display_name") || localStorage.getItem("user_display_name") || "You";
+  const initial = name.trim().charAt(0).toUpperCase() || "Y";
+  if (pic) {
+    return <img src={pic} alt="You" className="w-8 h-8 rounded-2xl object-cover flex-shrink-0" />;
+  }
+  return (
+    <div className="w-8 h-8 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+      <span className="text-[10px] font-bold text-white">{initial}</span>
+    </div>
   );
 }
 
@@ -398,9 +422,7 @@ export default function Chat() {
         <div className="flex items-center justify-between px-5 md:px-6 py-3 border-b border-white/[0.06] bg-[#0f0f14]/90 backdrop-blur-xl flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
-                <Sparkles className="h-4.5 w-4.5 text-white" />
-              </div>
+              <BotAvatar size="md" className="w-10 h-10" />
               <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#0f0f14]" />
             </div>
             <div>
@@ -457,9 +479,7 @@ export default function Chat() {
                   transition={{ repeat: Infinity, duration: 3.8, ease: "easeInOut" }}
                   className="relative mb-7"
                 >
-                  <div className="w-[88px] h-[88px] rounded-3xl bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 flex items-center justify-center shadow-2xl shadow-amber-500/25">
-                    <Sparkles className="h-10 w-10 text-white" />
-                  </div>
+                  <BotAvatar size="lg" />
                   <motion.div
                     animate={{ scale: [1, 1.18, 1], opacity: [0.35, 0.1, 0.35] }}
                     transition={{ repeat: Infinity, duration: 2.8, ease: "easeInOut" }}
@@ -541,9 +561,7 @@ export default function Chat() {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex gap-3"
                   >
-                    <div className="w-8 h-8 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/20">
-                      <Sparkles className="h-3.5 w-3.5 text-white" />
-                    </div>
+                    <BotAvatar size="md" />
                     <div className="bg-white/[0.06] border border-white/[0.08] rounded-2xl rounded-tl-sm">
                       <TypingIndicator />
                     </div>

@@ -47,8 +47,22 @@ function useProfile() {
   const displayName = localStorage.getItem("jupeb_display_name") || localStorage.getItem("user_display_name") || "Scholar";
   const initial = displayName.trim().charAt(0).toUpperCase() || "S";
   const profilePic = localStorage.getItem("jupeb_profile_picture");
+  const botImage = localStorage.getItem("jupeb_bot_image");
   const gState = getGamificationState();
-  return { displayName, initial, profilePic, streak: gState.streak, xp: gState.xp };
+  return { displayName, initial, profilePic, botImage, streak: gState.streak, xp: gState.xp };
+}
+
+function UserAvatar({ pic, initial, size = "md" }: { pic?: string | null; initial: string; size?: "sm" | "md" | "lg" }) {
+  const sz = size === "sm" ? "w-7 h-7" : size === "lg" ? "w-10 h-10" : "w-8 h-8";
+  const textSz = size === "sm" ? "text-[10px]" : "text-xs";
+  if (pic) {
+    return <img src={pic} alt="Profile" className={`${sz} rounded-lg object-cover flex-shrink-0`} />;
+  }
+  return (
+    <div className={`${sz} rounded-lg bg-gradient-to-br from-violet-500/70 to-indigo-600/70 flex items-center justify-center flex-shrink-0`}>
+      <span className={`${textSz} font-bold text-white`}>{initial}</span>
+    </div>
+  );
 }
 
 function ProfileDropdown({
@@ -60,7 +74,7 @@ function ProfileDropdown({
   onNavigate: (href: string) => void;
   showSignOut?: boolean;
 }) {
-  const { displayName, initial } = useProfile();
+  const { displayName, initial, profilePic } = useProfile();
   const [, navigate] = useLocation();
 
   const handleLogout = () => {
@@ -81,9 +95,7 @@ function ProfileDropdown({
       className="absolute bottom-full left-0 right-0 mb-2 mx-3 rounded-2xl bg-[#1e1e2a] border border-white/10 shadow-2xl overflow-hidden z-50"
     >
       <div className="px-4 py-3 border-b border-white/8 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-          <span className="text-sm font-bold text-white">{initial}</span>
-        </div>
+        <UserAvatar pic={profilePic} initial={initial} size="md" />
         <div className="min-w-0">
           <p className="text-sm font-semibold text-white truncate">{displayName}</p>
           <p className="text-[10px] text-white/40">JUPEB Prep Student</p>
@@ -207,8 +219,8 @@ export function Shell({ children }: ShellProps) {
             <img src="/logo.png" alt="JUPEB Prep" className="w-9 h-9 object-cover" />
           </div>
           <div>
-            <h1 className="font-bold text-sm text-white leading-tight">JUPEB Prep</h1>
-            <p className="text-[10px] text-white/50 leading-tight">UNILAG Foundation Studies</p>
+            <h1 className="font-serif font-light text-[15px] text-white leading-none tracking-tight">JUPEB Prep</h1>
+            <p className="text-[9px] text-white/35 leading-tight tracking-[0.12em] uppercase mt-0.5">Foundation Studies</p>
           </div>
         </div>
         {isMobile && (
@@ -278,9 +290,7 @@ export function Shell({ children }: ShellProps) {
               profileOpen ? "bg-white/10" : "hover:bg-white/5"
             )}
           >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/70 to-indigo-600/70 flex items-center justify-center flex-shrink-0">
-              <span className="text-xs font-bold text-white">{initial}</span>
-            </div>
+            <UserAvatar pic={profilePic} initial={initial} size="md" />
             <div className="flex-1 min-w-0 text-left">
               <p className="text-xs font-semibold text-white/80 truncate">{displayName}</p>
               <p className="text-[10px] text-white/40">Student</p>
@@ -356,9 +366,7 @@ export function Shell({ children }: ShellProps) {
               onClick={() => setMobileProfileOpen(v => !v)}
               className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5"
             >
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-                <span className="text-xs font-bold text-white">{initial}</span>
-              </div>
+              <UserAvatar pic={profilePic} initial={initial} size="sm" />
             </button>
             <AnimatePresence>
               {mobileProfileOpen && (
@@ -370,9 +378,7 @@ export function Shell({ children }: ShellProps) {
                   className="absolute top-full right-0 mt-2 w-52 rounded-2xl bg-[#1e1e2a] border border-white/10 shadow-2xl overflow-hidden z-50"
                 >
                   <div className="px-4 py-3 border-b border-white/8 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm font-bold text-white">{initial}</span>
-                    </div>
+                    <UserAvatar pic={profilePic} initial={initial} size="md" />
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-white truncate">{displayName}</p>
                       <p className="text-[10px] text-white/40">JUPEB Student</p>
