@@ -16,6 +16,7 @@ import Chat from "@/pages/Chat";
 import Syllabus from "@/pages/Syllabus";
 import LearnFromSource from "@/pages/LearnFromSource";
 import Community from "@/pages/Community";
+import Settings from "@/pages/Settings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/learn" component={LearnFromSource} />
       <Route path="/community" component={Community} />
       <Route path="/admin" component={AdminPanel} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -4,3 +4,4 @@ export * from "./notes";
 export * from "./quiz_sessions";
 export * from "./communities";
 export * from "./announcements";
+export * from "./access_codes";
