@@ -1,0 +1,2 @@
+- [JUPEB App Stack](jupeb-app-stack.md) — full-stack JUPEB Law Prep app: React+Vite frontend at `/`, Express API at port 8080, PostgreSQL DB
+- [AI Chatbot Setup](jupeb-ai-chatbot.md) — Gemini via direct GEMINI_API_KEY (Replit managed integration declined); routes at /api/ai/chat, /api/ai/generate-notes, /api/ai/explain-question

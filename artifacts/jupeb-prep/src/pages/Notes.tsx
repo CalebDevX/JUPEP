@@ -5,108 +5,349 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, GraduationCap, SearchX } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { BookOpen, GraduationCap, Sparkles, Plus, FileText, Loader2, Search } from "lucide-react";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
+
+const paperLabels: Record<string, string> = {
+  "001": "1st Incourse",
+  "002": "1st Semester",
+  "003": "2nd Incourse",
+  "004": "Mock Exam",
+};
+
+const subjectColors: Record<string, string> = {
+  "Literature-in-English": "bg-violet-500/15 text-violet-300 border-violet-500/20",
+  "Government": "bg-blue-500/15 text-blue-300 border-blue-500/20",
+  "CRS": "bg-emerald-500/15 text-emerald-300 border-emerald-500/20",
+};
 
 export default function Notes() {
   const [subjectId, setSubjectId] = useState<string>("all");
   const [paper, setPaper] = useState<string>("all");
+  const [search, setSearch] = useState("");
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [genOpen, setGenOpen] = useState(false);
+  const [genForm, setGenForm] = useState({ subjectId: "", paper: "001", topic: "", syllabus: "" });
+  const [genError, setGenError] = useState("");
 
   const { data: subjects } = useListSubjects();
-  
-  const queryParams = useMemo(() => {
-    return {
-      ...(subjectId !== "all" ? { subjectId: Number(subjectId) } : {}),
-      ...(paper !== "all" ? { paper } : {})
-    };
-  }, [subjectId, paper]);
+  const queryClient = useQueryClient();
+  const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  const queryParams = useMemo(() => ({
+    ...(subjectId !== "all" ? { subjectId: Number(subjectId) } : {}),
+    ...(paper !== "all" ? { paper } : {}),
+  }), [subjectId, paper]);
 
   const { data: notes, isLoading } = useListNotes(queryParams);
 
+  const filteredNotes = useMemo(() => {
+    if (!search.trim()) return notes;
+    const q = search.toLowerCase();
+    return notes?.filter(n =>
+      n.title.toLowerCase().includes(q) ||
+      n.content.toLowerCase().includes(q) ||
+      n.subjectName?.toLowerCase().includes(q)
+    );
+  }, [notes, search]);
+
+  const handleGenerate = async () => {
+    if (!genForm.subjectId || !genForm.topic.trim()) {
+      setGenError("Please select a subject and enter a topic.");
+      return;
+    }
+    setGenError("");
+    setGenerating(true);
+    try {
+      const res = await fetch(`${BASE}/api/ai/generate-notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subjectId: parseInt(genForm.subjectId),
+          paper: genForm.paper,
+          topic: genForm.topic,
+          syllabus: genForm.syllabus || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to generate notes");
+      }
+      const newNote = await res.json();
+      queryClient.invalidateQueries({ queryKey: ["listNotes"] });
+      setGenOpen(false);
+      setGenForm({ subjectId: "", paper: "001", topic: "", syllabus: "" });
+      setExpandedId(newNote.id);
+    } catch (err: any) {
+      setGenError(err.message || "Generation failed. Please try again.");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
     <Shell>
-      <div className="p-8 max-w-5xl mx-auto w-full space-y-6">
+      <div className="p-6 max-w-5xl mx-auto w-full space-y-6">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-serif font-bold text-foreground flex items-center gap-3">
-              <GraduationCap className="h-8 w-8 text-primary" />
+            <h1 className="text-2xl md:text-3xl font-bold font-serif text-white flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-pink-500/15 flex items-center justify-center">
+                <GraduationCap className="h-5 w-5 text-pink-400" />
+              </div>
               Study Notes
             </h1>
-            <p className="text-muted-foreground mt-1">Scholarly definitions and summaries for key topics.</p>
+            <p className="text-white/40 text-sm mt-1 ml-13">Academic notes & AI-generated lecture content</p>
           </div>
-          
-          <div className="flex flex-wrap gap-3">
-            <Select value={subjectId} onValueChange={setSubjectId}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="All Subjects" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Subjects</SelectItem>
-                {subjects?.map(s => (
-                  <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
 
-            <Select value={paper} onValueChange={setPaper}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="All Papers" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Papers</SelectItem>
-                <SelectItem value="001">1st Incourse</SelectItem>
-                <SelectItem value="002">1st Semester</SelectItem>
-                <SelectItem value="003">2nd Incourse</SelectItem>
-                <SelectItem value="004">Mock Exam</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Dialog open={genOpen} onOpenChange={setGenOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-violet-600 hover:bg-violet-500 text-white gap-2 rounded-xl">
+                <Sparkles className="h-4 w-4" />
+                Generate with AI
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-[#18181f] border-white/10 text-white max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 font-serif text-xl">
+                  <Sparkles className="h-5 w-5 text-amber-400" />
+                  AI Note Generator
+                </DialogTitle>
+                <p className="text-sm text-white/50 mt-1">
+                  Describe a topic and LexBot will generate comprehensive academic lecture notes instantly.
+                </p>
+              </DialogHeader>
+              <div className="space-y-4 mt-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-white/60">Subject *</Label>
+                    <Select value={genForm.subjectId} onValueChange={v => setGenForm(f => ({ ...f, subjectId: v }))}>
+                      <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                        <SelectValue placeholder="Select subject" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#1e1e28] border-white/10">
+                        {subjects?.map(s => (
+                          <SelectItem key={s.id} value={s.id.toString()} className="text-white">
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-white/60">Paper</Label>
+                    <Select value={genForm.paper} onValueChange={v => setGenForm(f => ({ ...f, paper: v }))}>
+                      <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#1e1e28] border-white/10">
+                        <SelectItem value="001" className="text-white">1st Incourse</SelectItem>
+                        <SelectItem value="002" className="text-white">1st Semester</SelectItem>
+                        <SelectItem value="003" className="text-white">2nd Incourse</SelectItem>
+                        <SelectItem value="004" className="text-white">Mock Exam</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-white/60">Topic / Title *</Label>
+                  <Input
+                    placeholder="e.g. Dramatic irony in Things Fall Apart"
+                    value={genForm.topic}
+                    onChange={e => setGenForm(f => ({ ...f, topic: e.target.value }))}
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-white/60">Syllabus / Outline (optional)</Label>
+                  <Textarea
+                    placeholder="Paste your syllabus, key points, or chapter outline here for more targeted notes…"
+                    value={genForm.syllabus}
+                    onChange={e => setGenForm(f => ({ ...f, syllabus: e.target.value }))}
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/30 min-h-[80px] resize-none"
+                  />
+                </div>
+                {genError && (
+                  <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+                    {genError}
+                  </p>
+                )}
+                <Button
+                  onClick={handleGenerate}
+                  disabled={generating}
+                  className="w-full bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-xl h-11"
+                >
+                  {generating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Generating comprehensive notes…
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Generate Academic Notes
+                    </>
+                  )}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        <div className="grid gap-6">
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+            <Input
+              placeholder="Search notes…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-white/30 h-9"
+            />
+          </div>
+          <Select value={subjectId} onValueChange={setSubjectId}>
+            <SelectTrigger className="w-[170px] bg-white/5 border-white/10 text-white h-9">
+              <SelectValue placeholder="All Subjects" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#1e1e28] border-white/10">
+              <SelectItem value="all" className="text-white">All Subjects</SelectItem>
+              {subjects?.map(s => (
+                <SelectItem key={s.id} value={s.id.toString()} className="text-white">{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={paper} onValueChange={setPaper}>
+            <SelectTrigger className="w-[140px] bg-white/5 border-white/10 text-white h-9">
+              <SelectValue placeholder="All Papers" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#1e1e28] border-white/10">
+              <SelectItem value="all" className="text-white">All Papers</SelectItem>
+              <SelectItem value="001" className="text-white">1st Incourse</SelectItem>
+              <SelectItem value="002" className="text-white">1st Semester</SelectItem>
+              <SelectItem value="003" className="text-white">2nd Incourse</SelectItem>
+              <SelectItem value="004" className="text-white">Mock Exam</SelectItem>
+            </SelectContent>
+          </Select>
+          {filteredNotes && (
+            <span className="text-xs text-white/30">{filteredNotes.length} note{filteredNotes.length !== 1 ? "s" : ""}</span>
+          )}
+        </div>
+
+        {/* Notes grid */}
+        <div className="space-y-4">
           {isLoading ? (
-            Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 w-full" />)
-          ) : notes?.length === 0 ? (
-            <Card className="bg-muted/50 border-dashed">
-              <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-                <BookOpen className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
-                <h3 className="text-lg font-serif font-bold text-foreground">No notes available</h3>
-                <p className="text-muted-foreground mt-2 max-w-sm">
-                  We couldn't find any study notes matching your filters.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            notes?.map((note) => (
-              <Card key={note.id} className="overflow-hidden">
-                <CardHeader className="bg-muted/10 border-b">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <CardTitle className="text-xl font-serif leading-tight">{note.title}</CardTitle>
-                      <CardDescription className="flex items-center gap-2 text-xs">
-                        <span className="font-medium text-primary">{note.subjectName}</span>
-                        <span>•</span>
-                        <span>Paper {note.paper}</span>
-                      </CardDescription>
-                    </div>
-                    {note.tags && note.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 justify-end max-w-[200px]">
-                        {note.tags.map(tag => (
-                          <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                  {/* Basic markdown rendering via prose classes */}
-                  <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-serif prose-headings:text-primary whitespace-pre-wrap">
-                    {note.content}
-                  </div>
-                </CardContent>
-              </Card>
+            Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-40 bg-white/5 rounded-2xl" />
             ))
+          ) : !filteredNotes?.length ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="glass-card p-12 text-center"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
+                <FileText className="h-7 w-7 text-white/30" />
+              </div>
+              <h3 className="text-lg font-serif font-bold text-white mb-2">No notes found</h3>
+              <p className="text-white/40 text-sm mb-6">
+                {search ? "No notes match your search." : "Generate your first AI-powered academic notes!"}
+              </p>
+              <Button
+                onClick={() => setGenOpen(true)}
+                className="bg-violet-600 hover:bg-violet-500 text-white gap-2 rounded-xl"
+              >
+                <Sparkles className="h-4 w-4" /> Generate with AI
+              </Button>
+            </motion.div>
+          ) : (
+            filteredNotes?.map((note, i) => {
+              const isExpanded = expandedId === note.id;
+              const colorClass = subjectColors[note.subjectName || ""] || "bg-violet-500/15 text-violet-300 border-violet-500/20";
+              const isAI = note.tags?.includes("ai-generated");
+              return (
+                <motion.div
+                  key={note.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="glass-card overflow-hidden"
+                >
+                  <button
+                    className="w-full text-left p-5 flex items-start justify-between gap-4 hover:bg-white/3 transition-colors"
+                    onClick={() => setExpandedId(isExpanded ? null : note.id)}
+                  >
+                    <div className="flex items-start gap-4 flex-1 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center flex-shrink-0">
+                        {isAI ? <Sparkles className="h-4 w-4 text-pink-400" /> : <BookOpen className="h-4 w-4 text-pink-400" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <h3 className="text-base font-semibold text-white font-serif">{note.title}</h3>
+                          {isAI && (
+                            <Badge className="text-[9px] bg-amber-500/10 text-amber-400 border-amber-500/20 px-1.5 py-0">
+                              AI Generated
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge className={cn("text-[10px] border px-2 py-0", colorClass)}>
+                            {note.subjectName}
+                          </Badge>
+                          <Badge variant="secondary" className="text-[10px] bg-white/5 text-white/40 border-0 px-2 py-0">
+                            Paper {note.paper} — {paperLabels[note.paper]}
+                          </Badge>
+                          {note.tags?.filter(t => t !== "ai-generated").map(tag => (
+                            <Badge key={tag} variant="secondary" className="text-[10px] bg-white/5 text-white/30 border-0 px-1.5 py-0">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className={cn(
+                      "text-white/30 flex-shrink-0 mt-1 transition-transform",
+                      isExpanded && "rotate-180"
+                    )}>
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </button>
+
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="border-t border-white/5 px-5 pb-6 pt-4"
+                    >
+                      <div
+                        className="prose prose-sm prose-invert max-w-none
+                          prose-headings:font-serif prose-headings:text-violet-300 prose-headings:border-b prose-headings:border-white/5 prose-headings:pb-1
+                          prose-h2:text-lg prose-h3:text-base prose-h4:text-sm
+                          prose-p:text-white/75 prose-p:leading-relaxed
+                          prose-strong:text-white prose-strong:font-semibold
+                          prose-ul:text-white/75 prose-ol:text-white/75 prose-li:my-0.5
+                          prose-blockquote:border-violet-500 prose-blockquote:text-white/60 prose-blockquote:bg-violet-500/5 prose-blockquote:rounded-r-xl prose-blockquote:py-1
+                          prose-code:text-amber-300 prose-code:bg-white/10 prose-code:px-1.5 prose-code:rounded
+                          prose-em:text-white/60
+                          whitespace-pre-wrap"
+                      >
+                        {note.content}
+                      </div>
+                    </motion.div>
+                  )}
+                </motion.div>
+              );
+            })
           )}
         </div>
       </div>

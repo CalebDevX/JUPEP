@@ -12,6 +12,7 @@ import QuizResult from "@/pages/QuizResult";
 import Notes from "@/pages/Notes";
 import ProgressPage from "@/pages/Progress";
 import AdminPanel from "@/pages/Admin";
+import Chat from "@/pages/Chat";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/quiz/result/:id" component={QuizResult} />
       <Route path="/notes" component={Notes} />
       <Route path="/progress" component={ProgressPage} />
+      <Route path="/chat" component={Chat} />
       <Route path="/admin" component={AdminPanel} />
       <Route component={NotFound} />
     </Switch>

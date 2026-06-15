@@ -1,184 +1,274 @@
 import { useState, useMemo } from "react";
 import { useListQuestions, useListSubjects, ListQuestionsPaper, ListQuestionsQuestionType } from "@workspace/api-client-react";
 import { Shell } from "@/components/layout/Shell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, FileText, SearchX } from "lucide-react";
-import { Link } from "wouter";
+import { ChevronLeft, ChevronRight, BookOpen, SearchX, CheckCircle, Lightbulb, FileText } from "lucide-react";
+import { useSearchParams } from "wouter";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 const PAPER_LABELS: Record<string, string> = {
   "001": "1st Incourse",
-  "002": "1st Semester Exam",
+  "002": "1st Semester",
   "003": "2nd Incourse",
   "004": "Mock Exam",
 };
 
+const SUBJECT_COLORS: Record<string, string> = {
+  "Literature-in-English": "bg-violet-500/15 text-violet-300 border-violet-500/25",
+  "Government": "bg-blue-500/15 text-blue-300 border-blue-500/25",
+  "Christian Religious Studies": "bg-emerald-500/15 text-emerald-300 border-emerald-500/25",
+};
+
 export default function Questions() {
-  const [subjectId, setSubjectId] = useState<string>("all");
-  const [paper, setPaper] = useState<string>("all");
+  const [searchParams] = useSearchParams();
+  const [subjectId, setSubjectId] = useState<string>(searchParams.get("subjectId") || "all");
+  const [paper, setPaper] = useState<string>(searchParams.get("paper") || "all");
   const [type, setType] = useState<string>("all");
   const [page, setPage] = useState(1);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const limit = 10;
 
   const { data: subjects } = useListSubjects();
-  
-  const queryParams = useMemo(() => {
-    return {
-      ...(subjectId !== "all" ? { subjectId: Number(subjectId) } : {}),
-      ...(paper !== "all" ? { paper: paper as ListQuestionsPaper } : {}),
-      ...(type !== "all" ? { questionType: type as ListQuestionsQuestionType } : {}),
-      limit,
-      offset: (page - 1) * limit
-    };
-  }, [subjectId, paper, type, page]);
+
+  const queryParams = useMemo(() => ({
+    ...(subjectId !== "all" ? { subjectId: Number(subjectId) } : {}),
+    ...(paper !== "all" ? { paper: paper as ListQuestionsPaper } : {}),
+    ...(type !== "all" ? { questionType: type as ListQuestionsQuestionType } : {}),
+    limit,
+    offset: (page - 1) * limit,
+  }), [subjectId, paper, type, page]);
 
   const { data: questions, isLoading } = useListQuestions(queryParams);
 
   return (
     <Shell>
-      <div className="p-8 max-w-6xl mx-auto w-full space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      <div className="p-6 max-w-5xl mx-auto w-full space-y-6">
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row sm:items-end justify-between gap-4"
+        >
           <div>
-            <h1 className="text-3xl font-serif font-bold text-foreground">Questions Bank</h1>
-            <p className="text-muted-foreground mt-1">Browse and review past examination questions.</p>
+            <h1 className="text-2xl md:text-3xl font-bold font-serif text-white flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center">
+                <BookOpen className="h-5 w-5 text-emerald-400" />
+              </div>
+              Question Bank
+            </h1>
+            <p className="text-white/40 text-sm mt-1">Browse and study real JUPEB past exam questions.</p>
           </div>
-          
-          <div className="flex flex-wrap gap-3">
-            <Select value={subjectId} onValueChange={(v) => { setSubjectId(v); setPage(1); }}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="All Subjects" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Subjects</SelectItem>
-                {subjects?.map(s => (
-                  <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        </motion.div>
 
-            <Select value={paper} onValueChange={(v) => { setPaper(v); setPage(1); }}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="All Papers" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Papers</SelectItem>
-                <SelectItem value="001">1st Incourse</SelectItem>
-                <SelectItem value="002">1st Semester</SelectItem>
-                <SelectItem value="003">2nd Incourse</SelectItem>
-                <SelectItem value="004">Mock Exam</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3">
+          <Select value={subjectId} onValueChange={v => { setSubjectId(v); setPage(1); }}>
+            <SelectTrigger className="w-[165px] bg-white/5 border-white/10 text-white h-9 text-sm">
+              <SelectValue placeholder="All Subjects" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#1e1e28] border-white/10">
+              <SelectItem value="all" className="text-white">All Subjects</SelectItem>
+              {subjects?.map(s => (
+                <SelectItem key={s.id} value={s.id.toString()} className="text-white">{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-            <Select value={type} onValueChange={(v) => { setType(v); setPage(1); }}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="objective">Objective</SelectItem>
-                <SelectItem value="theory">Theory</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Select value={paper} onValueChange={v => { setPaper(v); setPage(1); }}>
+            <SelectTrigger className="w-[145px] bg-white/5 border-white/10 text-white h-9 text-sm">
+              <SelectValue placeholder="All Papers" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#1e1e28] border-white/10">
+              <SelectItem value="all" className="text-white">All Papers</SelectItem>
+              <SelectItem value="001" className="text-white">1st Incourse</SelectItem>
+              <SelectItem value="002" className="text-white">1st Semester</SelectItem>
+              <SelectItem value="003" className="text-white">2nd Incourse</SelectItem>
+              <SelectItem value="004" className="text-white">Mock Exam</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={type} onValueChange={v => { setType(v); setPage(1); }}>
+            <SelectTrigger className="w-[130px] bg-white/5 border-white/10 text-white h-9 text-sm">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#1e1e28] border-white/10">
+              <SelectItem value="all" className="text-white">All Types</SelectItem>
+              <SelectItem value="objective" className="text-white">Objective</SelectItem>
+              <SelectItem value="theory" className="text-white">Theory</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {questions && (
+            <span className="text-xs text-white/30 ml-auto">
+              {questions.length} question{questions.length !== 1 ? "s" : ""} on this page
+            </span>
+          )}
         </div>
 
-        <div className="space-y-4">
+        {/* Questions list */}
+        <div className="space-y-3">
           {isLoading ? (
-            Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)
+            Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 bg-white/5 rounded-2xl" />
+            ))
           ) : questions?.length === 0 ? (
-            <Card className="bg-muted/50 border-dashed">
-              <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-                <SearchX className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-serif font-bold text-foreground">No questions found</h3>
-                <p className="text-muted-foreground mt-2 max-w-sm mb-6">
-                  We couldn't find any questions matching your filters. Try adjusting your search criteria.
-                </p>
-                <Link href="/admin">
-                  <Button variant="outline">Go to Admin to add questions</Button>
-                </Link>
-              </CardContent>
-            </Card>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="glass-card p-12 text-center"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
+                <SearchX className="h-7 w-7 text-white/30" />
+              </div>
+              <h3 className="text-lg font-serif font-bold text-white mb-2">No questions found</h3>
+              <p className="text-white/40 text-sm">Try adjusting your filters or clearing the selection.</p>
+            </motion.div>
           ) : (
-            <>
-              {questions?.map((q) => (
-                <Card key={q.id} className="overflow-hidden">
-                  <CardHeader className="bg-muted/30 py-3 px-6 border-b">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline" className="font-mono">{q.subjectName}</Badge>
-                        <Badge variant="secondary">{PAPER_LABELS[q.paper]}</Badge>
-                        <Badge variant={q.questionType === 'objective' ? 'default' : 'secondary'}>
-                          {q.questionType === 'objective' ? 'Objective' : 'Theory'}
-                        </Badge>
+            questions?.map((q, i) => {
+              const isExpanded = expandedId === q.id;
+              const subjectColor = SUBJECT_COLORS[q.subjectName || ""] || "bg-violet-500/15 text-violet-300 border-violet-500/25";
+              const optionLabels = ["A", "B", "C", "D"];
+
+              return (
+                <motion.div
+                  key={q.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="glass-card overflow-hidden"
+                >
+                  <button
+                    className="w-full text-left p-4 hover:bg-white/3 transition-colors"
+                    onClick={() => setExpandedId(isExpanded ? null : q.id)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <FileText className="h-3.5 w-3.5 text-white/40" />
                       </div>
-                      <span className="text-xs font-medium text-muted-foreground">Year: {q.year}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white/85 leading-relaxed line-clamp-2">
+                          {q.questionText}
+                        </p>
+                        <div className="flex items-center gap-2 flex-wrap mt-2">
+                          <Badge className={cn("text-[10px] border px-1.5 py-0", subjectColor)}>
+                            {q.subjectName}
+                          </Badge>
+                          <Badge variant="secondary" className="text-[10px] bg-white/5 text-white/40 border-0 px-1.5 py-0">
+                            {PAPER_LABELS[q.paper]}
+                          </Badge>
+                          <Badge variant="secondary" className={cn(
+                            "text-[10px] border-0 px-1.5 py-0",
+                            q.questionType === "objective"
+                              ? "bg-amber-500/10 text-amber-400"
+                              : "bg-pink-500/10 text-pink-400"
+                          )}>
+                            {q.questionType === "objective" ? "Objective" : "Theory"}
+                          </Badge>
+                          <span className="text-[10px] text-white/25">Year {q.year}</span>
+                        </div>
+                      </div>
+                      <div className={cn(
+                        "text-white/30 flex-shrink-0 mt-1 transition-transform",
+                        isExpanded && "rotate-180"
+                      )}>
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <p className="text-base font-medium leading-relaxed whitespace-pre-wrap">{q.questionText}</p>
-                      
-                      {q.questionType === 'objective' && q.options && (
-                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {q.options.map((opt, i) => {
-                            const labels = ['A', 'B', 'C', 'D'];
-                            const isCorrect = q.correctOption === labels[i];
+                  </button>
+
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      className="border-t border-white/5 p-4 space-y-4"
+                    >
+                      {/* Options for objective */}
+                      {q.questionType === "objective" && q.options && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {q.options.map((opt, idx) => {
+                            const label = optionLabels[idx];
+                            const isCorrect = q.correctOption === label;
                             return (
-                              <div 
-                                key={i} 
-                                className={`p-3 rounded border text-sm flex gap-3 ${isCorrect ? 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400' : 'bg-background border-border'}`}
+                              <div
+                                key={idx}
+                                className={cn(
+                                  "flex items-start gap-3 p-3 rounded-xl text-sm border transition-colors",
+                                  isCorrect
+                                    ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-300"
+                                    : "bg-white/3 border-white/8 text-white/70"
+                                )}
                               >
-                                <span className="font-bold">{labels[i]}.</span>
-                                <span>{opt}</span>
+                                <span className={cn(
+                                  "w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0",
+                                  isCorrect ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-white/50"
+                                )}>
+                                  {label}
+                                </span>
+                                <span className="flex-1 leading-relaxed">{opt}</span>
+                                {isCorrect && <CheckCircle className="h-4 w-4 text-emerald-400 flex-shrink-0 mt-0.5" />}
                               </div>
                             );
                           })}
                         </div>
                       )}
 
+                      {/* Explanation */}
                       {q.explanation && (
-                        <div className="mt-4 p-4 rounded-md bg-accent/50 text-sm border-l-2 border-primary">
-                          <strong className="block mb-1 font-serif">Explanation:</strong>
-                          <span className="whitespace-pre-wrap">{q.explanation}</span>
+                        <div className="flex gap-3 p-4 rounded-xl bg-amber-500/8 border border-amber-500/20">
+                          <Lightbulb className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-semibold text-amber-400 mb-1">Explanation</p>
+                            <p className="text-sm text-white/75 leading-relaxed whitespace-pre-wrap">{q.explanation}</p>
+                          </div>
                         </div>
                       )}
 
-                      {q.questionType === 'theory' && q.markingGuide && (
-                        <div className="mt-4 p-4 rounded-md bg-accent/50 text-sm border-l-2 border-primary">
-                          <strong className="block mb-1 font-serif">Marking Guide ({q.marks} marks):</strong>
-                          <span className="whitespace-pre-wrap">{q.markingGuide}</span>
+                      {/* Marking guide for theory */}
+                      {q.questionType === "theory" && q.markingGuide && (
+                        <div className="flex gap-3 p-4 rounded-xl bg-violet-500/8 border border-violet-500/20">
+                          <CheckCircle className="h-4 w-4 text-violet-400 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-semibold text-violet-400 mb-1">
+                              Marking Guide · {q.marks} mark{q.marks !== 1 ? "s" : ""}
+                            </p>
+                            <p className="text-sm text-white/75 leading-relaxed whitespace-pre-wrap">{q.markingGuide}</p>
+                          </div>
                         </div>
                       )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-
-              <div className="flex items-center justify-between pt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-2" />
-                  Previous Page
-                </Button>
-                <span className="text-sm font-medium">Page {page}</span>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setPage(p => p + 1)}
-                  disabled={questions?.length < limit}
-                >
-                  Next Page
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </Button>
-              </div>
-            </>
+                    </motion.div>
+                  )}
+                </motion.div>
+              );
+            })
           )}
         </div>
+
+        {/* Pagination */}
+        {questions && questions.length > 0 && (
+          <div className="flex items-center justify-between pt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="text-white/50 hover:text-white border border-white/10 hover:border-white/20 h-9"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+            </Button>
+            <span className="text-sm text-white/30">Page {page}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPage(p => p + 1)}
+              disabled={(questions?.length ?? 0) < limit}
+              className="text-white/50 hover:text-white border border-white/10 hover:border-white/20 h-9"
+            >
+              Next <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        )}
       </div>
     </Shell>
   );
