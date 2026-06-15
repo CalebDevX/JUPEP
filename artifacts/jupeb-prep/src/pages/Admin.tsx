@@ -429,7 +429,7 @@ function AddQuestionForm() {
               <Select value={formData.subjectId} onValueChange={v => set("subjectId", v)}>
                 <SelectTrigger className={inputCls}><SelectValue placeholder="Choose…" /></SelectTrigger>
                 <SelectContent className="bg-[#1a1a2e] border-white/10">
-                  {subjects?.map(s => <SelectItem key={s.id} value={s.id.toString()} className="text-white">{s.name}</SelectItem>)}
+                  {(Array.isArray(subjects) ? subjects : []).map(s => <SelectItem key={s.id} value={s.id.toString()} className="text-white">{s.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
@@ -527,7 +527,7 @@ function ManageQuestionsList() {
   return (
     <Section title="Recent Questions">
       <div className="space-y-3">
-        {questions?.map(q => (
+        {(Array.isArray(questions) ? questions : []).map(q => (
           <div key={q.id} className="flex items-start gap-4 p-4 rounded-2xl bg-white/3 border border-white/8 hover:bg-white/4 transition-colors">
             <div className="flex-1 min-w-0 space-y-1.5">
               <div className="flex gap-2 flex-wrap">

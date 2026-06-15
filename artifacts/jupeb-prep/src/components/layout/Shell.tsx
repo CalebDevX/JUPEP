@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   BookOpen,
@@ -9,12 +9,15 @@ import {
   GraduationCap,
   MessageCircle,
   Menu,
-  X,
   Sparkles,
   Target,
   ScrollText,
   Wand2,
   Users,
+  Settings,
+  LogOut,
+  ChevronUp,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,9 +39,78 @@ const navItems = [
   { href: "/chat", label: "LexBot AI", icon: MessageCircle, color: "text-amber-500" },
 ];
 
+function useProfile() {
+  const displayName = localStorage.getItem("jupeb_display_name") || "Scholar";
+  const initial = displayName.trim().charAt(0).toUpperCase() || "S";
+  return { displayName, initial };
+}
+
+function ProfileDropdown({ onClose, onNavigate }: { onClose: () => void; onNavigate: (href: string) => void }) {
+  const { displayName, initial } = useProfile();
+  const [, navigate] = useLocation();
+
+  const handleLogout = () => {
+    localStorage.removeItem("jupeb_display_name");
+    localStorage.removeItem("jupeb_study_goal");
+    localStorage.removeItem("jupeb_onboarded");
+    onClose();
+    navigate("/");
+    window.location.reload();
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 6, scale: 0.97 }}
+      transition={{ duration: 0.15 }}
+      className="absolute bottom-full left-0 right-0 mb-2 mx-3 rounded-2xl bg-[#1e1e2a] border border-white/10 shadow-2xl overflow-hidden z-50"
+    >
+      <div className="px-4 py-3 border-b border-white/8 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+          <span className="text-sm font-bold text-white">{initial}</span>
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-white truncate">{displayName}</p>
+          <p className="text-[10px] text-white/40">JUPEB Prep Student</p>
+        </div>
+      </div>
+      <div className="py-1.5">
+        <button
+          onClick={() => { onNavigate("/settings"); onClose(); }}
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+        >
+          <Settings className="h-4 w-4 text-white/40" />
+          Settings
+        </button>
+        <button
+          onClick={() => { onNavigate("/admin"); onClose(); }}
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+        >
+          <ShieldCheck className="h-4 w-4 text-white/40" />
+          Admin Panel
+        </button>
+        <div className="mx-3 my-1 border-t border-white/8" />
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400/80 hover:text-red-400 hover:bg-red-500/8 transition-colors"
+        >
+          <LogOut className="h-4 w-4" />
+          Sign Out
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
 export function Shell({ children }: ShellProps) {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [mobileProfileOpen, setMobileProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+  const mobileProfileRef = useRef<HTMLDivElement>(null);
+  const { displayName, initial } = useProfile();
 
   const activeItem = useMemo(
     () => navItems.find(item =>
@@ -46,6 +118,19 @@ export function Shell({ children }: ShellProps) {
     ),
     [location]
   );
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+      if (mobileProfileRef.current && !mobileProfileRef.current.contains(e.target as Node)) {
+        setMobileProfileOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   const SidebarContent = () => (
     <>
@@ -113,14 +198,34 @@ export function Shell({ children }: ShellProps) {
         })}
       </nav>
 
-      <div className="mx-4 mb-4 p-3 rounded-xl bg-gradient-to-br from-violet-600/30 to-indigo-600/20 border border-violet-500/20">
-        <p className="text-[10px] text-violet-300 font-semibold uppercase tracking-wider mb-1">LexBot Active</p>
-        <p className="text-xs text-white/70 leading-relaxed">Your AI tutor is ready to help you ace JUPEB.</p>
-        <Link href="/chat" onClick={() => setMobileOpen(false)}>
-          <div className="mt-2 text-xs text-violet-300 font-medium flex items-center gap-1 cursor-pointer hover:text-violet-200">
-            <MessageCircle className="h-3 w-3" /> Ask LexBot →
+      <div className="px-3 pb-4 relative" ref={profileRef}>
+        <AnimatePresence>
+          {profileOpen && (
+            <ProfileDropdown
+              onClose={() => setProfileOpen(false)}
+              onNavigate={(href) => { navigate(href); setMobileOpen(false); }}
+            />
+          )}
+        </AnimatePresence>
+        <button
+          onClick={() => setProfileOpen(v => !v)}
+          className={cn(
+            "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group",
+            profileOpen ? "bg-white/10" : "hover:bg-white/5"
+          )}
+        >
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/70 to-indigo-600/70 flex items-center justify-center flex-shrink-0">
+            <span className="text-xs font-bold text-white">{initial}</span>
           </div>
-        </Link>
+          <div className="flex-1 min-w-0 text-left">
+            <p className="text-xs font-semibold text-white/80 truncate">{displayName}</p>
+            <p className="text-[10px] text-white/40">Student</p>
+          </div>
+          <ChevronUp className={cn(
+            "h-3.5 w-3.5 text-white/30 transition-transform flex-shrink-0",
+            profileOpen ? "rotate-180" : ""
+          )} />
+        </button>
       </div>
     </>
   );
@@ -176,11 +281,67 @@ export function Shell({ children }: ShellProps) {
             </div>
             <span className="font-bold text-sm text-white">{activeItem?.label || "JUPEB Prep"}</span>
           </div>
-          <Link href="/chat">
-            <div className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5 text-amber-400">
-              <MessageCircle className="h-5 w-5" />
-            </div>
-          </Link>
+          <div className="relative" ref={mobileProfileRef}>
+            <button
+              onClick={() => setMobileProfileOpen(v => !v)}
+              className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5"
+            >
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+                <span className="text-xs font-bold text-white">{initial}</span>
+              </div>
+            </button>
+            <AnimatePresence>
+              {mobileProfileOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute top-full right-0 mt-2 w-52 rounded-2xl bg-[#1e1e2a] border border-white/10 shadow-2xl overflow-hidden z-50"
+                >
+                  <div className="px-4 py-3 border-b border-white/8 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+                      <span className="text-sm font-bold text-white">{initial}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">{displayName}</p>
+                      <p className="text-[10px] text-white/40">JUPEB Student</p>
+                    </div>
+                  </div>
+                  <div className="py-1.5">
+                    <Link href="/settings" onClick={() => setMobileProfileOpen(false)}>
+                      <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                        <Settings className="h-4 w-4 text-white/40" />
+                        Settings
+                      </button>
+                    </Link>
+                    <Link href="/admin" onClick={() => setMobileProfileOpen(false)}>
+                      <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                        <ShieldCheck className="h-4 w-4 text-white/40" />
+                        Admin Panel
+                      </button>
+                    </Link>
+                    <div className="mx-3 my-1 border-t border-white/8" />
+                    <button
+                      onClick={() => {
+                        localStorage.removeItem("jupeb_display_name");
+                        localStorage.removeItem("jupeb_study_goal");
+                        localStorage.removeItem("jupeb_onboarded");
+                        setMobileProfileOpen(false);
+                        setMobileOpen(false);
+                        navigate("/");
+                        window.location.reload();
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400/80 hover:text-red-400 hover:bg-red-500/8 transition-colors"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         <div className="flex-1">

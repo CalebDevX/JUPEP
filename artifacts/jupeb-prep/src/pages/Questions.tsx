@@ -70,7 +70,7 @@ export default function Questions() {
             </SelectTrigger>
             <SelectContent className="bg-[#1e1e28] border-white/10">
               <SelectItem value="all" className="text-white">All Subjects</SelectItem>
-              {subjects?.map(s => (
+              {(Array.isArray(subjects) ? subjects : []).map(s => (
                 <SelectItem key={s.id} value={s.id.toString()} className="text-white">{s.name}</SelectItem>
               ))}
             </SelectContent>
@@ -124,7 +124,7 @@ export default function Questions() {
               <p className="text-white/40 text-sm">Try adjusting your filters or clearing the selection.</p>
             </motion.div>
           ) : (
-            questions?.map((q, i) => {
+            (Array.isArray(questions) ? questions : []).map((q, i) => {
               const isExpanded = expandedId === q.id;
               const subjectColor = SUBJECT_COLORS[q.subjectName || ""] || "bg-violet-500/15 text-violet-300 border-violet-500/25";
               const optionLabels = ["A", "B", "C", "D"];

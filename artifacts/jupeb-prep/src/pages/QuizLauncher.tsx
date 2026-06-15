@@ -50,7 +50,7 @@ export default function QuizLauncher() {
           <SelectValue placeholder="Choose a subject…" />
         </SelectTrigger>
         <SelectContent className="bg-[#1e1e28] border-white/10">
-          {subjects?.map(s => (
+          {(Array.isArray(subjects) ? subjects : []).map(s => (
             <SelectItem key={s.id} value={s.id.toString()} className="text-white">{s.name}</SelectItem>
           ))}
         </SelectContent>
