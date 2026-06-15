@@ -72,7 +72,7 @@ export default function Dashboard() {
               Good {getTimeOfDay()}, Scholar 👋
             </h1>
             <p className="text-white/50 text-sm mt-1">
-              Keep pushing — 16 points and UNILAG Law awaits you.
+              Keep pushing — 16 points and your dream course awaits.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -93,7 +93,7 @@ export default function Dashboard() {
             <StatCard
               icon={Trophy}
               label="Average Score"
-              value={`${summary.averageScore.toFixed(1)}%`}
+              value={`${(summary.averageScore ?? 0).toFixed(1)}%`}
               color="bg-amber-500/15 text-amber-400"
             />
             <StatCard

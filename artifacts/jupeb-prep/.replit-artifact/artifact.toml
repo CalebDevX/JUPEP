@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "JUPEB Law Prep"
+title = "JUPEB Prep"
 version = "1.0.0"
 id = "artifacts/jupeb-prep"
 router = "path"

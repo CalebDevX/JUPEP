@@ -51,8 +51,8 @@ export function Shell({ children }: ShellProps) {
             <GraduationCap className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="font-bold text-sm text-white leading-tight">JUPEB Law Prep</h1>
-            <p className="text-[10px] text-white/50 leading-tight">UNILAG Foundation</p>
+            <h1 className="font-bold text-sm text-white leading-tight">JUPEB Prep</h1>
+            <p className="text-[10px] text-white/50 leading-tight">UNILAG Foundation Studies</p>
           </div>
         </div>
       </div>
