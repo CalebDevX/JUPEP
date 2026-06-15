@@ -1,5 +1,5 @@
 kind = "web"
-previewPath = "/"
+previewPath = "/crs-textbook/"
 title = "JUPEB CRS 003 Textbook"
 version = "1.0.0"
 id = "artifacts/crs003-textbook"
@@ -11,7 +11,7 @@ version = "1.0.0"
 
 [[services]]
 name = "web"
-paths = [ "/" ]
+paths = [ "/crs-textbook/" ]
 localPort = 24400
 
 [services.development]
@@ -28,4 +28,4 @@ to = "/index.html"
 
 [services.env]
 PORT = "24400"
-BASE_PATH = "/"
+BASE_PATH = "/crs-textbook/"
