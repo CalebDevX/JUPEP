@@ -1,6 +1,20 @@
 import { Router } from "express";
+import { readFileSync, existsSync } from "fs";
+import { join } from "path";
 
 const router = Router();
+
+function getHFToken(): string | null {
+  if (process.env.HUGGINGFACE_TOKEN) return process.env.HUGGINGFACE_TOKEN;
+  try {
+    const file = join(process.cwd(), "settings.json");
+    if (existsSync(file)) {
+      const data = JSON.parse(readFileSync(file, "utf8"));
+      return data.huggingface_token || null;
+    }
+  } catch {}
+  return null;
+}
 
 router.post("/api/tts", async (req, res) => {
   const { text } = req.body;
@@ -13,10 +27,10 @@ router.post("/api/tts", async (req, res) => {
     return res.status(400).json({ error: "Text too long. Please keep it under 1500 characters." });
   }
 
-  const hfToken = process.env.HUGGINGFACE_TOKEN;
+  const hfToken = getHFToken();
   if (!hfToken) {
     return res.status(503).json({
-      error: "Voice AI not configured. Please add your HUGGINGFACE_TOKEN to environment secrets.",
+      error: "Voice AI not configured. Add your HuggingFace token in Admin → Settings to enable audio.",
       code: "NO_HF_TOKEN",
     });
   }
@@ -64,9 +78,8 @@ router.post("/api/tts", async (req, res) => {
       return res.status(500).json({ error: "Failed to generate audio." });
     }
 
-    const contentType = "audio/flac";
     res.set({
-      "Content-Type": contentType,
+      "Content-Type": "audio/flac",
       "Content-Length": audioBuffer.byteLength.toString(),
       "Cache-Control": "no-store",
     });

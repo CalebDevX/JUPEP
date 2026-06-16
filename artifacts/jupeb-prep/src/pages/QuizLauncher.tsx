@@ -20,6 +20,14 @@ function fmtMinutes(min: number) {
   return `${min} Min`;
 }
 
+const PAPER_OPTIONS = [
+  { value: "001", label: "1st In-Course Exam",          desc: "First in-course test"              },
+  { value: "002", label: "1st Semester Exam",            desc: "End of first semester exam"         },
+  { value: "003", label: "2nd In-Course Exam",           desc: "Second in-course test"              },
+  { value: "mock", label: "Mock Exam",                   desc: "Combination of all sessions"        },
+  { value: "jupeb", label: "JUPEB Final Exam",           desc: "Past JUPEB final examination questions" },
+];
+
 export default function QuizLauncher() {
   const [, setLocation] = useLocation();
   const { data: subjects, isLoading: isLoadingSubjects } = useListSubjects();
@@ -34,7 +42,6 @@ export default function QuizLauncher() {
   const [count, setCount] = useState<string>(activated ? "20" : String(Math.min(5, trialRemaining)));
   const [isTimed, setIsTimed] = useState<boolean>(true);
 
-  // Dynamic timer settings from server
   const [timerSettings, setTimerSettings] = useState({
     obj_timer_minutes: 60,
     theory_timer_minutes: 120,
@@ -57,9 +64,11 @@ export default function QuizLauncher() {
   }, []);
 
   const isMock = paper === "mock";
+  const isJupeb = paper === "jupeb";
+  const isMixed = isMock || isJupeb;
 
   const getTimedMinutes = () => {
-    if (isMock) return timerSettings.mock_timer_minutes;
+    if (isMixed) return timerSettings.mock_timer_minutes;
     if (type === "theory") return timerSettings.theory_timer_minutes;
     return timerSettings.obj_timer_minutes;
   };
@@ -67,13 +76,15 @@ export default function QuizLauncher() {
   const timedMinutes = getTimedMinutes();
   const timerLabel = fmtMinutes(timedMinutes);
 
+  const selectedPaper = PAPER_OPTIONS.find(p => p.value === paper);
+
   const handleStart = () => {
     if (!subjectId) return;
     startQuiz.mutate({
       data: {
         subjectId: Number(subjectId),
         paper: paper as any,
-        questionType: isMock ? "mixed" : type as any,
+        questionType: isMixed ? "mixed" : type as any,
         questionCount: Number(count),
         timedMinutes: isTimed ? timedMinutes : undefined,
       }
@@ -84,22 +95,21 @@ export default function QuizLauncher() {
 
   return (
     <Shell>
-      <div className="p-6 max-w-2xl mx-auto w-full flex-1 flex flex-col justify-center">
+      <div className="p-4 md:p-6 max-w-2xl mx-auto w-full flex-1 flex flex-col justify-center">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="text-center mb-6 md:mb-8"
         >
           <div className="w-16 h-16 rounded-2xl bg-orange-500/15 flex items-center justify-center mx-auto mb-4 border border-orange-500/20">
             <Zap className="h-8 w-8 text-orange-400" />
           </div>
-          <h1 className="text-3xl font-bold font-serif text-white">Launch Quiz Session</h1>
+          <h1 className="text-2xl md:text-3xl font-bold font-serif text-white">Launch Quiz Session</h1>
           <p className="text-white/50 text-sm mt-2 max-w-sm mx-auto">
             Simulate actual JUPEB exam conditions. Configure your session below.
           </p>
         </motion.div>
 
-        {/* Free trial banner */}
         {!activated && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -111,7 +121,7 @@ export default function QuizLauncher() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-amber-300">Free Trial — {trialRemaining} question{trialRemaining !== 1 ? "s" : ""} remaining</p>
-              <p className="text-[11px] text-amber-400/50">No explanations • {TRIAL_QUESTION_LIMIT} total free questions</p>
+              <p className="text-[11px] text-amber-400/50">No explanations · {TRIAL_QUESTION_LIMIT} total free questions</p>
             </div>
             <Link href="/activate">
               <span className="text-[11px] font-bold text-amber-400 hover:text-amber-300 transition-colors whitespace-nowrap">Activate →</span>
@@ -123,10 +133,10 @@ export default function QuizLauncher() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="glass-card p-6 space-y-5"
+          className="glass-card p-5 md:p-6 space-y-5"
         >
+          {/* Subject + Session */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Subject */}
             <div className="space-y-1.5">
               <Label className="text-xs text-white/50 uppercase tracking-wider">Subject</Label>
               <Select value={subjectId} onValueChange={setSubjectId} disabled={isLoadingSubjects}>
@@ -141,25 +151,27 @@ export default function QuizLauncher() {
               </Select>
             </div>
 
-            {/* Paper */}
             <div className="space-y-1.5">
-              <Label className="text-xs text-white/50 uppercase tracking-wider">Paper</Label>
+              <Label className="text-xs text-white/50 uppercase tracking-wider">Session / Exam</Label>
               <Select value={paper} onValueChange={setPaper}>
                 <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-[#1e1e28] border-white/10">
-                  <SelectItem value="001" className="text-white">Paper 001 — 1st Incourse</SelectItem>
-                  <SelectItem value="002" className="text-white">Paper 002 — 1st Semester</SelectItem>
-                  <SelectItem value="003" className="text-white">Paper 003 — 2nd Incourse</SelectItem>
-                  <SelectItem value="004" className="text-white">Paper 004 — Mock Exam</SelectItem>
-                  <SelectItem value="mock" className="text-white">Full Mock (Mixed Papers)</SelectItem>
+                  {PAPER_OPTIONS.map(p => (
+                    <SelectItem key={p.value} value={p.value} className="text-white">
+                      {p.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              {selectedPaper && (
+                <p className="text-[10px] text-white/30 pl-1">{selectedPaper.desc}</p>
+              )}
             </div>
 
-            {/* Question Type */}
-            {!isMock && (
+            {/* Question Type — only for single-paper sessions */}
+            {!isMixed && (
               <div className="space-y-1.5">
                 <Label className="text-xs text-white/50 uppercase tracking-wider">Question Type</Label>
                 <Select value={type} onValueChange={setType}>
@@ -174,8 +186,8 @@ export default function QuizLauncher() {
               </div>
             )}
 
-            {/* Question Count */}
-            {!isMock && type === "objective" && (
+            {/* Question Count — only for MCQ single sessions */}
+            {!isMixed && type === "objective" && (
               <div className="space-y-1.5">
                 <Label className="text-xs text-white/50 uppercase tracking-wider">Number of Questions</Label>
                 {!activated ? (
@@ -226,11 +238,11 @@ export default function QuizLauncher() {
               <p className="text-xs text-violet-300 font-semibold uppercase tracking-wider mb-2">Session Summary</p>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
-                  <p className="text-white font-bold text-sm">{subjects?.find(s => s.id === Number(subjectId))?.name.split("-")[0]}</p>
+                  <p className="text-white font-bold text-sm truncate">{subjects?.find(s => s.id === Number(subjectId))?.name.split("-")[0]}</p>
                   <p className="text-[10px] text-white/40">Subject</p>
                 </div>
                 <div>
-                  <p className="text-white font-bold text-sm">{isMock ? "Mixed" : type === "objective" ? count : "All"}</p>
+                  <p className="text-white font-bold text-sm">{isMixed ? "Mixed" : type === "objective" ? count : "All"}</p>
                   <p className="text-[10px] text-white/40">Questions</p>
                 </div>
                 <div>
@@ -255,7 +267,6 @@ export default function QuizLauncher() {
           </Button>
         </motion.div>
 
-        {/* Tips */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -263,7 +274,7 @@ export default function QuizLauncher() {
           className="mt-4 grid grid-cols-3 gap-3"
         >
           {[
-            { icon: Target, text: "Real past questions from JUPEB papers" },
+            { icon: Target, text: "Past questions from real JUPEB papers" },
             { icon: Timer, text: "Auto-submits when time expires" },
             { icon: BookOpen, text: "Answers & explanations after quiz" },
           ].map((tip, i) => (

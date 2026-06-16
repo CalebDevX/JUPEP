@@ -19,10 +19,12 @@ import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 
 const paperLabels: Record<string, string> = {
-  "001": "1st Incourse",
+  "001": "1st In-Course",
   "002": "1st Semester",
-  "003": "2nd Incourse",
+  "003": "2nd In-Course",
   "004": "Mock Exam",
+  "mock": "Mock Exam",
+  "jupeb": "JUPEB Final",
 };
 
 const subjectColors: Record<string, string> = {
@@ -121,7 +123,7 @@ export default function Notes() {
               </div>
               Study Notes
             </h1>
-            <p className="text-white/40 text-sm mt-1 ml-13">Academic notes & AI-generated lecture content</p>
+            <p className="text-white/40 text-sm mt-1 ml-13">Academic notes & study materials</p>
           </div>
 
           <Dialog open={genOpen} onOpenChange={setGenOpen}>
@@ -165,10 +167,11 @@ export default function Notes() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-[#1e1e28] border-white/10">
-                        <SelectItem value="001" className="text-white">1st Incourse</SelectItem>
-                        <SelectItem value="002" className="text-white">1st Semester</SelectItem>
-                        <SelectItem value="003" className="text-white">2nd Incourse</SelectItem>
+                        <SelectItem value="001" className="text-white">1st In-Course Exam</SelectItem>
+                        <SelectItem value="002" className="text-white">1st Semester Exam</SelectItem>
+                        <SelectItem value="003" className="text-white">2nd In-Course Exam</SelectItem>
                         <SelectItem value="004" className="text-white">Mock Exam</SelectItem>
+                        <SelectItem value="jupeb" className="text-white">JUPEB Final Exam</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -274,7 +277,7 @@ export default function Notes() {
               </div>
               <h3 className="text-lg font-serif font-bold text-white mb-2">No notes found</h3>
               <p className="text-white/40 text-sm mb-6">
-                {search ? "No notes match your search." : "Generate your first AI-powered academic notes!"}
+                {search ? "No notes match your search." : "No notes yet. Generate notes or ask your admin to upload some!"}
               </p>
               <Button
                 onClick={() => setGenOpen(true)}
@@ -302,16 +305,11 @@ export default function Notes() {
                   >
                     <div className="flex items-start gap-4 flex-1 min-w-0">
                       <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center flex-shrink-0">
-                        {isAI ? <Sparkles className="h-4 w-4 text-pink-400" /> : <BookOpen className="h-4 w-4 text-pink-400" />}
+                        <BookOpen className="h-4 w-4 text-pink-400" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           <h3 className="text-base font-semibold text-white font-serif">{note.title}</h3>
-                          {isAI && (
-                            <Badge className="text-[9px] bg-amber-500/10 text-amber-400 border-amber-500/20 px-1.5 py-0">
-                              AI Generated
-                            </Badge>
-                          )}
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <Badge className={cn("text-[10px] border px-2 py-0", colorClass)}>

@@ -21,7 +21,7 @@ import { format, formatDistanceToNow } from "date-fns";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const ADMIN_PIN_KEY = "JUPEB2024";
 
-type AdminTab = "overview" | "students" | "codes" | "revenue" | "questions" | "anticheat" | "announcements" | "settings" | "branding";
+type AdminTab = "overview" | "students" | "codes" | "revenue" | "questions" | "anticheat" | "announcements" | "notes" | "settings" | "branding";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -1220,6 +1220,141 @@ function AnnouncementsTab() {
   );
 }
 
+// ─── Notes Tab ────────────────────────────────────────────────────────────────
+
+const PAPER_LABELS: Record<string, string> = {
+  "001": "1st In-Course Exam",
+  "002": "1st Semester Exam",
+  "003": "2nd In-Course Exam",
+  "004": "Mock Exam",
+  "mock": "Mock Exam",
+  "jupeb": "JUPEB Final Exam",
+};
+
+function NotesTab() {
+  const { toast } = useToast();
+  const [notes, setNotes]     = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving]   = useState(false);
+  const [form, setForm]       = useState({ subjectId: "", paper: "001", title: "", content: "" });
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [nr, sr] = await Promise.all([
+        fetch(`${BASE}/api/notes`),
+        fetch(`${BASE}/api/subjects`),
+      ]);
+      if (nr.ok) setNotes(await nr.json());
+      if (sr.ok) setSubjects(await sr.json());
+    } catch {}
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleAdd = async () => {
+    if (!form.subjectId || !form.title.trim() || !form.content.trim()) {
+      toast({ title: "Please fill in subject, title, and content.", variant: "destructive" }); return;
+    }
+    setSaving(true);
+    try {
+      const r = await fetch(`${BASE}/api/notes`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subjectId: parseInt(form.subjectId), paper: form.paper,
+          title: form.title.trim(), content: form.content.trim(), tags: [],
+        }),
+      });
+      if (!r.ok) throw new Error("Failed to save note");
+      toast({ title: "Note uploaded!" });
+      setForm({ subjectId: "", paper: "001", title: "", content: "" });
+      load();
+    } catch (err: any) { toast({ title: err.message, variant: "destructive" }); }
+    finally { setSaving(false); }
+  };
+
+  const handleDelete = async (id: number, title: string) => {
+    if (!confirm(`Delete "${title}"?`)) return;
+    await fetch(`${BASE}/api/notes/${id}`, { method: "DELETE" });
+    setNotes(n => n.filter(x => x.id !== id));
+    toast({ title: "Note deleted" });
+  };
+
+  return (
+    <div className="space-y-6">
+      <Section title="Upload Study Note">
+        <p className="text-xs text-white/40 -mt-2 leading-relaxed">
+          Add notes directly from here. Students see them in the Notes page without any "AI generated" labels.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Subject *</label>
+            <select value={form.subjectId} onChange={e => setForm(p => ({ ...p, subjectId: e.target.value }))}
+              className={cn(inputCls, "w-full rounded-lg border px-3 py-2.5 text-sm bg-white/5 border-white/10 text-white")}>
+              <option value="" className="bg-[#1e1e28]">Select subject…</option>
+              {subjects.map(s => <option key={s.id} value={s.id} className="bg-[#1e1e28]">{s.name}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Session / Paper *</label>
+            <select value={form.paper} onChange={e => setForm(p => ({ ...p, paper: e.target.value }))}
+              className={cn(inputCls, "w-full rounded-lg border px-3 py-2.5 text-sm bg-white/5 border-white/10 text-white")}>
+              {Object.entries(PAPER_LABELS).filter(([k]) => !["mock"].includes(k)).map(([v, l]) => (
+                <option key={v} value={v} className="bg-[#1e1e28]">{l}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Note Title *</label>
+          <Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+            placeholder="e.g. The Nigerian Civil War — Causes and Effects"
+            className={inputCls} />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Content *</label>
+          <Textarea value={form.content} onChange={e => setForm(p => ({ ...p, content: e.target.value }))}
+            placeholder="Paste or type the full note content here. Markdown is supported (## headings, **bold**, bullet points)…"
+            className={cn(inputCls, "min-h-[200px] resize-y")} />
+        </div>
+        <Button onClick={handleAdd} disabled={saving}
+          className="bg-violet-600 hover:bg-violet-500 text-white rounded-xl gap-2">
+          {saving ? <><Loader2 className="h-4 w-4 animate-spin" />Saving…</> : <><Plus className="h-4 w-4" />Upload Note</>}
+        </Button>
+      </Section>
+
+      <Section title={`Existing Notes (${notes.length})`}>
+        {loading ? (
+          <div className="space-y-2">
+            {[1,2,3].map(i => <div key={i} className="h-14 rounded-xl bg-white/3 animate-pulse" />)}
+          </div>
+        ) : notes.length === 0 ? (
+          <p className="text-sm text-white/30 text-center py-6">No notes yet. Upload one above.</p>
+        ) : (
+          <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+            {notes.map(note => (
+              <div key={note.id} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/3 border border-white/8">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{note.title}</p>
+                  <p className="text-[10px] text-white/35 mt-0.5">
+                    {note.subjectName} · {PAPER_LABELS[note.paper] ?? note.paper}
+                  </p>
+                </div>
+                <button onClick={() => handleDelete(note.id, note.title)}
+                  className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-all flex-shrink-0">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+    </div>
+  );
+}
+
 // ─── Settings Tab ─────────────────────────────────────────────────────────────
 
 function SettingsTab() {
@@ -1481,6 +1616,7 @@ const ADMIN_TABS: { id: AdminTab; label: string; icon: any; desc: string }[] = [
   { id: "questions",     label: "Questions",     icon: BookOpen,        desc: "Upload & manage" },
   { id: "anticheat",     label: "Anti-cheat",    icon: ShieldAlert,     desc: "Audit log" },
   { id: "announcements", label: "Announcements", icon: Megaphone,       desc: "Post updates" },
+  { id: "notes",         label: "Notes",         icon: FileText,        desc: "Upload study notes" },
   { id: "settings",      label: "Settings",      icon: Timer,           desc: "Timers & config" },
   { id: "branding",      label: "Branding",      icon: ImagePlus,       desc: "Bot image" },
 ];
@@ -1585,6 +1721,7 @@ export default function AdminPanel() {
             {tab === "questions"     && <QuestionsTab />}
             {tab === "anticheat"     && <AntiCheatTab pin={pin} />}
             {tab === "announcements" && <AnnouncementsTab />}
+            {tab === "notes"         && <NotesTab />}
             {tab === "settings"      && <SettingsTab />}
             {tab === "branding"      && <BrandingTab />}
           </motion.div>

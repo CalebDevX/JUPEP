@@ -351,6 +351,29 @@ router.post("/ai/tts", async (req, res) => {
   }
 });
 
+router.post("/ai/explain", async (req, res) => {
+  try {
+    const { topic, context, studentName, studentSubjects } = req.body;
+    if (!topic?.trim()) return res.status(400).json({ error: "topic is required" });
+
+    const ai = getAI();
+    const prompt = context
+      ? `${context}\n\nTopic: ${topic.trim()}`
+      : `Explain the following topic clearly for a JUPEB Foundation Studies student:\n\nTopic: ${topic.trim()}\n\nGive a 2-3 paragraph explanation that is warm, clear, and exam-focused.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      config: { systemInstruction: buildSystemPrompt(studentName, studentSubjects) },
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    });
+
+    res.json({ explanation: response.text });
+  } catch (err: any) {
+    console.error("AI explain error:", err);
+    res.status(500).json({ error: err?.message || "Failed to generate explanation" });
+  }
+});
+
 router.post("/ai/quiz-from-note", async (req, res) => {
   try {
     const { content, subject, count = 5, studentName, studentSubjects } = req.body;
