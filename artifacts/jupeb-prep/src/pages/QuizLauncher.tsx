@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Loader2, PlayCircle, Timer, BookOpen, Target, Zap, Lock, AlertTriangle } from "lucide-react";
+import { Loader2, PlayCircle, Timer, BookOpen, Target, Zap, Lock, AlertTriangle, Shuffle } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { isActivated, getTrialRemaining, TRIAL_QUESTION_LIMIT } from "@/lib/access";
@@ -48,6 +48,7 @@ export default function QuizLauncher() {
   const [customMinutes, setCustomMinutes] = useState<number>(30);
 
   const [mockTimerMinutes, setMockTimerMinutes] = useState(120);
+  const [shuffle, setShuffle] = useState(true);
 
   useEffect(() => {
     fetch(`${BASE}/api/settings`)
@@ -91,6 +92,7 @@ export default function QuizLauncher() {
         questionType: isMixed ? "mixed" : type as any,
         questionCount: Number(count),
         timedMinutes,
+        shuffle,
       }
     }, {
       onSuccess: (session) => setLocation(`/quiz/session/${session.id}`)
@@ -294,6 +296,43 @@ export default function QuizLauncher() {
               )}
             </div>
           )}
+
+          {/* ── Shuffle Toggle ── */}
+          <button
+            type="button"
+            onClick={() => setShuffle(s => !s)}
+            className={cn(
+              "w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left",
+              shuffle
+                ? "bg-violet-500/10 border-violet-500/30"
+                : "bg-white/3 border-white/10 hover:bg-white/6"
+            )}
+          >
+            <div className={cn(
+              "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all",
+              shuffle ? "bg-violet-500/20" : "bg-white/8"
+            )}>
+              <Shuffle className={cn("h-4 w-4 transition-colors", shuffle ? "text-violet-400" : "text-white/30")} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={cn("text-sm font-semibold transition-colors", shuffle ? "text-violet-200" : "text-white/50")}>
+                Randomise Question Order
+              </p>
+              <p className={cn("text-[11px] transition-colors", shuffle ? "text-violet-400/60" : "text-white/25")}>
+                {shuffle ? "Questions appear in a different order each session" : "Questions appear in their original fixed order"}
+              </p>
+            </div>
+            {/* visual toggle pill */}
+            <div className={cn(
+              "relative w-10 h-5 rounded-full transition-all flex-shrink-0",
+              shuffle ? "bg-violet-500" : "bg-white/15"
+            )}>
+              <div className={cn(
+                "absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all",
+                shuffle ? "left-5" : "left-0.5"
+              )} />
+            </div>
+          </button>
 
           {/* Summary */}
           {subjectId && (

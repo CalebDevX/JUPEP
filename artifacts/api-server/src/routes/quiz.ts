@@ -41,7 +41,7 @@ function formatSession(session: any, questions: any[], subjectName: string | nul
 
 router.post("/quiz/start", async (req, res) => {
   try {
-    const { subjectId, paper, questionType, year, questionCount = 20, timedMinutes } = req.body;
+    const { subjectId, paper, questionType, year, questionCount = 20, timedMinutes, shuffle = true } = req.body;
 
     const conditions: any[] = [eq(questionsTable.subjectId, subjectId)];
 
@@ -61,7 +61,7 @@ router.post("/quiz/start", async (req, res) => {
       .select()
       .from(questionsTable)
       .where(and(...conditions))
-      .orderBy(sql`RANDOM()`)
+      .orderBy(shuffle ? sql`RANDOM()` : sql`id ASC`)
       .limit(questionCount);
 
     if (allQuestions.length === 0) {
