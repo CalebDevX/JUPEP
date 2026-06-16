@@ -4,8 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
-import Register from "@/pages/Register";
-import Login from "@/pages/Login";
+import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import Subjects from "@/pages/Subjects";
 import Questions from "@/pages/Questions";
@@ -35,7 +34,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   const isAuth = !!localStorage.getItem("jupeb_profile");
 
   useEffect(() => {
-    if (!isAuth) navigate("/register");
+    if (!isAuth) navigate("/auth");
   }, [isAuth]);
 
   if (!isAuth) return null;
@@ -60,7 +59,6 @@ function ProtectedRoutes() {
       <Route path="/flashcards" component={Flashcards} />
       <Route path="/leaderboard" component={Leaderboard} />
       <Route path="/activate" component={Activate} />
-      <Route path="/admin" component={AdminPanel} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
@@ -70,8 +68,13 @@ function ProtectedRoutes() {
 function Router() {
   return (
     <Switch>
-      <Route path="/register" component={Register} />
-      <Route path="/login" component={Login} />
+      {/* Public auth routes */}
+      <Route path="/auth" component={Auth} />
+      <Route path="/login" component={Auth} />
+      <Route path="/register" component={Auth} />
+      {/* Admin — PIN-protected separately, no auth redirect */}
+      <Route path="/admin" component={AdminPanel} />
+      {/* All other routes require login */}
       <Route>
         <RequireAuth>
           <ProtectedRoutes />

@@ -146,4 +146,40 @@ router.post("/communities/:slug/posts/:postId/like", async (req, res) => {
   }
 });
 
+// Bot endpoint — auto-join community by phone number (called by WhatsApp bot)
+router.post("/community/bot-join", async (req, res) => {
+  const botSecret = req.headers["x-bot-secret"];
+  if (botSecret !== (process.env.BOT_SECRET ?? "jupeb-bot-secret")) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  try {
+    const { phone, communityId } = req.body;
+    if (!phone?.trim() || !communityId) {
+      return res.status(400).json({ error: "phone and communityId are required" });
+    }
+
+    const [community] = await db.select().from(communitiesTable).where(eq(communitiesTable.id, Number(communityId)));
+    if (!community) return res.status(404).json({ error: "Community not found" });
+
+    const status = community.requiresApproval ? "pending" : "approved";
+    const [member] = await db.insert(communityMembersTable).values({
+      communityId: community.id,
+      displayName: phone.trim(),
+      whatsappNumber: phone.trim(),
+      role: "member",
+      status,
+    }).returning();
+
+    if (status === "approved") {
+      await db.update(communitiesTable)
+        .set({ memberCount: community.memberCount + 1 })
+        .where(eq(communitiesTable.id, community.id));
+    }
+
+    res.status(201).json({ success: true, member, status });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to join community" });
+  }
+});
+
 export default router;
