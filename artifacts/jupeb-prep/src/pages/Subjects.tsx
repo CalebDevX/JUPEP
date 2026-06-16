@@ -11,27 +11,22 @@ import {
 import { cn } from "@/lib/utils";
 
 const PAPER_LABELS: Record<string, string> = {
-  "001": "1st Incourse",
+  "001": "1st In-Course",
   "002": "1st Semester",
-  "003": "2nd Incourse",
-  "004": "Mock Exam",
+  "003": "2nd In-Course",
+  "004": "2nd Semester",
 };
 
-const SCIENCE_NAMES = new Set([
-  "Mathematics", "Biology", "Chemistry", "Physics",
-  "Agricultural Science", "Computer Science", "Further Mathematics", "Further Maths",
-]);
-
-const NON_SCIENCE_LOCKED = new Set([
-  "Government", "Christian Religious Studies", "CRS",
+// Only these three subjects are currently available
+const AVAILABLE_NAMES = new Set([
+  "Government",
+  "Christian Religious Studies", "CRS",
   "Literature in English", "Literature-in-English",
-  "Islamic Religious Studies", "IRS",
 ]);
 
 function getSubjectStatus(name: string): "available" | "science" | "locked" {
-  if (SCIENCE_NAMES.has(name)) return "science";
-  if (NON_SCIENCE_LOCKED.has(name)) return "locked";
-  return "available";
+  if (AVAILABLE_NAMES.has(name)) return "available";
+  return "locked";
 }
 
 const SUBJECT_META: Record<string, { emoji: string; iconColor: string; gradient: string; accent: string }> = {

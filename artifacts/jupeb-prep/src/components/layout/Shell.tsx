@@ -33,20 +33,20 @@ interface ShellProps {
 }
 
 const navItems = [
-  { href: "/",          label: "Dashboard",    icon: LayoutDashboard, color: "text-violet-500" },
-  { href: "/subjects",  label: "Subjects",     icon: Library,         color: "text-blue-500"   },
-  { href: "/syllabus",  label: "Syllabus",     icon: ScrollText,      color: "text-emerald-500"},
-  { href: "/questions", label: "Question Bank",icon: BookOpen,        color: "text-teal-500"   },
+  { href: "/",           label: "Dashboard",    icon: LayoutDashboard, color: "text-violet-500"  },
+  { href: "/class",      label: "Class",        icon: GraduationCap,   color: "text-emerald-500" },
+  { href: "/subjects",   label: "Subjects",     icon: Library,         color: "text-blue-500"    },
+  { href: "/syllabus",   label: "Syllabus",     icon: ScrollText,      color: "text-emerald-500" },
+  { href: "/questions",  label: "Question Bank",icon: BookOpen,        color: "text-teal-500"    },
   { href: "/quiz",       label: "Quiz Mode",    icon: PenTool,         color: "text-orange-500"  },
-  { href: "/flashcards", label: "Flashcards",  icon: Layers,          color: "text-fuchsia-500" },
-  { href: "/community",  label: "Community",   icon: Users,           color: "text-sky-500"     },
-  { href: "/leaderboard", label: "Leaderboard", icon: Trophy,          color: "text-amber-500"   },
-  { href: "/learn",     label: "AI Learn",     icon: Wand2,           color: "text-rose-500"   },
-  { href: "/voice",     label: "Voice AI",     icon: Mic,             color: "text-green-500"  },
-  { href: "/class",     label: "Class",        icon: GraduationCap,   color: "text-emerald-500"},
-  { href: "/history",   label: "History",      icon: History,         color: "text-indigo-500" },
-  { href: "/progress",  label: "Progress",     icon: TrendingUp,      color: "text-cyan-500"   },
-  { href: "/chat",      label: "AI Tutor",     icon: MessageCircle,   color: "text-amber-500"  },
+  { href: "/flashcards", label: "Flashcards",   icon: Layers,          color: "text-fuchsia-500" },
+  { href: "/community",  label: "Community",    icon: Users,           color: "text-sky-500"     },
+  { href: "/leaderboard",label: "Leaderboard",  icon: Trophy,          color: "text-amber-500"   },
+  { href: "/learn",      label: "AI Learn",     icon: Wand2,           color: "text-rose-500"    },
+  { href: "/voice",      label: "Voice AI",     icon: Mic,             color: "text-green-500"   },
+  { href: "/history",    label: "History",      icon: History,         color: "text-indigo-500"  },
+  { href: "/progress",   label: "Progress",     icon: TrendingUp,      color: "text-cyan-500"    },
+  { href: "/chat",       label: "AI Tutor",     icon: MessageCircle,   color: "text-amber-500"   },
 ];
 
 function useProfile() {
