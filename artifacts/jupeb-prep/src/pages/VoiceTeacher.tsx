@@ -3,7 +3,7 @@ import { Shell } from "@/components/layout/Shell";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mic, Play, Pause, Volume2, Loader2, Sparkles, RefreshCw,
-  BookOpen, ChevronRight, AlertCircle, Square, Wand2,
+  BookOpen, AlertCircle, Wand2, ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +35,32 @@ const SUBJECT_COLORS: Record<string, string> = {
   Accounting: "bg-lime-500/15 text-lime-300 border-lime-500/25",
 };
 
+const SPEAKERS = [
+  { id: "idera", label: "Idera", gender: "♀" },
+  { id: "jide", label: "Jide", gender: "♂" },
+  { id: "tolu", label: "Tolu", gender: "♀" },
+  { id: "emma", label: "Emma", gender: "♂" },
+  { id: "zainab", label: "Zainab", gender: "♀" },
+  { id: "joke", label: "Joke", gender: "♀" },
+  { id: "adaeze", label: "Adaeze", gender: "♀" },
+  { id: "umar", label: "Umar", gender: "♂" },
+  { id: "chisom", label: "Chisom", gender: "♀" },
+  { id: "remi", label: "Remi", gender: "♂" },
+  { id: "amaka", label: "Amaka", gender: "♀" },
+  { id: "kemi", label: "Kemi", gender: "♀" },
+  { id: "ngozi", label: "Ngozi", gender: "♀" },
+  { id: "kehinde", label: "Kehinde", gender: "♂" },
+  { id: "taiwo", label: "Taiwo", gender: "♀" },
+];
+
+const LANGUAGES = [
+  { id: "english", label: "English" },
+  { id: "yoruba", label: "Yoruba" },
+  { id: "igbo", label: "Igbo" },
+  { id: "hausa", label: "Hausa" },
+  { id: "pidgin", label: "Pidgin" },
+];
+
 type Phase = "idle" | "generating-text" | "generating-audio" | "ready" | "playing" | "error";
 
 export default function VoiceTeacher() {
@@ -46,6 +72,8 @@ export default function VoiceTeacher() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [speaker, setSpeaker] = useState("idera");
+  const [language, setLanguage] = useState("english");
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const reset = () => {
@@ -58,6 +86,43 @@ export default function VoiceTeacher() {
     setIsPlaying(false);
     setProgress(0);
     setDuration(0);
+  };
+
+  const playAudio = (blob: Blob) => {
+    const url = URL.createObjectURL(blob);
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    setAudioUrl(url);
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    audio.onloadedmetadata = () => setDuration(audio.duration);
+    audio.ontimeupdate = () => setProgress(audio.currentTime);
+    audio.onended = () => { setIsPlaying(false); setProgress(0); };
+    audio.onpause = () => setIsPlaying(false);
+    audio.onplay = () => setIsPlaying(true);
+    audio.play();
+    setPhase("ready");
+  };
+
+  const fetchAudio = async (text: string) => {
+    setPhase("generating-audio");
+    const ttsRes = await fetch(`${BASE}/api/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: text.slice(0, 1400), speaker, language }),
+    });
+
+    if (!ttsRes.ok) {
+      const errData = await ttsRes.json().catch(() => ({})) as any;
+      if (errData.code === "MODEL_LOADING") {
+        setPhase("ready");
+        setError("Voice model is warming up on HuggingFace — wait a moment then tap 'Speak Lesson' to retry.");
+        return;
+      }
+      throw new Error(errData.error || "Audio generation failed.");
+    }
+
+    const blob = await ttsRes.blob();
+    playAudio(blob);
   };
 
   const generate = async () => {
@@ -80,45 +145,8 @@ export default function VoiceTeacher() {
       const aiData = await aiRes.json();
       const text: string = aiData.explanation || aiData.content || aiData.text || "";
       if (!text) throw new Error("No explanation generated.");
-
       setLessonText(text);
-      setPhase("generating-audio");
-
-      const ttsRes = await fetch(`${BASE}/api/tts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: text.slice(0, 1400) }),
-      });
-
-      if (!ttsRes.ok) {
-        const errData = await ttsRes.json().catch(() => ({})) as any;
-        if (errData.code === "NO_HF_TOKEN") {
-          setPhase("ready");
-          setError("Voice is not configured yet. The lesson text is ready — add HUGGINGFACE_TOKEN to enable audio.");
-          return;
-        }
-        if (errData.code === "MODEL_LOADING") {
-          setPhase("ready");
-          setError("Voice model is warming up. Wait a moment then tap 'Speak Lesson' to try again.");
-          return;
-        }
-        throw new Error(errData.error || "Audio generation failed.");
-      }
-
-      const blob = await ttsRes.blob();
-      const url = URL.createObjectURL(blob);
-      setAudioUrl(url);
-
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.onloadedmetadata = () => setDuration(audio.duration);
-      audio.ontimeupdate = () => setProgress(audio.currentTime);
-      audio.onended = () => { setIsPlaying(false); setProgress(0); };
-      audio.onpause = () => setIsPlaying(false);
-      audio.onplay = () => setIsPlaying(true);
-      audio.play();
-
-      setPhase("ready");
+      await fetchAudio(text);
     } catch (err: any) {
       setPhase("error");
       setError(err.message || "Something went wrong. Please try again.");
@@ -127,33 +155,9 @@ export default function VoiceTeacher() {
 
   const speakLesson = async () => {
     if (!lessonText) return;
-    setPhase("generating-audio");
     setError("");
     try {
-      const ttsRes = await fetch(`${BASE}/api/tts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: lessonText.slice(0, 1400) }),
-      });
-      if (!ttsRes.ok) {
-        const errData = await ttsRes.json().catch(() => ({})) as any;
-        setPhase("ready");
-        setError(errData.error || "Audio generation failed.");
-        return;
-      }
-      const blob = await ttsRes.blob();
-      const url = URL.createObjectURL(blob);
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
-      setAudioUrl(url);
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.onloadedmetadata = () => setDuration(audio.duration);
-      audio.ontimeupdate = () => setProgress(audio.currentTime);
-      audio.onended = () => { setIsPlaying(false); setProgress(0); };
-      audio.onpause = () => setIsPlaying(false);
-      audio.onplay = () => setIsPlaying(true);
-      audio.play();
-      setPhase("ready");
+      await fetchAudio(lessonText);
     } catch (err: any) {
       setPhase("ready");
       setError(err.message || "Audio generation failed.");
@@ -167,7 +171,8 @@ export default function VoiceTeacher() {
   };
 
   const formatTime = (s: number) => {
-    const m = Math.floor(s / 60); const sec = Math.floor(s % 60);
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
     return `${m}:${sec.toString().padStart(2, "0")}`;
   };
 
@@ -195,11 +200,81 @@ export default function VoiceTeacher() {
           </div>
         </motion.div>
 
+        {/* Voice selector */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.03 }}
+          className="glass-card p-4 space-y-3"
+        >
+          <p className="text-[11px] font-bold text-white/40 tracking-widest uppercase">Choose a voice</p>
+          <div className="flex gap-3">
+            {/* Speaker */}
+            <div className="flex-1">
+              <label className="text-[10px] text-white/30 mb-1.5 block">Speaker</label>
+              <div className="relative">
+                <select
+                  value={speaker}
+                  onChange={e => setSpeaker(e.target.value)}
+                  disabled={isLoading}
+                  className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/40 transition-all disabled:opacity-50 pr-8"
+                >
+                  {SPEAKERS.map(s => (
+                    <option key={s.id} value={s.id} className="bg-zinc-900">
+                      {s.gender} {s.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/30 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Language */}
+            <div className="flex-1">
+              <label className="text-[10px] text-white/30 mb-1.5 block">Language</label>
+              <div className="relative">
+                <select
+                  value={language}
+                  onChange={e => setLanguage(e.target.value)}
+                  disabled={isLoading}
+                  className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-green-500/40 transition-all disabled:opacity-50 pr-8"
+                >
+                  {LANGUAGES.map(l => (
+                    <option key={l.id} value={l.id} className="bg-zinc-900">
+                      {l.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/30 pointer-events-none" />
+              </div>
+            </div>
+          </div>
+
+          {/* Speaker chips */}
+          <div className="flex flex-wrap gap-1.5 pt-0.5">
+            {SPEAKERS.slice(0, 8).map(s => (
+              <button
+                key={s.id}
+                onClick={() => setSpeaker(s.id)}
+                disabled={isLoading}
+                className={cn(
+                  "text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-all disabled:opacity-30",
+                  speaker === s.id
+                    ? "bg-green-500/20 text-green-300 border-green-500/30"
+                    : "bg-white/4 text-white/40 border-white/8 hover:border-white/20 hover:text-white/60"
+                )}
+              >
+                {s.gender} {s.label}
+              </button>
+            ))}
+          </div>
+        </motion.div>
+
         {/* Topic input */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
+          transition={{ delay: 0.07 }}
           className="glass-card p-4 space-y-3"
         >
           <label className="text-[11px] font-bold text-white/40 tracking-widest uppercase">
@@ -235,14 +310,13 @@ export default function VoiceTeacher() {
             </button>
           </div>
 
-          {/* Quick topics */}
           <div>
             <p className="text-[10px] text-white/25 mb-2">Quick topics:</p>
             <div className="flex flex-wrap gap-1.5">
               {QUICK_TOPICS.map(t => (
                 <button
                   key={t.label}
-                  onClick={() => { setTopic(t.label); }}
+                  onClick={() => setTopic(t.label)}
                   disabled={isLoading}
                   className={cn(
                     "text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-all hover:opacity-80 active:scale-95 disabled:opacity-30",
@@ -256,7 +330,7 @@ export default function VoiceTeacher() {
           </div>
         </motion.div>
 
-        {/* Status */}
+        {/* Status banners */}
         <AnimatePresence>
           {phase === "generating-text" && (
             <motion.div
@@ -277,7 +351,7 @@ export default function VoiceTeacher() {
               className="flex items-center gap-3 px-4 py-3.5 bg-green-500/10 border border-green-500/20 rounded-2xl"
             >
               <div className="flex gap-0.5 flex-shrink-0">
-                {[0,1,2,3].map(i => (
+                {[0, 1, 2, 3].map(i => (
                   <motion.div
                     key={i} className="w-1 bg-green-400 rounded-full"
                     animate={{ height: ["8px", "18px", "8px"] }}
@@ -286,8 +360,10 @@ export default function VoiceTeacher() {
                 ))}
               </div>
               <div>
-                <p className="text-sm font-semibold text-green-300">Generating Nigerian voice…</p>
-                <p className="text-[11px] text-white/35 mt-0.5">YarnGPT is synthesising speech — may take a few seconds</p>
+                <p className="text-sm font-semibold text-green-300">
+                  Generating voice — {SPEAKERS.find(s => s.id === speaker)?.label ?? speaker} ({language})…
+                </p>
+                <p className="text-[11px] text-white/35 mt-0.5">YarnGPT is synthesising Nigerian speech — may take ~15s</p>
               </div>
             </motion.div>
           )}
@@ -306,14 +382,13 @@ export default function VoiceTeacher() {
           )}
         </AnimatePresence>
 
-        {/* Lesson text */}
+        {/* Lesson + player */}
         <AnimatePresence>
           {lessonText && (
             <motion.div
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
               className="glass-card overflow-hidden"
             >
-              {/* Audio player */}
               {audioUrl && (
                 <div className="px-4 py-3 bg-gradient-to-r from-green-500/10 to-emerald-500/5 border-b border-green-500/15">
                   <div className="flex items-center gap-3">
@@ -321,7 +396,9 @@ export default function VoiceTeacher() {
                       onClick={togglePlay}
                       className="w-9 h-9 rounded-xl bg-green-500/20 border border-green-500/30 flex items-center justify-center hover:bg-green-500/30 transition-all active:scale-95 flex-shrink-0"
                     >
-                      {isPlaying ? <Pause className="h-4 w-4 text-green-400" /> : <Play className="h-4 w-4 text-green-400 ml-0.5" />}
+                      {isPlaying
+                        ? <Pause className="h-4 w-4 text-green-400" />
+                        : <Play className="h-4 w-4 text-green-400 ml-0.5" />}
                     </button>
 
                     <div className="flex-1 space-y-1">
@@ -330,8 +407,7 @@ export default function VoiceTeacher() {
                         onClick={e => {
                           if (!audioRef.current || !duration) return;
                           const rect = e.currentTarget.getBoundingClientRect();
-                          const x = e.clientX - rect.left;
-                          audioRef.current.currentTime = (x / rect.width) * duration;
+                          audioRef.current.currentTime = ((e.clientX - rect.left) / rect.width) * duration;
                         }}
                       >
                         <div
@@ -345,16 +421,13 @@ export default function VoiceTeacher() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/15 text-green-400 border border-green-500/20">
-                        🇳🇬 YarnGPT
-                      </span>
-                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/15 text-green-400 border border-green-500/20 flex-shrink-0">
+                      🇳🇬 {SPEAKERS.find(s => s.id === speaker)?.label ?? speaker}
+                    </span>
                   </div>
                 </div>
               )}
 
-              {/* Lesson content */}
               <div className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <BookOpen className="h-4 w-4 text-white/30" />
@@ -375,7 +448,8 @@ export default function VoiceTeacher() {
                     onClick={speakLesson}
                     className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-green-600/20 border border-green-500/30 text-green-400 text-sm font-semibold hover:bg-green-600/30 transition-all"
                   >
-                    <Volume2 className="h-4 w-4" />Speak this lesson (Nigerian accent)
+                    <Volume2 className="h-4 w-4" />
+                    Speak this lesson — {SPEAKERS.find(s => s.id === speaker)?.label ?? speaker} ({language})
                   </button>
                 )}
               </div>
@@ -383,7 +457,7 @@ export default function VoiceTeacher() {
           )}
         </AnimatePresence>
 
-        {/* Idle state info */}
+        {/* Idle state */}
         {phase === "idle" && !lessonText && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
@@ -394,10 +468,12 @@ export default function VoiceTeacher() {
             </div>
             <div>
               <p className="text-sm font-semibold text-white/60">Your AI teacher is ready</p>
-              <p className="text-xs text-white/30 mt-1">Type any JUPEB topic above and get a full lesson spoken in Nigerian English</p>
+              <p className="text-xs text-white/30 mt-1">
+                Pick a voice above, type any JUPEB topic, and get a lesson spoken in Nigerian English
+              </p>
             </div>
             <div className="flex flex-wrap justify-center gap-2 pt-1">
-              {["Powered by Gemini AI", "YarnGPT Nigerian Voice", "All JUPEB Subjects"].map(f => (
+              {["15 Nigerian voices", "5 languages incl. Yoruba & Igbo", "All JUPEB subjects"].map(f => (
                 <span key={f} className="text-[10px] px-2.5 py-1 rounded-lg bg-white/4 border border-white/8 text-white/35">{f}</span>
               ))}
             </div>
