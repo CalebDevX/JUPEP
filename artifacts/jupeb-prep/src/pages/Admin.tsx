@@ -1,5 +1,4 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Shell } from "@/components/layout/Shell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -1651,82 +1650,91 @@ export default function AdminPanel() {
 
   if (!isAuthenticated) {
     return (
-      <Shell>
-        <div className="flex-1 flex items-center justify-center p-6">
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm">
-            <div className="glass-card p-8 space-y-6 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-violet-500/15 flex items-center justify-center mx-auto border border-violet-500/25">
-                <Lock className="h-6 w-6 text-violet-400" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold font-serif text-white">Admin Panel</h1>
-                <p className="text-white/40 text-sm mt-1">Enter your PIN to continue</p>
-              </div>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <Input type="password" value={inputPin} onChange={e => setInputPin(e.target.value)}
-                  placeholder="Enter PIN" className={cn(inputCls, "text-center text-lg tracking-widest h-12")} autoFocus />
-                <Button type="submit" className="w-full h-12 bg-violet-600 hover:bg-violet-500 font-bold">
-                  Verify Access
-                </Button>
-              </form>
+      <div className="min-h-screen bg-[#0d0d12] flex items-center justify-center p-6">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-sm">
+          <div className="glass-card p-8 space-y-6 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-violet-500/15 flex items-center justify-center mx-auto border border-violet-500/25">
+              <Lock className="h-6 w-6 text-violet-400" />
             </div>
-          </motion.div>
-        </div>
-      </Shell>
+            <div>
+              <h1 className="text-2xl font-bold font-serif text-white">Admin Panel</h1>
+              <p className="text-white/40 text-sm mt-1">Enter your PIN to continue</p>
+            </div>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <Input type="password" value={inputPin} onChange={e => setInputPin(e.target.value)}
+                placeholder="Enter PIN" className={cn(inputCls, "text-center text-lg tracking-widest h-12")} autoFocus />
+              <Button type="submit" className="w-full h-12 bg-violet-600 hover:bg-violet-500 font-bold">
+                Verify Access
+              </Button>
+            </form>
+          </div>
+        </motion.div>
+      </div>
     );
   }
 
   const activeTab = ADMIN_TABS.find(t => t.id === tab);
 
   return (
-    <Shell>
-      <div className="p-5 md:p-8 max-w-6xl mx-auto w-full">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <p className="ed-label mb-1">Admin Panel</p>
-            <h1 className="text-2xl font-bold font-serif text-white">{activeTab?.label}</h1>
-            <p className="text-white/40 text-sm mt-0.5">{activeTab?.desc}</p>
+    <div className="min-h-screen bg-[#0d0d12] flex flex-col">
+      {/* Standalone admin top bar — no student sidebar */}
+      <header className="sticky top-0 z-40 border-b border-white/8 bg-[#0d0d12]/90 backdrop-blur-xl">
+        <div className="max-w-6xl mx-auto px-5 md:px-8 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-lg bg-violet-500/20 border border-violet-500/30 flex items-center justify-center">
+              <Lock className="h-3.5 w-3.5 text-violet-400" />
+            </div>
+            <span className="text-sm font-bold text-white tracking-tight">JUPEB Admin</span>
+            <span className="hidden sm:block text-white/20 text-xs">·</span>
+            <span className="hidden sm:block text-white/40 text-xs">{activeTab?.label}</span>
           </div>
           <Button variant="outline" size="sm" onClick={logout}
-            className="border-white/15 text-white/60 hover:bg-white/8 hover:text-white bg-transparent text-sm">
+            className="border-white/15 text-white/50 hover:bg-white/8 hover:text-white bg-transparent text-xs h-8 px-3">
             Lock Session
           </Button>
         </div>
+      </header>
 
-        {/* Tab bar */}
-        <div className="flex gap-1 flex-wrap border-b border-white/8 pb-0 mb-6 overflow-x-auto">
-          {ADMIN_TABS.map(t => {
-            const Icon = t.icon;
-            return (
-              <button key={t.id} onClick={() => setTab(t.id)}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold border-b-2 transition-colors -mb-px whitespace-nowrap",
-                  tab === t.id ? "border-violet-400 text-violet-400" : "border-transparent text-white/40 hover:text-white/70"
-                )}>
-                <Icon className="h-3.5 w-3.5" />
-                {t.label}
-              </button>
-            );
-          })}
+      {/* Tab bar */}
+      <div className="border-b border-white/8 bg-[#0d0d12]/60 backdrop-blur-sm">
+        <div className="max-w-6xl mx-auto px-5 md:px-8">
+          <div className="flex gap-0.5 overflow-x-auto scrollbar-hide">
+            {ADMIN_TABS.map(t => {
+              const Icon = t.icon;
+              return (
+                <button key={t.id} onClick={() => setTab(t.id)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-3 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap",
+                    tab === t.id ? "border-violet-400 text-violet-400" : "border-transparent text-white/40 hover:text-white/70"
+                  )}>
+                  <Icon className="h-3.5 w-3.5" />
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
-
-        {/* Content */}
-        <AnimatePresence mode="wait">
-          <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-            {tab === "overview"      && <OverviewTab pin={pin} />}
-            {tab === "students"      && <StudentsTab pin={pin} />}
-            {tab === "codes"         && <CodesTab pin={pin} />}
-            {tab === "revenue"       && <RevenueTab pin={pin} />}
-            {tab === "questions"     && <QuestionsTab />}
-            {tab === "anticheat"     && <AntiCheatTab pin={pin} />}
-            {tab === "announcements" && <AnnouncementsTab />}
-            {tab === "notes"         && <NotesTab />}
-            {tab === "settings"      && <SettingsTab />}
-            {tab === "branding"      && <BrandingTab />}
-          </motion.div>
-        </AnimatePresence>
       </div>
-    </Shell>
+
+      {/* Page content */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="p-5 md:p-8 max-w-6xl mx-auto w-full">
+          <AnimatePresence mode="wait">
+            <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+              {tab === "overview"      && <OverviewTab pin={pin} />}
+              {tab === "students"      && <StudentsTab pin={pin} />}
+              {tab === "codes"         && <CodesTab pin={pin} />}
+              {tab === "revenue"       && <RevenueTab pin={pin} />}
+              {tab === "questions"     && <QuestionsTab />}
+              {tab === "anticheat"     && <AntiCheatTab pin={pin} />}
+              {tab === "announcements" && <AnnouncementsTab />}
+              {tab === "notes"         && <NotesTab />}
+              {tab === "settings"      && <SettingsTab />}
+              {tab === "branding"      && <BrandingTab />}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </main>
+    </div>
   );
 }
