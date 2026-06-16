@@ -112,6 +112,25 @@ export async function startBot(logger: Logger) {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
+      // Check if admin has requested phone-number pairing instead of QR
+      try {
+        const pairingRes = await fetch(`${API_BASE}/api/bot/pending-pairing`, {
+          headers: { "x-bot-secret": BOT_SECRET },
+        });
+        if (pairingRes.ok) {
+          const { pairingPhone } = await pairingRes.json() as { pairingPhone: string | null };
+          if (pairingPhone) {
+            logger.info({ pairingPhone }, "Requesting pairing code for phone number");
+            const code = await sock.requestPairingCode(pairingPhone);
+            logger.info({ code }, "Pairing code generated — enter this in WhatsApp on your phone");
+            reportToApi("/bot/report-pairing-code", { pairingCode: code }, logger).catch(() => {});
+            return; // Skip QR when using phone pairing
+          }
+        }
+      } catch (err) {
+        logger.warn({ err }, "Failed to check pending pairing — falling back to QR");
+      }
+
       logger.info("Scan this QR code with WhatsApp (Linked Devices):");
       qrcode.generate(qr, { small: true });
       // Report QR to API server so admin panel can show it

@@ -1605,8 +1605,10 @@ function WhatsAppTab({ pin }: { pin: string }) {
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [loadingNotifs, setLoadingNotifs] = useState(true);
   const [broadcastMsg, setBroadcastMsg] = useState("");
-  const [sending, setSending] = useState(false);
   const [broadcasting, setBroadcasting] = useState(false);
+  const [pairingMethod, setPairingMethod] = useState<"qr" | "phone">("qr");
+  const [pairingPhone, setPairingPhone] = useState("");
+  const [requestingPairing, setRequestingPairing] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadStatus = async () => {
@@ -1624,10 +1626,7 @@ function WhatsAppTab({ pin }: { pin: string }) {
   useEffect(() => {
     loadStatus();
     loadNotifs();
-    // Poll status every 5s when connecting (waiting for QR scan)
-    pollRef.current = setInterval(() => {
-      loadStatus();
-    }, 5000);
+    pollRef.current = setInterval(() => { loadStatus(); }, 5000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
 
@@ -1635,6 +1634,25 @@ function WhatsAppTab({ pin }: { pin: string }) {
     try {
       await adminFetch(pin, "/api/bot/disconnect", "POST");
       toast({ title: "Bot disconnected" });
+      loadStatus();
+    } catch (e: any) { toast({ title: e.message, variant: "destructive" }); }
+  };
+
+  const requestPhonePairing = async () => {
+    if (!pairingPhone.trim()) return;
+    setRequestingPairing(true);
+    try {
+      await adminFetch(pin, "/api/bot/request-pairing", "POST", { phone: pairingPhone.trim() });
+      toast({ title: "Pairing requested!", description: "Restart your bot — the 8-digit code will appear here shortly." });
+      loadStatus();
+    } catch (e: any) { toast({ title: e.message, variant: "destructive" }); }
+    setRequestingPairing(false);
+  };
+
+  const clearPairing = async () => {
+    try {
+      await adminFetch(pin, "/api/bot/clear-pairing", "POST");
+      toast({ title: "Pairing request cleared" });
       loadStatus();
     } catch (e: any) { toast({ title: e.message, variant: "destructive" }); }
   };
@@ -1664,7 +1682,7 @@ function WhatsAppTab({ pin }: { pin: string }) {
   };
 
   const statusColor = botStatus?.status === "connected" ? "emerald" : botStatus?.status === "connecting" ? "amber" : "red";
-  const statusLabel = botStatus?.status === "connected" ? "Connected" : botStatus?.status === "connecting" ? "Waiting for scan…" : "Disconnected";
+  const statusLabel = botStatus?.status === "connected" ? "Connected" : botStatus?.status === "connecting" ? "Waiting for pairing…" : "Disconnected";
 
   const pending = notifications.filter(n => n.status === "pending").length;
   const sent = notifications.filter(n => n.status === "sent").length;
@@ -1676,11 +1694,12 @@ function WhatsAppTab({ pin }: { pin: string }) {
       {/* Bot Status */}
       <Section title="Bot Connection">
         <p className="text-xs text-white/40 -mt-2 leading-relaxed">
-          Your WhatsApp bot connects to this panel automatically. Start the bot with{" "}
+          Start the bot with{" "}
           <span className="font-mono text-violet-400 text-[11px]">pnpm --filter @workspace/whatsapp-bot run dev</span>,
-          then scan the QR code that appears here.
+          then pair it using a QR code or your WhatsApp phone number.
         </p>
 
+        {/* Status row */}
         <div className="flex items-center justify-between p-4 rounded-xl bg-white/3 border border-white/8">
           <div className="flex items-center gap-3">
             <div className={cn("w-2.5 h-2.5 rounded-full animate-pulse", `bg-${statusColor}-400`)} />
@@ -1703,33 +1722,111 @@ function WhatsAppTab({ pin }: { pin: string }) {
           </div>
         </div>
 
-        {/* QR Code */}
-        {botStatus?.qrCode && botStatus?.status !== "connected" && (
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            className="p-6 rounded-2xl border border-amber-500/20 bg-amber-500/5 text-center space-y-4">
-            <p className="text-sm font-bold text-amber-400">📱 Scan with WhatsApp → Linked Devices</p>
-            <div className="bg-white p-4 rounded-2xl inline-block mx-auto">
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(botStatus.qrCode)}`}
-                alt="WhatsApp QR"
-                className="w-48 h-48 block"
-              />
+        {/* Pairing method toggle — only show when not connected */}
+        {botStatus?.status !== "connected" && (
+          <div className="space-y-4">
+            <div className="flex rounded-xl overflow-hidden border border-white/10 text-xs font-bold">
+              <button
+                onClick={() => setPairingMethod("qr")}
+                className={cn("flex-1 py-2.5 transition-colors", pairingMethod === "qr" ? "bg-violet-600 text-white" : "bg-white/5 text-white/40 hover:text-white/60")}
+              >
+                📷 QR Code
+              </button>
+              <button
+                onClick={() => setPairingMethod("phone")}
+                className={cn("flex-1 py-2.5 transition-colors", pairingMethod === "phone" ? "bg-violet-600 text-white" : "bg-white/5 text-white/40 hover:text-white/60")}
+              >
+                📞 Phone Number
+              </button>
             </div>
-            <p className="text-xs text-white/40">QR refreshes every 60 seconds. If expired, restart your bot.</p>
-          </motion.div>
+
+            {/* QR Code panel */}
+            {pairingMethod === "qr" && (
+              <AnimatePresence>
+                {botStatus?.qrCode ? (
+                  <motion.div key="qr" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+                    className="p-6 rounded-2xl border border-amber-500/20 bg-amber-500/5 text-center space-y-4">
+                    <p className="text-sm font-bold text-amber-400">📱 Scan with WhatsApp → Linked Devices → Link a Device</p>
+                    <div className="bg-white p-4 rounded-2xl inline-block mx-auto">
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(botStatus.qrCode)}`}
+                        alt="WhatsApp QR"
+                        className="w-48 h-48 block"
+                      />
+                    </div>
+                    <p className="text-xs text-white/40">QR refreshes every 60 seconds. If expired, restart your bot.</p>
+                  </motion.div>
+                ) : (
+                  <motion.div key="qr-wait" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="flex items-center gap-2 px-4 py-3 bg-white/3 border border-white/8 rounded-xl text-sm text-white/35">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0 text-white/25" />
+                    Start the bot — a QR code will appear here automatically.
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
+
+            {/* Phone number pairing panel */}
+            {pairingMethod === "phone" && (
+              <motion.div key="phone" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                className="space-y-3">
+                <p className="text-xs text-white/40 leading-relaxed">
+                  Enter the WhatsApp number the bot will be linked to (with country code, e.g. <span className="font-mono text-violet-400">2348012345678</span>).
+                  After saving, <strong className="text-white/60">restart your bot</strong> — an 8-digit code will appear here within seconds.
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    value={pairingPhone}
+                    onChange={e => setPairingPhone(e.target.value.replace(/[^\d+]/g, ""))}
+                    placeholder="e.g. 2348012345678"
+                    className={cn(inputCls, "font-mono flex-1")}
+                  />
+                  <Button
+                    onClick={requestPhonePairing}
+                    disabled={requestingPairing || !pairingPhone.trim()}
+                    className="bg-violet-600 hover:bg-violet-500 text-white font-bold text-sm px-4"
+                  >
+                    {requestingPairing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                  </Button>
+                </div>
+
+                {/* Pending pairing phone saved in DB */}
+                {botStatus?.pairingPhone && !botStatus?.pairingCode && (
+                  <div className="flex items-center justify-between px-4 py-3 bg-violet-500/10 border border-violet-500/20 rounded-xl">
+                    <div>
+                      <p className="text-xs text-violet-300 font-bold">Pairing requested for</p>
+                      <p className="text-sm font-mono text-white">+{botStatus.pairingPhone}</p>
+                      <p className="text-xs text-white/40 mt-0.5">Restart your bot to generate the code.</p>
+                    </div>
+                    <button onClick={clearPairing} className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded-lg bg-red-500/10 border border-red-500/20 transition-colors">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Pairing code received from bot */}
+                {botStatus?.pairingCode && (
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                    className="p-5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 text-center space-y-3">
+                    <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Your Pairing Code</p>
+                    <p className="text-4xl font-black tracking-[0.3em] text-white font-mono">{botStatus.pairingCode}</p>
+                    <p className="text-xs text-white/40">
+                      On your phone: WhatsApp → <strong className="text-white/60">Linked Devices</strong> → <strong className="text-white/60">Link a Device</strong> → <strong className="text-white/60">Link with phone number</strong>. Code valid for 5 minutes.
+                    </p>
+                    <button onClick={clearPairing} className="text-xs text-white/30 hover:text-white/50 transition-colors">
+                      Clear
+                    </button>
+                  </motion.div>
+                )}
+              </motion.div>
+            )}
+          </div>
         )}
 
         {botStatus?.status === "connected" && (
           <div className="flex items-center gap-2 px-4 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-sm text-emerald-400">
             <CheckCircle className="h-4 w-4 flex-shrink-0" />
             Bot is online. Notifications will be sent automatically when queued.
-          </div>
-        )}
-
-        {botStatus?.status === "disconnected" && (
-          <div className="flex items-center gap-2 px-4 py-3 bg-white/3 border border-white/8 rounded-xl text-sm text-white/35">
-            <AlertCircle className="h-4 w-4 flex-shrink-0 text-white/25" />
-            Bot is offline. Start it locally to enable WhatsApp messaging.
           </div>
         )}
       </Section>
