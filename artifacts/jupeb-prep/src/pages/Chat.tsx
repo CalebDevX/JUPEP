@@ -8,6 +8,8 @@ import {
   FlaskConical, StopCircle, Volume2, Square, Pause, Play,
   Mic, Save,
 } from "lucide-react";
+import { isActivated } from "@/lib/access";
+import { PaywallGate } from "@/components/PaywallGate";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useReadAloud } from "@/hooks/useReadAloud";
@@ -418,6 +420,14 @@ export default function Chat() {
   };
 
   const isEmpty = messages.length === 0;
+
+  if (!isActivated()) {
+    return (
+      <Shell>
+        <PaywallGate feature="chat" />
+      </Shell>
+    );
+  }
 
   return (
     <Shell>

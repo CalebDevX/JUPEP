@@ -6,9 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useLocation } from "wouter";
-import { Loader2, PlayCircle, Timer, BookOpen, Target, Zap } from "lucide-react";
+import { Loader2, PlayCircle, Timer, BookOpen, Target, Zap, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { isActivated, getTrialRemaining, TRIAL_QUESTION_LIMIT } from "@/lib/access";
+import { Link } from "wouter";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -23,10 +25,13 @@ export default function QuizLauncher() {
   const { data: subjects, isLoading: isLoadingSubjects } = useListSubjects();
   const startQuiz = useStartQuiz();
 
+  const activated = isActivated();
+  const trialRemaining = getTrialRemaining();
+
   const [subjectId, setSubjectId] = useState<string>("");
   const [paper, setPaper] = useState<string>("001");
   const [type, setType] = useState<string>("objective");
-  const [count, setCount] = useState<string>("20");
+  const [count, setCount] = useState<string>(activated ? "20" : String(Math.min(5, trialRemaining)));
   const [isTimed, setIsTimed] = useState<boolean>(true);
 
   // Dynamic timer settings from server
@@ -94,6 +99,26 @@ export default function QuizLauncher() {
           </p>
         </motion.div>
 
+        {/* Free trial banner */}
+        {!activated && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 mb-4"
+          >
+            <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+              <Lock className="h-4 w-4 text-amber-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-amber-300">Free Trial — {trialRemaining} question{trialRemaining !== 1 ? "s" : ""} remaining</p>
+              <p className="text-[11px] text-amber-400/50">No explanations • {TRIAL_QUESTION_LIMIT} total free questions</p>
+            </div>
+            <Link href="/activate">
+              <span className="text-[11px] font-bold text-amber-400 hover:text-amber-300 transition-colors whitespace-nowrap">Activate →</span>
+            </Link>
+          </motion.div>
+        )}
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -153,17 +178,24 @@ export default function QuizLauncher() {
             {!isMock && type === "objective" && (
               <div className="space-y-1.5">
                 <Label className="text-xs text-white/50 uppercase tracking-wider">Number of Questions</Label>
-                <Select value={count} onValueChange={setCount}>
-                  <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#1e1e28] border-white/10">
-                    <SelectItem value="10" className="text-white">10 — Quick Review</SelectItem>
-                    <SelectItem value="20" className="text-white">20 — Standard</SelectItem>
-                    <SelectItem value="40" className="text-white">40 — Full Paper</SelectItem>
-                    <SelectItem value="50" className="text-white">50 — Comprehensive</SelectItem>
-                  </SelectContent>
-                </Select>
+                {!activated ? (
+                  <div className="h-11 px-3 flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg text-sm text-amber-300">
+                    <Lock className="h-3.5 w-3.5 text-amber-400" />
+                    Max {trialRemaining} question{trialRemaining !== 1 ? "s" : ""} (free trial)
+                  </div>
+                ) : (
+                  <Select value={count} onValueChange={setCount}>
+                    <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1e1e28] border-white/10">
+                      <SelectItem value="10" className="text-white">10 — Quick Review</SelectItem>
+                      <SelectItem value="20" className="text-white">20 — Standard</SelectItem>
+                      <SelectItem value="40" className="text-white">40 — Full Paper</SelectItem>
+                      <SelectItem value="50" className="text-white">50 — Comprehensive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             )}
           </div>

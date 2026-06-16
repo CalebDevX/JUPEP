@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { BookOpen, GraduationCap, Sparkles, Plus, FileText, Loader2, Search, Volume2, Pause, Play, Square } from "lucide-react";
+import { isActivated } from "@/lib/access";
+import { PaywallGate } from "@/components/PaywallGate";
 import { useReadAloud } from "@/hooks/useReadAloud";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -98,6 +100,14 @@ export default function Notes() {
       setGenerating(false);
     }
   };
+
+  if (!isActivated()) {
+    return (
+      <Shell>
+        <PaywallGate feature="notes" />
+      </Shell>
+    );
+  }
 
   return (
     <Shell>

@@ -157,6 +157,7 @@ export default function Register() {
   const [targetGrade, setTargetGrade] = useState("aaa1");
   const [subjects, setSubjects] = useState<string[]>([]);
   const [accessCode, setAccessCode] = useState("");
+  const [hasCode, setHasCode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -177,7 +178,7 @@ export default function Register() {
 
   const handleRegister = async () => {
     if (subjects.length < 2) return setError("Please select at least 2 JUPEB subjects.");
-    if (!accessCode.trim()) return setError("Please enter your access code.");
+    if (hasCode && !accessCode.trim()) return setError("Please enter your access code or choose 'Start Free Trial'.");
     setError("");
     setLoading(true);
 
@@ -192,7 +193,7 @@ export default function Register() {
           subjects,
           targetUniversity: targetUniversity.trim(),
           targetGrade,
-          accessCode: accessCode.trim().toUpperCase(),
+          accessCode: hasCode ? accessCode.trim().toUpperCase() : "",
         }),
       });
 
@@ -363,23 +364,66 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Access Code */}
-              <div className="space-y-1.5 mb-1">
-                <label className="text-xs font-semibold text-white/60 tracking-wide uppercase">
-                  Access Code <span className="text-rose-400">*</span>
-                </label>
-                <div className="relative">
-                  <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/25 pointer-events-none" />
-                  <input
-                    type="text"
-                    placeholder="Enter your access code"
-                    value={accessCode}
-                    onChange={e => setAccessCode(e.target.value.toUpperCase())}
-                    maxLength={24}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all tracking-widest font-mono"
-                  />
+              {/* Access Code / Free Trial toggle */}
+              <div className="space-y-3 mb-1">
+                <label className="text-xs font-semibold text-white/60 tracking-wide uppercase">Access</label>
+
+                {/* Toggle */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setHasCode(false)}
+                    className={cn(
+                      "flex flex-col items-start px-3.5 py-2.5 rounded-xl border text-left transition-all",
+                      !hasCode
+                        ? "border-emerald-500/50 bg-emerald-500/10"
+                        : "border-white/8 bg-white/3 hover:border-white/15"
+                    )}
+                  >
+                    <span className={cn("text-sm font-bold", !hasCode ? "text-emerald-300" : "text-white/60")}>
+                      🎯 Free Trial
+                    </span>
+                    <span className="text-[10px] text-white/30 mt-0.5">5 practice questions</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHasCode(true)}
+                    className={cn(
+                      "flex flex-col items-start px-3.5 py-2.5 rounded-xl border text-left transition-all",
+                      hasCode
+                        ? "border-violet-500/50 bg-violet-500/10"
+                        : "border-white/8 bg-white/3 hover:border-white/15"
+                    )}
+                  >
+                    <span className={cn("text-sm font-bold", hasCode ? "text-violet-300" : "text-white/60")}>
+                      🔑 Have a Code
+                    </span>
+                    <span className="text-[10px] text-white/30 mt-0.5">Full access</span>
+                  </button>
                 </div>
-                <p className="text-[11px] text-white/25">Access codes are provided by your JUPEB Prep coordinator.</p>
+
+                {/* Code input */}
+                {hasCode ? (
+                  <div className="space-y-1.5">
+                    <div className="relative">
+                      <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/25 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="Enter your access code"
+                        value={accessCode}
+                        onChange={e => setAccessCode(e.target.value.toUpperCase())}
+                        maxLength={24}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all tracking-widest font-mono"
+                      />
+                    </div>
+                    <p className="text-[11px] text-white/25">Access codes are provided by your JUPEB Prep coordinator.</p>
+                  </div>
+                ) : (
+                  <div className="px-3.5 py-3 rounded-xl bg-emerald-500/6 border border-emerald-500/15 text-xs text-white/50 leading-relaxed">
+                    ✅ Practice 5 questions free — no payment needed.<br />
+                    You can activate full access anytime from your account.
+                  </div>
+                )}
               </div>
             </>
           )}

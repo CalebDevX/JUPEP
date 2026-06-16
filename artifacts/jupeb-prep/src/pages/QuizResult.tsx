@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Confetti, StarBurst } from "@/components/Confetti";
 import { recordQuizComplete, getGamificationState } from "@/lib/gamification";
+import { isActivated, recordTrialQuestionsUsed } from "@/lib/access";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -46,6 +47,7 @@ export default function QuizResult() {
     const alreadyRecorded = sessionStorage.getItem(`quiz_result_${id}`);
     if (!alreadyRecorded) {
       sessionStorage.setItem(`quiz_result_${id}`, "1");
+      if (!isActivated()) recordTrialQuestionsUsed(session.questions.length);
       const { xpGained: gained } = recordQuizComplete(score, total);
       setXpGained(gained);
       setTimeout(() => setShowXPBanner(true), 600);
@@ -283,11 +285,20 @@ export default function QuizResult() {
                     </div>
                   )}
 
-                  {q.explanation && (
+                  {q.explanation && isActivated() && (
                     <div className="p-4 rounded-xl bg-amber-500/8 border border-amber-500/20 text-xs leading-relaxed text-white/65 border-l-2 border-l-amber-400">
                       <p className="font-semibold text-amber-400 mb-1">Explanation</p>
                       <p className="whitespace-pre-wrap">{q.explanation}</p>
                     </div>
+                  )}
+                  {q.explanation && !isActivated() && (
+                    <Link href="/activate">
+                      <div className="p-3 rounded-xl bg-white/4 border border-white/8 text-xs flex items-center gap-2 cursor-pointer hover:bg-white/6 transition-colors">
+                        <Lock className="h-3.5 w-3.5 text-white/30 flex-shrink-0" />
+                        <span className="text-white/35">Explanation locked — </span>
+                        <span className="text-violet-400 font-semibold">Activate to unlock</span>
+                      </div>
+                    </Link>
                   )}
 
                   {q.questionType === "theory" && q.markingGuide && (
