@@ -20,11 +20,12 @@ function fmtMinutes(min: number) {
 }
 
 const PAPER_OPTIONS = [
-  { value: "001",   label: "1st In-Course Exam",    desc: "First in-course test"                    },
-  { value: "002",   label: "1st Semester Exam",      desc: "End of first semester exam"              },
-  { value: "003",   label: "2nd In-Course Exam",     desc: "Second in-course test"                   },
-  { value: "mock",  label: "Mock Exam",              desc: "Combination of all sessions"             },
-  { value: "jupeb", label: "JUPEB Final Exam",       desc: "Past JUPEB final examination questions"  },
+  { value: "001",   label: "1st In-Course Exam",    desc: "First in-course test"                          },
+  { value: "002",   label: "1st Semester Exam",      desc: "End of first semester exam"                    },
+  { value: "003",   label: "2nd In-Course Exam",     desc: "Second in-course test"                         },
+  { value: "004",   label: "2nd Semester Exam",      desc: "End of second semester exam"                   },
+  { value: "mock",  label: "Mock Exam",              desc: "Full mock covering all four papers (001–004)"  },
+  { value: "jupeb", label: "JUPEB Final Exam",       desc: "Past JUPEB final examination questions"        },
 ];
 
 const CUSTOM_TIMES = [10, 15, 20, 30, 45, 60, 90, 120];

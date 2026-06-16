@@ -32,6 +32,7 @@ const PAPER_LABELS: Record<string, string> = {
   "001": "1st In-Course Exam",
   "002": "1st Semester Exam",
   "003": "2nd In-Course Exam",
+  "004": "2nd Semester Exam",
   "mock": "Mock Exam",
 };
 

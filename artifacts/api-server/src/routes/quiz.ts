@@ -6,11 +6,11 @@ import { eq, and, inArray, sql } from "drizzle-orm";
 const router = Router();
 
 const PAPER_LABELS: Record<string, string> = {
-  "001": "1st Incourse",
+  "001": "1st In-Course Exam",
   "002": "1st Semester Exam",
-  "003": "2nd Incourse",
-  "004": "Mock Exam",
-  "mock": "Full Mock (001-004)",
+  "003": "2nd In-Course Exam",
+  "004": "2nd Semester Exam",
+  "mock": "Full Mock (001–004)",
 };
 
 const GRADE_MAP = (pct: number) => {
@@ -46,7 +46,8 @@ router.post("/quiz/start", async (req, res) => {
     const conditions: any[] = [eq(questionsTable.subjectId, subjectId)];
 
     if (paper === "mock") {
-      // all papers
+      // Mock covers papers 001, 002, 003, 004 only (not jupeb final papers)
+      conditions.push(inArray(questionsTable.paper, ["001", "002", "003", "004"]));
     } else {
       conditions.push(eq(questionsTable.paper, paper));
     }

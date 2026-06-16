@@ -22,7 +22,7 @@ const paperLabels: Record<string, string> = {
   "001": "1st In-Course",
   "002": "1st Semester",
   "003": "2nd In-Course",
-  "004": "Mock Exam",
+  "004": "2nd Semester",
   "mock": "Mock Exam",
   "jupeb": "JUPEB Final",
 };
@@ -170,7 +170,7 @@ export default function Notes() {
                         <SelectItem value="001" className="text-white">1st In-Course Exam</SelectItem>
                         <SelectItem value="002" className="text-white">1st Semester Exam</SelectItem>
                         <SelectItem value="003" className="text-white">2nd In-Course Exam</SelectItem>
-                        <SelectItem value="004" className="text-white">Mock Exam</SelectItem>
+                        <SelectItem value="004" className="text-white">2nd Semester Exam</SelectItem>
                         <SelectItem value="jupeb" className="text-white">JUPEB Final Exam</SelectItem>
                       </SelectContent>
                     </Select>
@@ -249,10 +249,11 @@ export default function Notes() {
             </SelectTrigger>
             <SelectContent className="bg-[#1e1e28] border-white/10">
               <SelectItem value="all" className="text-white">All Papers</SelectItem>
-              <SelectItem value="001" className="text-white">1st Incourse</SelectItem>
+              <SelectItem value="001" className="text-white">1st In-Course</SelectItem>
               <SelectItem value="002" className="text-white">1st Semester</SelectItem>
-              <SelectItem value="003" className="text-white">2nd Incourse</SelectItem>
-              <SelectItem value="004" className="text-white">Mock Exam</SelectItem>
+              <SelectItem value="003" className="text-white">2nd In-Course</SelectItem>
+              <SelectItem value="004" className="text-white">2nd Semester</SelectItem>
+              <SelectItem value="jupeb" className="text-white">JUPEB Final</SelectItem>
             </SelectContent>
           </Select>
           {filteredNotes && (
