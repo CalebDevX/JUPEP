@@ -5,8 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Loader2, PlayCircle, Timer, BookOpen, Target, Zap, Lock, AlertTriangle, Shuffle } from "lucide-react";
-import { motion } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Loader2, PlayCircle, Timer, BookOpen, Target, Zap, Lock,
+  AlertTriangle, Shuffle, CheckCircle2, XCircle, Info,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { isActivated, getTrialRemaining, TRIAL_QUESTION_LIMIT } from "@/lib/access";
 import { Link } from "wouter";
@@ -20,18 +24,21 @@ function fmtMinutes(min: number) {
 }
 
 const PAPER_OPTIONS = [
-  { value: "001",   label: "1st In-Course Exam",    desc: "First in-course test"                          },
-  { value: "002",   label: "1st Semester Exam",      desc: "End of first semester exam"                    },
-  { value: "003",   label: "2nd In-Course Exam",     desc: "Second in-course test"                         },
-  { value: "004",   label: "2nd Semester Exam",      desc: "End of second semester exam"                   },
-  { value: "mock",  label: "Mock Exam",              desc: "Full mock covering all four papers (001–004)"  },
-  { value: "jupeb", label: "JUPEB Final Exam",       desc: "Past JUPEB final examination questions"        },
+  { value: "001",   label: "1st In-Course Exam",   short: "Paper 001" },
+  { value: "002",   label: "1st Semester Exam",     short: "Paper 002" },
+  { value: "003",   label: "2nd In-Course Exam",    short: "Paper 003" },
+  { value: "004",   label: "2nd Semester Exam",     short: "Paper 004" },
+  { value: "mock",  label: "Full Mock Exam",        short: "Mock (All)"  },
+  { value: "jupeb", label: "JUPEB Final Exam",      short: "JUPEB Final" },
 ];
 
 const CUSTOM_TIMES = [10, 15, 20, 30, 45, 60, 90, 120];
 
+interface AvailRow { subjectId: number; paper: string; questionType: string; count: number; }
+
 export default function QuizLauncher() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const { data: subjects, isLoading: isLoadingSubjects } = useListSubjects();
   const startQuiz = useStartQuiz();
 
@@ -42,35 +49,62 @@ export default function QuizLauncher() {
   const [paper, setPaper]           = useState<string>("001");
   const [type, setType]             = useState<string>("objective");
   const [count, setCount]           = useState<string>(activated ? "20" : String(Math.min(5, trialRemaining)));
-
-  // Timer state — "none" | "best" | "custom"  (mock/jupeb → locked automatically)
-  const [timerMode, setTimerMode]       = useState<"none" | "best" | "custom">("best");
+  const [timerMode, setTimerMode]   = useState<"none" | "best" | "custom">("best");
   const [customMinutes, setCustomMinutes] = useState<number>(30);
-
   const [mockTimerMinutes, setMockTimerMinutes] = useState(120);
-  const [shuffle, setShuffle] = useState(true);
+  const [shuffle, setShuffle]       = useState(true);
+  const [avail, setAvail]           = useState<AvailRow[]>([]);
 
+  // Load mock timer setting
   useEffect(() => {
     fetch(`${BASE}/api/settings`)
       .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data) setMockTimerMinutes(parseInt(data.mock_timer_minutes ?? "120") || 120);
-      })
+      .then(data => { if (data) setMockTimerMinutes(parseInt(data.mock_timer_minutes ?? "120") || 120); })
       .catch(() => {});
   }, []);
+
+  // Load availability map
+  useEffect(() => {
+    fetch(`${BASE}/api/quiz/available`)
+      .then(r => r.ok ? r.json() : [])
+      .then(setAvail)
+      .catch(() => {});
+  }, []);
+
+  // Auto-select first subject once subjects load
+  useEffect(() => {
+    if (!subjectId && Array.isArray(subjects) && subjects.length > 0) {
+      setSubjectId(String(subjects[0].id));
+    }
+  }, [subjects, subjectId]);
 
   const isMock  = paper === "mock";
   const isJupeb = paper === "jupeb";
   const isMixed = isMock || isJupeb;
 
-  // Best time: 1.5 min/question for objective, 25 min/question for theory (min 10 / 20)
+  // How many questions exist for current selection
+  const availCount = (sid: string, p: string, qt: string): number => {
+    const sid_ = Number(sid);
+    if (p === "mock" || p === "jupeb") {
+      // Mock/jupeb = sum across 001-004 for mixed types
+      return avail.filter(r => r.subjectId === sid_).reduce((s, r) => s + r.count, 0);
+    }
+    if (qt === "objective" || qt === "theory") {
+      return avail.find(r => r.subjectId === sid_ && r.paper === p && r.questionType === qt)?.count ?? 0;
+    }
+    return avail.filter(r => r.subjectId === sid_ && r.paper === p).reduce((s, r) => s + r.count, 0);
+  };
+
+  const currentCount = subjectId ? availCount(subjectId, paper, isMixed ? "mixed" : type) : 0;
+  const hasQuestions = currentCount > 0;
+
+  // Best time: 1.5 min/question for objective, 25 min/question for theory
   const getBestMinutes = () => {
     const q = Number(count);
     if (type === "theory") return Math.max(20, q * 25);
     return Math.max(10, Math.round((q * 1.5) / 5) * 5);
   };
 
-  // Resolve the actual timed minutes to pass to API
   const resolveTimedMinutes = (): number | undefined => {
     if (isMixed) return mockTimerMinutes;
     if (timerMode === "none") return undefined;
@@ -81,10 +115,8 @@ export default function QuizLauncher() {
   const timedMinutes = resolveTimedMinutes();
   const timerLabel   = timedMinutes !== undefined ? fmtMinutes(timedMinutes) : "∞";
 
-  const selectedPaper = PAPER_OPTIONS.find(p => p.value === paper);
-
   const handleStart = () => {
-    if (!subjectId) return;
+    if (!subjectId || !hasQuestions) return;
     startQuiz.mutate({
       data: {
         subjectId: Number(subjectId),
@@ -95,18 +127,35 @@ export default function QuizLauncher() {
         shuffle,
       }
     }, {
-      onSuccess: (session) => setLocation(`/quiz/session/${session.id}`)
+      onSuccess: (session) => setLocation(`/quiz/session/${session.id}`),
+      onError: (err: any) => {
+        const msg = err?.message ?? "Could not start quiz. No questions found for this selection.";
+        toast({
+          title: "Cannot start quiz",
+          description: msg.includes("No questions") ? "No questions are available for this subject + exam combination yet. Try a different paper or subject." : msg,
+          variant: "destructive",
+        });
+      },
     });
+  };
+
+  // Helper: does a paper have any questions for current subject?
+  const paperHasQuestions = (p: string) => {
+    if (!subjectId) return false;
+    const sid = Number(subjectId);
+    if (p === "mock" || p === "jupeb") {
+      return avail.some(r => r.subjectId === sid);
+    }
+    return avail.some(r => r.subjectId === sid && r.paper === p);
   };
 
   return (
     <Shell>
       <div className="p-4 md:p-6 max-w-2xl mx-auto w-full flex-1 flex flex-col justify-center">
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-6 md:mb-8"
-        >
+
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-6 md:mb-8">
           <div className="w-16 h-16 rounded-2xl bg-orange-500/15 flex items-center justify-center mx-auto mb-4 border border-orange-500/20">
             <Zap className="h-8 w-8 text-orange-400" />
           </div>
@@ -116,12 +165,10 @@ export default function QuizLauncher() {
           </p>
         </motion.div>
 
+        {/* Trial banner */}
         {!activated && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 mb-4"
-          >
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 mb-4">
             <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center flex-shrink-0">
               <Lock className="h-4 w-4 text-amber-400" />
             </div>
@@ -135,92 +182,154 @@ export default function QuizLauncher() {
           </motion.div>
         )}
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="glass-card p-5 md:p-6 space-y-5"
-        >
-          {/* Subject + Session */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-white/50 uppercase tracking-wider">Subject</Label>
-              <Select value={subjectId} onValueChange={setSubjectId} disabled={isLoadingSubjects}>
-                <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white">
-                  <SelectValue placeholder="Choose a subject…" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#1e1e28] border-white/10">
-                  {(Array.isArray(subjects) ? subjects : []).map(s => (
-                    <SelectItem key={s.id} value={s.id.toString()} className="text-white">{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }} className="glass-card p-5 md:p-6 space-y-5">
 
-            <div className="space-y-1.5">
-              <Label className="text-xs text-white/50 uppercase tracking-wider">Session / Exam</Label>
-              <Select value={paper} onValueChange={setPaper}>
-                <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-[#1e1e28] border-white/10">
-                  {PAPER_OPTIONS.map(p => (
-                    <SelectItem key={p.value} value={p.value} className="text-white">
-                      {p.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedPaper && (
-                <p className="text-[10px] text-white/30 pl-1">{selectedPaper.desc}</p>
-              )}
-            </div>
+          {/* Subject */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-white/50 uppercase tracking-wider">Subject</Label>
+            <Select value={subjectId} onValueChange={setSubjectId} disabled={isLoadingSubjects}>
+              <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white">
+                <SelectValue placeholder={isLoadingSubjects ? "Loading subjects…" : "Choose a subject…"} />
+              </SelectTrigger>
+              <SelectContent className="bg-[#1e1e28] border-white/10">
+                {(Array.isArray(subjects) ? subjects : []).map(s => (
+                  <SelectItem key={s.id} value={s.id.toString()} className="text-white">{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            {/* Question Type — only for single-paper sessions */}
-            {!isMixed && (
-              <div className="space-y-1.5">
-                <Label className="text-xs text-white/50 uppercase tracking-wider">Question Type</Label>
-                <Select value={type} onValueChange={setType}>
+          {/* Exam / Paper — show availability badges */}
+          <div className="space-y-2">
+            <Label className="text-xs text-white/50 uppercase tracking-wider">Exam Paper</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {PAPER_OPTIONS.map(p => {
+                const active = paper === p.value;
+                const has = paperHasQuestions(p.value);
+                return (
+                  <button
+                    key={p.value}
+                    onClick={() => setPaper(p.value)}
+                    className={cn(
+                      "relative flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-xl border text-left transition-all text-sm",
+                      active
+                        ? "bg-violet-600/20 border-violet-500/50 text-white"
+                        : "bg-white/3 border-white/8 text-white/60 hover:bg-white/6 hover:text-white/80"
+                    )}
+                  >
+                    <span className={cn("font-bold text-[13px]", active ? "text-white" : "text-white/70")}>{p.label}</span>
+                    <span className={cn("text-[10px] flex items-center gap-1",
+                      has ? (active ? "text-emerald-400" : "text-emerald-500/60")
+                          : (active ? "text-white/30" : "text-white/20"))}>
+                      {has
+                        ? <><CheckCircle2 className="h-2.5 w-2.5" /> Questions available</>
+                        : <><XCircle className="h-2.5 w-2.5" /> No questions yet</>}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* No-questions warning */}
+          <AnimatePresence>
+            {subjectId && !hasQuestions && (
+              <motion.div key="no-q" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="flex items-start gap-3 px-4 py-3 rounded-xl bg-red-500/8 border border-red-500/20">
+                <AlertTriangle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-red-300">No questions available</p>
+                  <p className="text-xs text-white/40 mt-0.5">
+                    Questions for this subject + paper combination haven't been added yet.
+                    {avail.some(r => r.subjectId === Number(subjectId))
+                      ? " Try a different exam paper."
+                      : " Try a different subject."}
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Question Type — only for single-paper sessions */}
+          {!isMixed && (
+            <div className="space-y-2">
+              <Label className="text-xs text-white/50 uppercase tracking-wider">Question Type</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { val: "objective", label: "Objective (MCQ)", emoji: "☑️" },
+                  { val: "theory",    label: "Theory (Essay)",  emoji: "✍️" },
+                ].map(opt => {
+                  const cnt = subjectId ? availCount(subjectId, paper, opt.val) : 0;
+                  return (
+                    <button
+                      key={opt.val}
+                      onClick={() => setType(opt.val)}
+                      className={cn(
+                        "flex items-center gap-2.5 px-3 py-2.5 rounded-xl border transition-all text-left",
+                        type === opt.val
+                          ? "bg-violet-600/20 border-violet-500/50"
+                          : "bg-white/3 border-white/8 hover:bg-white/6"
+                      )}
+                    >
+                      <span className="text-base">{opt.emoji}</span>
+                      <div>
+                        <p className={cn("text-[13px] font-bold", type === opt.val ? "text-white" : "text-white/60")}>{opt.label}</p>
+                        <p className={cn("text-[10px]", cnt > 0 ? "text-emerald-400/70" : "text-white/25")}>
+                          {cnt > 0 ? `${cnt} questions` : "None available"}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Question Count — only for MCQ single sessions */}
+          {!isMixed && type === "objective" && (
+            <div className="space-y-1.5">
+              <Label className="text-xs text-white/50 uppercase tracking-wider">
+                Number of Questions
+                {currentCount > 0 && (
+                  <span className="ml-2 text-emerald-400/70 normal-case font-normal">{currentCount} available</span>
+                )}
+              </Label>
+              {!activated ? (
+                <div className="h-11 px-3 flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg text-sm text-amber-300">
+                  <Lock className="h-3.5 w-3.5 text-amber-400" />
+                  Max {trialRemaining} question{trialRemaining !== 1 ? "s" : ""} (free trial)
+                </div>
+              ) : (
+                <Select value={count} onValueChange={setCount}>
                   <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-[#1e1e28] border-white/10">
-                    <SelectItem value="objective" className="text-white">Objective (MCQ)</SelectItem>
-                    <SelectItem value="theory" className="text-white">Theory (Written)</SelectItem>
+                    {[
+                      { val: "10", label: "10 — Quick Review" },
+                      { val: "20", label: "20 — Standard" },
+                      { val: "40", label: "40 — Full Paper" },
+                      { val: "50", label: "50 — Comprehensive" },
+                    ].map(o => (
+                      <SelectItem key={o.val} value={o.val}
+                        disabled={currentCount > 0 && currentCount < Number(o.val)}
+                        className="text-white">
+                        {o.label}
+                        {currentCount > 0 && currentCount < Number(o.val)
+                          ? <span className="text-white/30 ml-1">(only {currentCount} available)</span>
+                          : null}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-              </div>
-            )}
-
-            {/* Question Count — only for MCQ single sessions */}
-            {!isMixed && type === "objective" && (
-              <div className="space-y-1.5">
-                <Label className="text-xs text-white/50 uppercase tracking-wider">Number of Questions</Label>
-                {!activated ? (
-                  <div className="h-11 px-3 flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg text-sm text-amber-300">
-                    <Lock className="h-3.5 w-3.5 text-amber-400" />
-                    Max {trialRemaining} question{trialRemaining !== 1 ? "s" : ""} (free trial)
-                  </div>
-                ) : (
-                  <Select value={count} onValueChange={setCount}>
-                    <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#1e1e28] border-white/10">
-                      <SelectItem value="10" className="text-white">10 — Quick Review</SelectItem>
-                      <SelectItem value="20" className="text-white">20 — Standard</SelectItem>
-                      <SelectItem value="40" className="text-white">40 — Full Paper</SelectItem>
-                      <SelectItem value="50" className="text-white">50 — Comprehensive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* ── Timer Section ── */}
           {isMixed ? (
-            /* Mock / JUPEB Final — timer is locked, can't change */
             <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/8 border border-red-500/20">
               <div className="w-9 h-9 rounded-xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
                 <AlertTriangle className="h-4 w-4 text-red-400" />
@@ -233,7 +342,6 @@ export default function QuizLauncher() {
               </div>
             </div>
           ) : (
-            /* Practice papers — user can choose timer mode */
             <div className="space-y-3">
               <Label className="text-xs text-white/50 uppercase tracking-wider flex items-center gap-1.5">
                 <Timer className="h-3.5 w-3.5" /> Timer Mode
@@ -244,51 +352,36 @@ export default function QuizLauncher() {
                   { id: "best",   emoji: "⚡", title: "Best Time",  sub: `${getBestMinutes()} min` },
                   { id: "custom", emoji: "✏️", title: "Custom",     sub: "You choose"              },
                 ] as const).map(opt => (
-                  <button
-                    key={opt.id}
-                    onClick={() => setTimerMode(opt.id)}
+                  <button key={opt.id} onClick={() => setTimerMode(opt.id)}
                     className={cn(
                       "p-3 rounded-xl border text-left transition-all",
                       timerMode === opt.id
                         ? "bg-amber-500/15 border-amber-500/40"
                         : "bg-white/3 border-white/10 hover:bg-white/6"
-                    )}
-                  >
+                    )}>
                     <div className="text-base mb-0.5">{opt.emoji}</div>
                     <p className={cn("text-[11px] font-bold", timerMode === opt.id ? "text-amber-300" : "text-white/60")}>{opt.title}</p>
                     <p className={cn("text-[10px]", timerMode === opt.id ? "text-amber-400/70" : "text-white/30")}>{opt.sub}</p>
                   </button>
                 ))}
               </div>
-
               {timerMode === "best" && (
-                <motion.p
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-[11px] text-amber-400/70 px-1 leading-relaxed"
-                >
-                  ⚡ Recommended: <span className="font-bold text-amber-300">{getBestMinutes()} min</span> — {count} questions × {type === "theory" ? "25" : "1.5"} min each.
-                  Trains you to answer at exam pace.
+                <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                  className="text-[11px] text-amber-400/70 px-1 leading-relaxed">
+                  ⚡ Recommended: <span className="font-bold text-amber-300">{getBestMinutes()} min</span> — {count} questions × {type === "theory" ? "25" : "1.5"} min each. Trains you to answer at exam pace.
                 </motion.p>
               )}
-
               {timerMode === "custom" && (
-                <motion.div
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex flex-wrap gap-2"
-                >
+                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-wrap gap-2">
                   {CUSTOM_TIMES.map(m => (
-                    <button
-                      key={m}
-                      onClick={() => setCustomMinutes(m)}
+                    <button key={m} onClick={() => setCustomMinutes(m)}
                       className={cn(
                         "px-3 py-1.5 rounded-lg text-xs font-bold border transition-all",
                         customMinutes === m
                           ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
                           : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white/60"
-                      )}
-                    >
+                      )}>
                       {fmtMinutes(m)}
                     </button>
                   ))}
@@ -298,20 +391,13 @@ export default function QuizLauncher() {
           )}
 
           {/* ── Shuffle Toggle ── */}
-          <button
-            type="button"
-            onClick={() => setShuffle(s => !s)}
+          <button type="button" onClick={() => setShuffle(s => !s)}
             className={cn(
               "w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left",
-              shuffle
-                ? "bg-violet-500/10 border-violet-500/30"
-                : "bg-white/3 border-white/10 hover:bg-white/6"
-            )}
-          >
-            <div className={cn(
-              "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all",
-              shuffle ? "bg-violet-500/20" : "bg-white/8"
+              shuffle ? "bg-violet-500/10 border-violet-500/30" : "bg-white/3 border-white/10 hover:bg-white/6"
             )}>
+            <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all",
+              shuffle ? "bg-violet-500/20" : "bg-white/8")}>
               <Shuffle className={cn("h-4 w-4 transition-colors", shuffle ? "text-violet-400" : "text-white/30")} />
             </div>
             <div className="flex-1 min-w-0">
@@ -319,28 +405,18 @@ export default function QuizLauncher() {
                 Randomise Question Order
               </p>
               <p className={cn("text-[11px] transition-colors", shuffle ? "text-violet-400/60" : "text-white/25")}>
-                {shuffle ? "Questions appear in a different order each session" : "Questions appear in their original fixed order"}
+                {shuffle ? "Questions appear in a different order each session" : "Fixed order — good for systematic review"}
               </p>
             </div>
-            {/* visual toggle pill */}
-            <div className={cn(
-              "relative w-10 h-5 rounded-full transition-all flex-shrink-0",
-              shuffle ? "bg-violet-500" : "bg-white/15"
-            )}>
-              <div className={cn(
-                "absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all",
-                shuffle ? "left-5" : "left-0.5"
-              )} />
+            <div className={cn("relative w-10 h-5 rounded-full transition-all flex-shrink-0", shuffle ? "bg-violet-500" : "bg-white/15")}>
+              <div className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all", shuffle ? "left-5" : "left-0.5")} />
             </div>
           </button>
 
-          {/* Summary */}
-          {subjectId && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              className="p-4 rounded-xl bg-violet-500/10 border border-violet-500/20"
-            >
+          {/* Session Summary */}
+          {subjectId && hasQuestions && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+              className="p-4 rounded-xl bg-violet-500/10 border border-violet-500/20">
               <p className="text-xs text-violet-300 font-semibold uppercase tracking-wider mb-2">Session Summary</p>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
@@ -359,26 +435,31 @@ export default function QuizLauncher() {
             </motion.div>
           )}
 
+          {/* Begin Quiz Button */}
           <Button
             size="lg"
-            className="w-full h-12 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg disabled:opacity-50"
-            disabled={!subjectId || startQuiz.isPending}
+            className={cn(
+              "w-full h-12 text-white font-bold rounded-xl shadow-lg transition-all",
+              hasQuestions && subjectId
+                ? "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500"
+                : "bg-white/8 border border-white/10"
+            )}
+            disabled={!subjectId || !hasQuestions || startQuiz.isPending}
             onClick={handleStart}
           >
             {startQuiz.isPending ? (
               <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Starting Session…</>
+            ) : !hasQuestions && subjectId ? (
+              <><XCircle className="h-5 w-5 mr-2 text-white/30" /> <span className="text-white/30">No Questions Available</span></>
             ) : (
               <><PlayCircle className="h-5 w-5 mr-2" /> Begin Quiz Session</>
             )}
           </Button>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="mt-4 grid grid-cols-3 gap-3"
-        >
+        {/* Feature tips */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+          className="mt-4 grid grid-cols-3 gap-3">
           {[
             { icon: Target,   text: "Past questions from real JUPEB papers" },
             { icon: Timer,    text: "Train at exam speed with Best Time mode" },

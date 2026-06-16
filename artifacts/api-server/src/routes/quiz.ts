@@ -39,6 +39,25 @@ function formatSession(session: any, questions: any[], subjectName: string | nul
   };
 }
 
+// Returns question counts per subject × paper × type so the frontend
+// can show which combos are available before the user tries to start.
+router.get("/quiz/available", async (_req, res) => {
+  try {
+    const rows = await db
+      .select({
+        subjectId: questionsTable.subjectId,
+        paper: questionsTable.paper,
+        questionType: questionsTable.questionType,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(questionsTable)
+      .groupBy(questionsTable.subjectId, questionsTable.paper, questionsTable.questionType);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch availability" });
+  }
+});
+
 router.post("/quiz/start", async (req, res) => {
   try {
     const { subjectId, paper, questionType, year, questionCount = 20, timedMinutes, shuffle = true } = req.body;
