@@ -116,13 +116,13 @@ export default function Subjects() {
           </div>
 
           {isLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {[1,2,3].map(i => <Skeleton key={i} className="h-28 bg-white/5 rounded-2xl" />)}
             </div>
           ) : available.length === 0 ? (
             <div className="text-center py-10 text-white/25 text-sm">No subjects available yet — check back soon.</div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {available.map((subject, i) => {
                 const meta = SUBJECT_META[subject.name] || DEFAULT_META;
                 return (

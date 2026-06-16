@@ -13,6 +13,7 @@ import announcementsRouter from "./announcements";
 import settingsRouter from "./settings";
 import adminRouter from "./admin";
 import leaderboardRouter from "./leaderboard";
+import ttsRouter from "./tts";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(announcementsRouter);
 router.use(settingsRouter);
 router.use(adminRouter);
 router.use(leaderboardRouter);
+router.use(ttsRouter);
 
 export default router;

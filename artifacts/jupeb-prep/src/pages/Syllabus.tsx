@@ -975,7 +975,7 @@ export default function Syllabus() {
 
   return (
     <Shell>
-      <div className="p-6 max-w-4xl mx-auto w-full space-y-6">
+      <div className="p-3 md:p-6 max-w-4xl mx-auto w-full space-y-6">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-2xl md:text-3xl font-bold font-serif text-white flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center">
@@ -1011,7 +1011,7 @@ export default function Syllabus() {
         {activeTab === "syllabus" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
             {/* Subject selector */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 md:gap-3">
               {SYLLABUS_DATA.map(s => {
                 const SIcon = s.icon;
                 const isActive = s.name === activeSubject;
@@ -1020,13 +1020,13 @@ export default function Syllabus() {
                     key={s.name}
                     onClick={() => setActiveSubject(s.name)}
                     className={cn(
-                      "flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all",
+                      "flex flex-col items-center gap-1.5 p-2.5 md:p-4 rounded-2xl border transition-all",
                       isActive
                         ? `bg-gradient-to-br ${s.gradient} border-white/15 shadow-lg ${s.glow}`
                         : "bg-white/3 border-white/5 hover:bg-white/6"
                     )}
                   >
-                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border", s.accent)}>
+                    <div className={cn("w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center border", s.accent)}>
                       <SIcon className="h-5 w-5" />
                     </div>
                     <span className="text-xs font-semibold text-white/80 text-center leading-tight">{s.name}</span>
@@ -1106,8 +1106,8 @@ export default function Syllabus() {
                       const prefix = slot.subject.split(" ")[0].split("/")[0];
                       const colorClass = getSubjectColor(slot.subject);
                       return (
-                        <div key={i} className="flex items-center gap-3 px-4 py-3">
-                          <div className="flex items-center gap-1.5 w-32 flex-shrink-0">
+                        <div key={i} className="flex items-center gap-2 px-3 md:px-4 py-2.5 md:py-3">
+                          <div className="flex items-center gap-1 w-16 sm:w-24 md:w-32 flex-shrink-0">
                             <Clock className="h-3 w-3 text-white/25" />
                             <span className="text-[11px] text-white/40">{slot.time}</span>
                           </div>

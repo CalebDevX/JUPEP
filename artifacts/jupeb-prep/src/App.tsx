@@ -22,6 +22,7 @@ import Settings from "@/pages/Settings";
 import Flashcards from "@/pages/Flashcards";
 import Leaderboard from "@/pages/Leaderboard";
 import Activate from "@/pages/Activate";
+import VoiceTeacher from "@/pages/VoiceTeacher";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -59,6 +60,7 @@ function ProtectedRoutes() {
       <Route path="/flashcards" component={Flashcards} />
       <Route path="/leaderboard" component={Leaderboard} />
       <Route path="/activate" component={Activate} />
+      <Route path="/voice" component={VoiceTeacher} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
