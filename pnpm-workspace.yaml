@@ -35,7 +35,10 @@ minimumReleaseAgeExclude:
   - stripe-replit-sync
 
 packages:
-  - artifacts/*
+  - artifacts/api-server
+  - artifacts/jupeb-prep
+  - artifacts/crs003-textbook
+  - artifacts/mockup-sandbox
   - lib/*
   - lib/integrations/*
   - scripts
