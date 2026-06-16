@@ -21,6 +21,7 @@ import LearnFromSource from "@/pages/LearnFromSource";
 import Community from "@/pages/Community";
 import Settings from "@/pages/Settings";
 import Flashcards from "@/pages/Flashcards";
+import Leaderboard from "@/pages/Leaderboard";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,6 +57,7 @@ function ProtectedRoutes() {
       <Route path="/learn" component={LearnFromSource} />
       <Route path="/community" component={Community} />
       <Route path="/flashcards" component={Flashcards} />
+      <Route path="/leaderboard" component={Leaderboard} />
       <Route path="/admin" component={AdminPanel} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />

@@ -20,6 +20,7 @@ import {
   X,
   Layers,
   Flame,
+  Trophy,
 } from "lucide-react";
 import { getGamificationState, getLevel } from "@/lib/gamification";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,7 @@ const navItems = [
   { href: "/quiz",       label: "Quiz Mode",    icon: PenTool,         color: "text-orange-500"  },
   { href: "/flashcards", label: "Flashcards",  icon: Layers,          color: "text-fuchsia-500" },
   { href: "/community",  label: "Community",   icon: Users,           color: "text-sky-500"     },
+  { href: "/leaderboard", label: "Leaderboard", icon: Trophy,          color: "text-amber-500"   },
   { href: "/learn",     label: "AI Learn",     icon: Wand2,           color: "text-rose-500"   },
   { href: "/notes",     label: "Study Notes",  icon: GraduationCap,   color: "text-pink-500"   },
   { href: "/progress",  label: "Progress",     icon: TrendingUp,      color: "text-cyan-500"   },

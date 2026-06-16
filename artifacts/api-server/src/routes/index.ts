@@ -11,6 +11,8 @@ import aiRouter from "./ai";
 import communityRouter from "./community";
 import announcementsRouter from "./announcements";
 import settingsRouter from "./settings";
+import adminRouter from "./admin";
+import leaderboardRouter from "./leaderboard";
 
 const router: IRouter = Router();
 
@@ -26,5 +28,7 @@ router.use(aiRouter);
 router.use(communityRouter);
 router.use(announcementsRouter);
 router.use(settingsRouter);
+router.use(adminRouter);
+router.use(leaderboardRouter);
 
 export default router;

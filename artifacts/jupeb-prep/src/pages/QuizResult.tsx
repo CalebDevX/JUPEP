@@ -11,7 +11,23 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Confetti, StarBurst } from "@/components/Confetti";
-import { recordQuizComplete } from "@/lib/gamification";
+import { recordQuizComplete, getGamificationState } from "@/lib/gamification";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+async function syncProgressToServer(opts: {
+  phone: string; xp: number; streak: number;
+  quizScore: number; subjectName: string; paperCode: string;
+  questionCount: number; timeSpentSeconds?: number;
+}) {
+  try {
+    await fetch(`${BASE}/api/student/sync-progress`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(opts),
+    });
+  } catch {}
+}
 
 export default function QuizResult() {
   const [, params] = useRoute("/quiz/result/:id");
@@ -37,6 +53,22 @@ export default function QuizResult() {
       if (pct >= 70) {
         setTimeout(() => setConfettiActive(true), 300);
         setTimeout(() => setConfettiActive(false), 6000);
+      }
+      const gState = getGamificationState();
+      const profile = (() => { try { return JSON.parse(localStorage.getItem("jupeb_profile") || "null"); } catch { return null; } })();
+      if (profile?.phone) {
+        const timeKey = `quiz_time_${id}`;
+        const timeSpent = parseInt(sessionStorage.getItem(timeKey) || "0") || undefined;
+        syncProgressToServer({
+          phone: profile.phone,
+          xp: gState.xp,
+          streak: gState.streak,
+          quizScore: score,
+          subjectName: session.subjectName || "",
+          paperCode: session.paper || "",
+          questionCount: session.questions.length,
+          timeSpentSeconds: timeSpent,
+        });
       }
     }
   }, [session, id]);
