@@ -4,9 +4,8 @@ import { Shell } from "@/components/layout/Shell";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { useLocation } from "wouter";
-import { Loader2, PlayCircle, Timer, BookOpen, Target, Zap, Lock } from "lucide-react";
+import { Loader2, PlayCircle, Timer, BookOpen, Target, Zap, Lock, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { isActivated, getTrialRemaining, TRIAL_QUESTION_LIMIT } from "@/lib/access";
@@ -21,12 +20,14 @@ function fmtMinutes(min: number) {
 }
 
 const PAPER_OPTIONS = [
-  { value: "001", label: "1st In-Course Exam",          desc: "First in-course test"              },
-  { value: "002", label: "1st Semester Exam",            desc: "End of first semester exam"         },
-  { value: "003", label: "2nd In-Course Exam",           desc: "Second in-course test"              },
-  { value: "mock", label: "Mock Exam",                   desc: "Combination of all sessions"        },
-  { value: "jupeb", label: "JUPEB Final Exam",           desc: "Past JUPEB final examination questions" },
+  { value: "001",   label: "1st In-Course Exam",    desc: "First in-course test"                    },
+  { value: "002",   label: "1st Semester Exam",      desc: "End of first semester exam"              },
+  { value: "003",   label: "2nd In-Course Exam",     desc: "Second in-course test"                   },
+  { value: "mock",  label: "Mock Exam",              desc: "Combination of all sessions"             },
+  { value: "jupeb", label: "JUPEB Final Exam",       desc: "Past JUPEB final examination questions"  },
 ];
+
+const CUSTOM_TIMES = [10, 15, 20, 30, 45, 60, 90, 120];
 
 export default function QuizLauncher() {
   const [, setLocation] = useLocation();
@@ -36,45 +37,47 @@ export default function QuizLauncher() {
   const activated = isActivated();
   const trialRemaining = getTrialRemaining();
 
-  const [subjectId, setSubjectId] = useState<string>("");
-  const [paper, setPaper] = useState<string>("001");
-  const [type, setType] = useState<string>("objective");
-  const [count, setCount] = useState<string>(activated ? "20" : String(Math.min(5, trialRemaining)));
-  const [isTimed, setIsTimed] = useState<boolean>(true);
+  const [subjectId, setSubjectId]   = useState<string>("");
+  const [paper, setPaper]           = useState<string>("001");
+  const [type, setType]             = useState<string>("objective");
+  const [count, setCount]           = useState<string>(activated ? "20" : String(Math.min(5, trialRemaining)));
 
-  const [timerSettings, setTimerSettings] = useState({
-    obj_timer_minutes: 60,
-    theory_timer_minutes: 120,
-    mock_timer_minutes: 120,
-  });
+  // Timer state — "none" | "best" | "custom"  (mock/jupeb → locked automatically)
+  const [timerMode, setTimerMode]       = useState<"none" | "best" | "custom">("best");
+  const [customMinutes, setCustomMinutes] = useState<number>(30);
+
+  const [mockTimerMinutes, setMockTimerMinutes] = useState(120);
 
   useEffect(() => {
     fetch(`${BASE}/api/settings`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (data) {
-          setTimerSettings({
-            obj_timer_minutes: parseInt(data.obj_timer_minutes ?? "60") || 60,
-            theory_timer_minutes: parseInt(data.theory_timer_minutes ?? "120") || 120,
-            mock_timer_minutes: parseInt(data.mock_timer_minutes ?? "120") || 120,
-          });
-        }
+        if (data) setMockTimerMinutes(parseInt(data.mock_timer_minutes ?? "120") || 120);
       })
       .catch(() => {});
   }, []);
 
-  const isMock = paper === "mock";
+  const isMock  = paper === "mock";
   const isJupeb = paper === "jupeb";
   const isMixed = isMock || isJupeb;
 
-  const getTimedMinutes = () => {
-    if (isMixed) return timerSettings.mock_timer_minutes;
-    if (type === "theory") return timerSettings.theory_timer_minutes;
-    return timerSettings.obj_timer_minutes;
+  // Best time: 1.5 min/question for objective, 25 min/question for theory (min 10 / 20)
+  const getBestMinutes = () => {
+    const q = Number(count);
+    if (type === "theory") return Math.max(20, q * 25);
+    return Math.max(10, Math.round((q * 1.5) / 5) * 5);
   };
 
-  const timedMinutes = getTimedMinutes();
-  const timerLabel = fmtMinutes(timedMinutes);
+  // Resolve the actual timed minutes to pass to API
+  const resolveTimedMinutes = (): number | undefined => {
+    if (isMixed) return mockTimerMinutes;
+    if (timerMode === "none") return undefined;
+    if (timerMode === "best") return getBestMinutes();
+    return customMinutes;
+  };
+
+  const timedMinutes = resolveTimedMinutes();
+  const timerLabel   = timedMinutes !== undefined ? fmtMinutes(timedMinutes) : "∞";
 
   const selectedPaper = PAPER_OPTIONS.find(p => p.value === paper);
 
@@ -86,7 +89,7 @@ export default function QuizLauncher() {
         paper: paper as any,
         questionType: isMixed ? "mixed" : type as any,
         questionCount: Number(count),
-        timedMinutes: isTimed ? timedMinutes : undefined,
+        timedMinutes,
       }
     }, {
       onSuccess: (session) => setLocation(`/quiz/session/${session.id}`)
@@ -212,21 +215,84 @@ export default function QuizLauncher() {
             )}
           </div>
 
-          {/* Timed mode */}
-          <div className="flex items-center justify-between p-4 rounded-xl bg-white/3 border border-white/8">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                <Timer className="h-4 w-4 text-amber-400" />
+          {/* ── Timer Section ── */}
+          {isMixed ? (
+            /* Mock / JUPEB Final — timer is locked, can't change */
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/8 border border-red-500/20">
+              <div className="w-9 h-9 rounded-xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="h-4 w-4 text-red-400" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">Timed Mode</p>
+                <p className="text-sm font-semibold text-white">Exam Mode — Timer Locked</p>
                 <p className="text-xs text-white/40">
-                  Countdown timer · <span className="text-amber-400/80">{timerLabel}</span>
+                  Official timing: <span className="text-red-400 font-bold">{fmtMinutes(mockTimerMinutes)}</span> · Cannot be changed for mock/final exams
                 </p>
               </div>
             </div>
-            <Switch checked={isTimed} onCheckedChange={setIsTimed} />
-          </div>
+          ) : (
+            /* Practice papers — user can choose timer mode */
+            <div className="space-y-3">
+              <Label className="text-xs text-white/50 uppercase tracking-wider flex items-center gap-1.5">
+                <Timer className="h-3.5 w-3.5" /> Timer Mode
+              </Label>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { id: "none",   emoji: "∞",  title: "No Timer",   sub: "Unlimited time"          },
+                  { id: "best",   emoji: "⚡", title: "Best Time",  sub: `${getBestMinutes()} min` },
+                  { id: "custom", emoji: "✏️", title: "Custom",     sub: "You choose"              },
+                ] as const).map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setTimerMode(opt.id)}
+                    className={cn(
+                      "p-3 rounded-xl border text-left transition-all",
+                      timerMode === opt.id
+                        ? "bg-amber-500/15 border-amber-500/40"
+                        : "bg-white/3 border-white/10 hover:bg-white/6"
+                    )}
+                  >
+                    <div className="text-base mb-0.5">{opt.emoji}</div>
+                    <p className={cn("text-[11px] font-bold", timerMode === opt.id ? "text-amber-300" : "text-white/60")}>{opt.title}</p>
+                    <p className={cn("text-[10px]", timerMode === opt.id ? "text-amber-400/70" : "text-white/30")}>{opt.sub}</p>
+                  </button>
+                ))}
+              </div>
+
+              {timerMode === "best" && (
+                <motion.p
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-[11px] text-amber-400/70 px-1 leading-relaxed"
+                >
+                  ⚡ Recommended: <span className="font-bold text-amber-300">{getBestMinutes()} min</span> — {count} questions × {type === "theory" ? "25" : "1.5"} min each.
+                  Trains you to answer at exam pace.
+                </motion.p>
+              )}
+
+              {timerMode === "custom" && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-wrap gap-2"
+                >
+                  {CUSTOM_TIMES.map(m => (
+                    <button
+                      key={m}
+                      onClick={() => setCustomMinutes(m)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs font-bold border transition-all",
+                        customMinutes === m
+                          ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
+                          : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white/60"
+                      )}
+                    >
+                      {fmtMinutes(m)}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </div>
+          )}
 
           {/* Summary */}
           {subjectId && (
@@ -246,7 +312,7 @@ export default function QuizLauncher() {
                   <p className="text-[10px] text-white/40">Questions</p>
                 </div>
                 <div>
-                  <p className="text-white font-bold text-sm">{isTimed ? timerLabel : "∞"}</p>
+                  <p className="text-white font-bold text-sm">{timerLabel}</p>
                   <p className="text-[10px] text-white/40">Time Limit</p>
                 </div>
               </div>
@@ -274,8 +340,8 @@ export default function QuizLauncher() {
           className="mt-4 grid grid-cols-3 gap-3"
         >
           {[
-            { icon: Target, text: "Past questions from real JUPEB papers" },
-            { icon: Timer, text: "Auto-submits when time expires" },
+            { icon: Target,   text: "Past questions from real JUPEB papers" },
+            { icon: Timer,    text: "Train at exam speed with Best Time mode" },
             { icon: BookOpen, text: "Answers & explanations after quiz" },
           ].map((tip, i) => (
             <div key={i} className="flex flex-col items-center text-center p-3 rounded-xl bg-white/2 border border-white/5">

@@ -12,6 +12,7 @@ import QuizLauncher from "@/pages/QuizLauncher";
 import QuizSession from "@/pages/QuizSession";
 import QuizResult from "@/pages/QuizResult";
 import Notes from "@/pages/Notes";
+import Class from "@/pages/Class";
 import ProgressPage from "@/pages/Progress";
 import AdminPanel from "@/pages/Admin";
 import Chat from "@/pages/Chat";
@@ -90,6 +91,7 @@ function ProtectedRoutes() {
       <Route path="/quiz/session/:id" component={QuizSession} />
       <Route path="/quiz/result/:id" component={QuizResult} />
       <Route path="/notes" component={Notes} />
+      <Route path="/class" component={Class} />
       <Route path="/progress" component={ProgressPage} />
       <Route path="/chat" component={Chat} />
       <Route path="/syllabus" component={Syllabus} />

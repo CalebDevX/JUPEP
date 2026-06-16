@@ -42,7 +42,7 @@ const navItems = [
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy,          color: "text-amber-500"   },
   { href: "/learn",     label: "AI Learn",     icon: Wand2,           color: "text-rose-500"   },
   { href: "/voice",     label: "Voice AI",     icon: Mic,             color: "text-green-500"  },
-  { href: "/notes",     label: "Study Notes",  icon: GraduationCap,   color: "text-pink-500"   },
+  { href: "/class",     label: "Class",        icon: GraduationCap,   color: "text-emerald-500"},
   { href: "/progress",  label: "Progress",     icon: TrendingUp,      color: "text-cyan-500"   },
   { href: "/chat",      label: "AI Tutor",     icon: MessageCircle,   color: "text-amber-500"  },
 ];
