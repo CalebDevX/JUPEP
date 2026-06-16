@@ -860,12 +860,12 @@ function TopicRow({ topic, index }: { topic: Topic; index: number }) {
     <div className="border border-white/5 rounded-xl overflow-hidden">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left"
+        className="w-full flex items-center gap-3 px-4 py-4 hover:bg-white/5 transition-colors text-left active:bg-white/[0.06]"
       >
-        <span className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-white/40">
+        <span className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white/40">
           {index + 1}
         </span>
-        <span className="text-sm font-medium text-white/85 flex-1">{topic.title}</span>
+        <span className="text-sm font-medium text-white/85 flex-1 leading-snug">{topic.title}</span>
         {open ? (
           <ChevronDown className="h-4 w-4 text-white/30 flex-shrink-0" />
         ) : (
@@ -915,7 +915,7 @@ function CourseSection({ course, accent }: { course: Course; accent: string }) {
     <div className={cn("rounded-2xl border overflow-hidden", open ? "border-white/10" : "border-white/5")}>
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-4 p-4 hover:bg-white/3 transition-colors text-left"
+        className="w-full flex items-center gap-3 md:gap-4 p-4 md:p-5 hover:bg-white/[0.04] active:bg-white/[0.06] transition-colors text-left"
       >
         <div className={cn("px-2.5 py-1 rounded-lg text-xs font-bold border flex-shrink-0", accent)}>
           {course.code}
@@ -975,43 +975,43 @@ export default function Syllabus() {
 
   return (
     <Shell>
-      <div className="p-3 md:p-6 max-w-4xl mx-auto w-full space-y-6">
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-2xl md:text-3xl font-bold font-serif text-white flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center">
-              <ScrollText className="h-5 w-5 text-emerald-400" />
-            </div>
-            Syllabus
-          </h1>
-          <p className="text-white/40 text-sm mt-1 ml-13">JUPEB Non-Science — UNILAG School of Foundation Studies</p>
+      <div className="px-4 pb-6 pt-4 max-w-4xl mx-auto w-full space-y-5">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
+            <ScrollText className="h-5 w-5 text-emerald-400" />
+          </div>
+          <div>
+            <h1 className="text-xl font-black text-white">Syllabus & Timetable</h1>
+            <p className="text-white/40 text-xs mt-0.5">JUPEB Non-Science · UNILAG Foundation Studies</p>
+          </div>
         </motion.div>
 
-        {/* Tab switcher */}
-        <div className="flex gap-2 p-1 bg-white/5 rounded-xl w-fit">
+        {/* Tab switcher — full width, bigger touch targets */}
+        <div className="flex gap-1 p-1 bg-white/[0.05] border border-white/[0.07] rounded-2xl">
           <button
             onClick={() => setActiveTab("syllabus")}
             className={cn(
-              "px-4 py-2 rounded-lg text-sm font-medium transition-all",
-              activeTab === "syllabus" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"
+              "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all",
+              activeTab === "syllabus" ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/70"
             )}
           >
-            <span className="flex items-center gap-2"><ScrollText className="h-4 w-4" /> Syllabus</span>
+            <ScrollText className="h-4 w-4" /> Syllabus
           </button>
           <button
             onClick={() => setActiveTab("timetable")}
             className={cn(
-              "px-4 py-2 rounded-lg text-sm font-medium transition-all",
-              activeTab === "timetable" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"
+              "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all",
+              activeTab === "timetable" ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/70"
             )}
           >
-            <span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Timetable</span>
+            <Calendar className="h-4 w-4" /> Timetable
           </button>
         </div>
 
         {activeTab === "syllabus" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
             {/* Subject selector */}
-            <div className="grid grid-cols-3 gap-2 md:gap-3">
+            <div className="grid grid-cols-3 gap-2">
               {SYLLABUS_DATA.map(s => {
                 const SIcon = s.icon;
                 const isActive = s.name === activeSubject;
@@ -1020,17 +1020,17 @@ export default function Syllabus() {
                     key={s.name}
                     onClick={() => setActiveSubject(s.name)}
                     className={cn(
-                      "flex flex-col items-center gap-1.5 p-2.5 md:p-4 rounded-2xl border transition-all",
+                      "flex flex-col items-center gap-2 p-3 md:p-4 rounded-2xl border transition-all active:scale-[0.97]",
                       isActive
                         ? `bg-gradient-to-br ${s.gradient} border-white/15 shadow-lg ${s.glow}`
-                        : "bg-white/3 border-white/5 hover:bg-white/6"
+                        : "bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.06]"
                     )}
                   >
-                    <div className={cn("w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center border", s.accent)}>
+                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border flex-shrink-0", s.accent)}>
                       <SIcon className="h-5 w-5" />
                     </div>
-                    <span className="text-xs font-semibold text-white/80 text-center leading-tight">{s.name}</span>
-                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border", s.accent)}>{s.code}</span>
+                    <span className="text-xs font-bold text-white/80 text-center leading-tight">{s.name}</span>
+                    <span className={cn("text-[11px] font-bold px-2.5 py-0.5 rounded-full border", s.accent)}>{s.code}</span>
                   </button>
                 );
               })}
