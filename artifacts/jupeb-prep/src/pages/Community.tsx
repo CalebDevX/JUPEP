@@ -327,7 +327,7 @@ function CommunityView({ slug, onBack, myName }: { slug: string; onBack: () => v
               </div>
             </div>
 
-            <div className="flex items-center gap-4 mt-4 text-xs text-white/40">
+            <div className="flex items-center gap-3 flex-wrap mt-4 text-xs text-white/40">
               <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{community.memberCount} members</span>
               <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" />{community.postCount} posts</span>
               {community.whatsappNumber && (
@@ -650,7 +650,7 @@ export default function Community() {
 
   return (
     <Shell>
-      <div className="p-6 max-w-5xl mx-auto w-full space-y-6">
+      <div className="p-3 md:p-6 max-w-5xl mx-auto w-full space-y-5">
         <AnimatePresence mode="wait">
           {viewSlug ? (
             <motion.div key="view" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
@@ -660,7 +660,7 @@ export default function Community() {
             <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
               {/* Header */}
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold font-serif text-white flex items-center gap-3">
+                <h1 className="text-xl md:text-2xl font-bold font-serif text-white flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-sky-500/15 flex items-center justify-center">
                     <Users className="h-5 w-5 text-sky-400" />
                   </div>
@@ -669,18 +669,45 @@ export default function Community() {
                 <p className="text-white/40 text-sm mt-1">Connect with scholars, join tutorial centres, and study together.</p>
               </div>
 
-              {/* Filter tabs */}
-              <div className="flex gap-2 flex-wrap">
-                {([["all", "All"], ["tutorial_center", "Tutorial Centres"], ["study_group", "Study Groups"], ["general", "General"]] as const).map(([val, label]) => (
-                  <button key={val} onClick={() => setFilter(val)}
-                    className={cn("px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all",
-                      filter === val ? "bg-sky-500/20 border-sky-500/30 text-sky-300" : "bg-white/3 border-white/8 text-white/50 hover:bg-white/6"
-                    )}>
-                    {label}
-                  </button>
-                ))}
+              {/* My Communities quick access */}
+              {communities.length > 0 && Object.keys(joinedCommunities).length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-400" /> My Communities
+                  </p>
+                  <div className="flex gap-2 overflow-x-auto pb-1 -mx-3 px-3 md:mx-0 md:px-0">
+                    {Object.keys(joinedCommunities).map(slug => {
+                      const c = communities.find(x => x.slug === slug);
+                      if (!c) return null;
+                      return (
+                        <button key={slug} onClick={() => setViewSlug(slug)}
+                          className="flex-shrink-0 flex items-center gap-2 pl-3 pr-4 py-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/15 transition-colors active:scale-95">
+                          <span className="text-xl leading-none">{c.coverEmoji}</span>
+                          <div className="text-left min-w-0">
+                            <p className="text-xs font-semibold text-white leading-tight max-w-[110px] truncate">{c.name}</p>
+                            <p className="text-[10px] text-emerald-400 truncate max-w-[110px]">{joinedCommunities[slug]}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Filter tabs + identity pill */}
+              <div className="space-y-2">
+                <div className="flex gap-2 overflow-x-auto pb-1 -mx-3 px-3 md:mx-0 md:px-0">
+                  {([["all", "All"], ["tutorial_center", "Tutorial Centres"], ["study_group", "Study Groups"], ["general", "General"]] as const).map(([val, label]) => (
+                    <button key={val} onClick={() => setFilter(val)}
+                      className={cn("flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all",
+                        filter === val ? "bg-sky-500/20 border-sky-500/30 text-sky-300" : "bg-white/3 border-white/8 text-white/50 hover:bg-white/6"
+                      )}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
                 {myName && (
-                  <div className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 w-fit">
                     <Avatar name={myName} size="sm" />
                     <span className="text-xs text-white/60">{myName}</span>
                     <button onClick={() => { setMyName(""); localStorage.removeItem("jupeb_community_name"); }}

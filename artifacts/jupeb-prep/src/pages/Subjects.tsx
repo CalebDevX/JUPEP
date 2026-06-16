@@ -79,9 +79,17 @@ export default function Subjects() {
   const { data: subjectsRaw, isLoading } = useListSubjects();
   const subjects = Array.isArray(subjectsRaw) ? subjectsRaw : [];
 
+  // Profile subjects from registration
+  let profileSubjects: string[] = [];
+  try {
+    const p = JSON.parse(localStorage.getItem("jupeb_profile") || "null");
+    if (Array.isArray(p?.subjects)) profileSubjects = p.subjects;
+  } catch {}
+
   const available = subjects.filter(s => getSubjectStatus(s.name) === "available");
   const dbLocked  = subjects.filter(s => getSubjectStatus(s.name) === "locked");
   const dbScience = subjects.filter(s => getSubjectStatus(s.name) === "science");
+  const mySubjects = available.filter(s => profileSubjects.includes(s.name));
 
   const lockedNames = new Set(dbLocked.map(s => s.name));
   const extraLocked = HARDCODED_NON_SCIENCE_LOCKED.filter(s => !lockedNames.has(s.name));
@@ -103,6 +111,63 @@ export default function Subjects() {
           </h1>
           <p className="text-white/35 text-xs mt-1 ml-11.5">Select a subject to start practising.</p>
         </motion.div>
+
+        {/* ── YOUR SUBJECTS ─────────────────────────────────────────── */}
+        {mySubjects.length > 0 && (
+          <motion.section initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse flex-shrink-0" />
+              <h2 className="text-xs font-bold text-white/50 uppercase tracking-widest">Your Subjects</h2>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/15 text-violet-400 border border-violet-500/25">
+                {mySubjects.length} selected
+              </span>
+              <span className="flex-1 h-px bg-white/5" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {mySubjects.map((subject, i) => {
+                const meta = SUBJECT_META[subject.name] || DEFAULT_META;
+                return (
+                  <motion.div
+                    key={subject.id}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.08 }}
+                    className={cn("relative glass-card overflow-hidden flex flex-col bg-gradient-to-br ring-1 ring-violet-500/25", meta.gradient)}
+                  >
+                    <div className="absolute top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-violet-500/25 text-violet-300 border border-violet-500/30 z-10">
+                      ⭐ Yours
+                    </div>
+                    <div className="p-3 flex-1">
+                      <div className="flex items-start mb-2">
+                        <span className="text-2xl leading-none">{meta.emoji}</span>
+                      </div>
+                      <h3 className="text-sm font-bold text-white leading-tight">{subject.name}</h3>
+                      <p className="text-[10px] text-white/35 mt-0.5 font-mono">{subject.code}</p>
+                    </div>
+                    {/* Quick paper links */}
+                    <div className="px-3 pb-1.5 space-y-0.5">
+                      {["001","002","003","004"].map(paper => (
+                        <Link key={paper} href={`/questions?subjectId=${subject.id}&paper=${paper}`}>
+                          <div className="flex items-center justify-between py-1 px-2 rounded-lg hover:bg-white/6 transition-colors cursor-pointer group">
+                            <span className="text-[10px] text-white/45 group-hover:text-white/70">{PAPER_LABELS[paper]}</span>
+                            <ChevronRight className="h-2.5 w-2.5 text-white/20 group-hover:text-white/50" />
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                    <div className="p-2.5 pt-1">
+                      <Link href={`/quiz?subjectId=${subject.id}`}>
+                        <div className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[11px] font-bold cursor-pointer transition-all active:scale-95 bg-violet-600/80 hover:bg-violet-500 text-white border border-violet-500/30">
+                          <Zap className="h-3.5 w-3.5" />Start Practice
+                        </div>
+                      </Link>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.section>
+        )}
 
         {/* ── AVAILABLE ──────────────────────────────────────────────── */}
         <section className="space-y-3">
