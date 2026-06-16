@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { BookOpen, GraduationCap, Sparkles, Plus, FileText, Loader2, Search, Volume2, Pause, Play, Square } from "lucide-react";
+import { BookOpen, GraduationCap, Sparkles, FileText, Loader2, Search, Volume2, Pause, Play, Square } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { isActivated } from "@/lib/access";
 import { PaywallGate } from "@/components/PaywallGate";
 import { useReadAloud } from "@/hooks/useReadAloud";
@@ -262,9 +263,13 @@ export default function Notes() {
         </div>
 
         {/* Notes grid */}
-        <div className="space-y-4">
+        <div className={cn(
+          filteredNotes?.length && !isLoading
+            ? "grid grid-cols-1 sm:grid-cols-2 gap-4 items-start"
+            : "space-y-4"
+        )}>
           {isLoading ? (
-            Array.from({ length: 3 }).map((_, i) => (
+            Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-40 bg-white/5 rounded-2xl" />
             ))
           ) : !filteredNotes?.length ? (
@@ -298,7 +303,7 @@ export default function Notes() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="glass-card overflow-hidden"
+                  className={cn("glass-card overflow-hidden", isExpanded && "sm:col-span-2")}
                 >
                   <button
                     className="w-full text-left p-5 flex items-start justify-between gap-4 hover:bg-white/3 transition-colors"
@@ -405,9 +410,9 @@ export default function Notes() {
                           prose-blockquote:border-violet-500 prose-blockquote:text-white/60 prose-blockquote:bg-violet-500/5 prose-blockquote:rounded-r-xl prose-blockquote:py-1
                           prose-code:text-amber-300 prose-code:bg-white/10 prose-code:px-1.5 prose-code:rounded
                           prose-em:text-white/60
-                          whitespace-pre-wrap"
+                          prose-table:text-white/75 prose-thead:border-white/10 prose-tr:border-white/5 prose-th:text-white prose-td:text-white/70"
                       >
-                        {note.content}
+                        <ReactMarkdown>{note.content}</ReactMarkdown>
                       </div>
                     </motion.div>
                   )}
