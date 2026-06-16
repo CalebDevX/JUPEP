@@ -16,8 +16,8 @@ router.get("/subjects", async (req, res) => {
       paperCount: s.paperCount,
       color: s.color,
     })));
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch subjects" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to fetch subjects", detail: err?.message });
   }
 });
 

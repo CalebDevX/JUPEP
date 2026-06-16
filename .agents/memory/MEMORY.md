@@ -4,3 +4,4 @@
 - [Gemini TTS](gemini-tts.md) — TTS via gemini-2.5-flash-preview-tts; contents must omit role field; raw PCM (audio/L16) must be wrapped in WAV header before sending to browser
 - [Google GenAI SDK v1.x](genai-v1-text-property.md) — In @google/genai ≥1.x, response.text and chunk.text are getter properties NOT methods; call as .text not .text()
 - [Editorial Design System](jupeb-editorial-design.md) — Fraunces serif (already imported) as display font; ed-label/ed-display/ed-stat/ed-rule CSS utilities in index.css; bot image in localStorage jupeb_bot_image; user profile pic in jupeb_profile_picture
+- [Aiven PostgreSQL SSL Fix](aiven-ssl-fix.md) — Must strip sslmode from URL and set ssl:{rejectUnauthorized:false} in pool; drizzle-kit push hangs so use raw Node.js migration script instead

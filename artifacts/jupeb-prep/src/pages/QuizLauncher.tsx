@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useListSubjects, useStartQuiz } from "@workspace/api-client-react";
 import { Shell } from "@/components/layout/Shell";
 import { Label } from "@/components/ui/label";
@@ -6,9 +6,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useLocation } from "wouter";
-import { Loader2, PlayCircle, Timer, BookOpen, FileText, Target, Zap } from "lucide-react";
+import { Loader2, PlayCircle, Timer, BookOpen, Target, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+function fmtMinutes(min: number) {
+  if (min >= 60 && min % 60 === 0) return `${min / 60} Hour${min / 60 > 1 ? "s" : ""}`;
+  if (min >= 60) return `${Math.floor(min / 60)}h ${min % 60}m`;
+  return `${min} Min`;
+}
 
 export default function QuizLauncher() {
   const [, setLocation] = useLocation();
@@ -21,56 +29,53 @@ export default function QuizLauncher() {
   const [count, setCount] = useState<string>("20");
   const [isTimed, setIsTimed] = useState<boolean>(true);
 
+  // Dynamic timer settings from server
+  const [timerSettings, setTimerSettings] = useState({
+    obj_timer_minutes: 60,
+    theory_timer_minutes: 120,
+    mock_timer_minutes: 120,
+  });
+
+  useEffect(() => {
+    fetch(`${BASE}/api/settings`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          setTimerSettings({
+            obj_timer_minutes: parseInt(data.obj_timer_minutes ?? "60") || 60,
+            theory_timer_minutes: parseInt(data.theory_timer_minutes ?? "120") || 120,
+            mock_timer_minutes: parseInt(data.mock_timer_minutes ?? "120") || 120,
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const isMock = paper === "mock";
-  const timerLabel = isMock || type === "theory" ? "2 Hours" : "1 Hour";
+
+  const getTimedMinutes = () => {
+    if (isMock) return timerSettings.mock_timer_minutes;
+    if (type === "theory") return timerSettings.theory_timer_minutes;
+    return timerSettings.obj_timer_minutes;
+  };
+
+  const timedMinutes = getTimedMinutes();
+  const timerLabel = fmtMinutes(timedMinutes);
 
   const handleStart = () => {
     if (!subjectId) return;
-    const timedMinutes = isTimed
-      ? (isMock || type === "theory" ? 120 : 60)
-      : undefined;
-
     startQuiz.mutate({
       data: {
         subjectId: Number(subjectId),
         paper: paper as any,
         questionType: isMock ? "mixed" : type as any,
         questionCount: Number(count),
-        timedMinutes,
+        timedMinutes: isTimed ? timedMinutes : undefined,
       }
     }, {
       onSuccess: (session) => setLocation(`/quiz/session/${session.id}`)
     });
   };
-
-  const options = [
-    { label: "Subject", content: (
-      <Select value={subjectId} onValueChange={setSubjectId} disabled={isLoadingSubjects}>
-        <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white">
-          <SelectValue placeholder="Choose a subject…" />
-        </SelectTrigger>
-        <SelectContent className="bg-[#1e1e28] border-white/10">
-          {(Array.isArray(subjects) ? subjects : []).map(s => (
-            <SelectItem key={s.id} value={s.id.toString()} className="text-white">{s.name}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    )},
-    { label: "Paper", content: (
-      <Select value={paper} onValueChange={setPaper}>
-        <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent className="bg-[#1e1e28] border-white/10">
-          <SelectItem value="001" className="text-white">Paper 001 — 1st Incourse</SelectItem>
-          <SelectItem value="002" className="text-white">Paper 002 — 1st Semester</SelectItem>
-          <SelectItem value="003" className="text-white">Paper 003 — 2nd Incourse</SelectItem>
-          <SelectItem value="004" className="text-white">Paper 004 — Mock Exam</SelectItem>
-          <SelectItem value="mock" className="text-white">Full Mock (Mixed Papers)</SelectItem>
-        </SelectContent>
-      </Select>
-    )},
-  ];
 
   return (
     <Shell>
@@ -96,13 +101,39 @@ export default function QuizLauncher() {
           className="glass-card p-6 space-y-5"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {options.map(opt => (
-              <div key={opt.label} className="space-y-1.5">
-                <Label className="text-xs text-white/50 uppercase tracking-wider">{opt.label}</Label>
-                {opt.content}
-              </div>
-            ))}
+            {/* Subject */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-white/50 uppercase tracking-wider">Subject</Label>
+              <Select value={subjectId} onValueChange={setSubjectId} disabled={isLoadingSubjects}>
+                <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white">
+                  <SelectValue placeholder="Choose a subject…" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1e1e28] border-white/10">
+                  {(Array.isArray(subjects) ? subjects : []).map(s => (
+                    <SelectItem key={s.id} value={s.id.toString()} className="text-white">{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
+            {/* Paper */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-white/50 uppercase tracking-wider">Paper</Label>
+              <Select value={paper} onValueChange={setPaper}>
+                <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1e1e28] border-white/10">
+                  <SelectItem value="001" className="text-white">Paper 001 — 1st Incourse</SelectItem>
+                  <SelectItem value="002" className="text-white">Paper 002 — 1st Semester</SelectItem>
+                  <SelectItem value="003" className="text-white">Paper 003 — 2nd Incourse</SelectItem>
+                  <SelectItem value="004" className="text-white">Paper 004 — Mock Exam</SelectItem>
+                  <SelectItem value="mock" className="text-white">Full Mock (Mixed Papers)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Question Type */}
             {!isMock && (
               <div className="space-y-1.5">
                 <Label className="text-xs text-white/50 uppercase tracking-wider">Question Type</Label>
@@ -118,6 +149,7 @@ export default function QuizLauncher() {
               </div>
             )}
 
+            {/* Question Count */}
             {!isMock && type === "objective" && (
               <div className="space-y-1.5">
                 <Label className="text-xs text-white/50 uppercase tracking-wider">Number of Questions</Label>
@@ -136,7 +168,7 @@ export default function QuizLauncher() {
             )}
           </div>
 
-          {/* Timed mode toggle */}
+          {/* Timed mode */}
           <div className="flex items-center justify-between p-4 rounded-xl bg-white/3 border border-white/8">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center">
@@ -144,7 +176,9 @@ export default function QuizLauncher() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-white">Timed Mode</p>
-                <p className="text-xs text-white/40">Countdown timer · {timerLabel}</p>
+                <p className="text-xs text-white/40">
+                  Countdown timer · <span className="text-amber-400/80">{timerLabel}</span>
+                </p>
               </div>
             </div>
             <Switch checked={isTimed} onCheckedChange={setIsTimed} />

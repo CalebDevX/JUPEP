@@ -5,3 +5,4 @@ export * from "./quiz_sessions";
 export * from "./communities";
 export * from "./announcements";
 export * from "./access_codes";
+export * from "./settings";

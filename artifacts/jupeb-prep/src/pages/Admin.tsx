@@ -1,10 +1,14 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Shell } from "@/components/layout/Shell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Plus, Trash2, Edit, Upload, Megaphone, Pin, CheckCircle2, Sparkles, X, ImagePlus, User } from "lucide-react";
+import {
+  Lock, Plus, Trash2, Edit, Upload, Megaphone, Pin, CheckCircle2,
+  Sparkles, X, ImagePlus, User, FileText, Download, AlertCircle,
+  CheckCircle, Loader2, Timer, Settings2, Brain,
+} from "lucide-react";
 import { useListQuestions, useListSubjects, useCreateQuestion, useDeleteQuestion } from "@workspace/api-client-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
@@ -37,7 +41,7 @@ export default function AdminPanel() {
   const [isAuthenticated, setIsAuthenticated] = useState(localStorage.getItem("admin_auth") === "true");
   const [pin, setPin] = useState("");
   const { toast } = useToast();
-  const [tab, setTab] = useState<"questions" | "manage" | "announcements" | "bulk" | "branding">("announcements");
+  const [tab, setTab] = useState<"questions" | "manage" | "announcements" | "bulk" | "branding" | "settings">("announcements");
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,9 +99,10 @@ export default function AdminPanel() {
 
   const TABS = [
     { id: "announcements", label: "📢 Announcements" },
-    { id: "questions",     label: "Add Question" },
-    { id: "manage",        label: "Manage Questions" },
-    { id: "bulk",          label: "Bulk Upload" },
+    { id: "questions",     label: "➕ Add Question" },
+    { id: "manage",        label: "📋 Manage" },
+    { id: "bulk",          label: "⬆️ Bulk Upload" },
+    { id: "settings",      label: "⚙️ Settings" },
     { id: "branding",      label: "🎨 Branding" },
   ] as const;
 
@@ -115,7 +120,6 @@ export default function AdminPanel() {
           </Button>
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-2 flex-wrap border-b border-white/8 pb-0">
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
@@ -146,15 +150,12 @@ export default function AdminPanel() {
           )}
           {tab === "bulk" && (
             <motion.div key="bulk" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <Section title="Bulk Upload">
-                <div className="flex flex-col items-center justify-center py-14 border-2 border-dashed border-white/10 rounded-2xl text-center">
-                  <Upload className="h-10 w-10 text-white/20 mb-4" />
-                  <h3 className="text-base font-bold text-white/50">Coming Soon</h3>
-                  <p className="text-xs text-white/30 mt-1 max-w-xs">
-                    Bulk JSON/CSV upload is in development. Use the single question form for now.
-                  </p>
-                </div>
-              </Section>
+              <BulkUploadTab />
+            </motion.div>
+          )}
+          {tab === "settings" && (
+            <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <AppSettingsTab />
             </motion.div>
           )}
           {tab === "branding" && (
@@ -167,6 +168,428 @@ export default function AdminPanel() {
     </Shell>
   );
 }
+
+// ─── Bulk Upload Tab ────────────────────────────────────────────────────────
+
+type ParsedQuestion = {
+  subjectId: string; paper: string; year: string; questionType: string;
+  questionText: string; optionA?: string; optionB?: string; optionC?: string; optionD?: string;
+  correctOption?: string; explanation?: string; markingGuide?: string; marks?: string;
+};
+
+function parseCSVLocal(csv: string): ParsedQuestion[] {
+  const lines = csv.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
+  return lines.slice(1).filter(l => l.trim()).map(line => {
+    const vals: string[] = [];
+    let cur = "", inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === "," && !inQ) { vals.push(cur.trim()); cur = ""; }
+      else { cur += ch; }
+    }
+    vals.push(cur.trim());
+    const obj: Record<string, string> = {};
+    headers.forEach((h, i) => { obj[h] = (vals[i] ?? "").replace(/^"|"$/g, ""); });
+    return obj as ParsedQuestion;
+  });
+}
+
+type UploadResult = { inserted: number; failed: number; total: number; errors: { row: number; error: string }[] };
+
+function BulkUploadTab() {
+  const { toast } = useToast();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [parsed, setParsed] = useState<ParsedQuestion[]>([]);
+  const [fileName, setFileName] = useState("");
+  const [autoExplain, setAutoExplain] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [result, setResult] = useState<UploadResult | null>(null);
+  const [error, setError] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+
+  const processFile = useCallback((file: File) => {
+    setError(""); setResult(null);
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      try {
+        if (ext === "json") {
+          const data = JSON.parse(text);
+          const arr = Array.isArray(data) ? data : data.questions ?? [];
+          setParsed(arr);
+        } else if (ext === "csv") {
+          setParsed(parseCSVLocal(text));
+        } else {
+          setError("Only .json and .csv files are supported.");
+        }
+      } catch {
+        setError("Could not parse file. Check the format and try again.");
+      }
+    };
+    reader.readAsText(file);
+  }, []);
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault(); setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) processFile(file);
+  };
+
+  const downloadTemplate = () => {
+    window.location.href = `${BASE}/api/questions/bulk/template`;
+  };
+
+  const handleUpload = async () => {
+    if (!parsed.length) return;
+    setUploading(true); setResult(null); setError("");
+    try {
+      const isCSV = fileName.endsWith(".csv");
+      const body: any = { adminPin: "JUPEB2024", autoExplain };
+      if (isCSV) {
+        // Re-read as raw csv for server-side parsing
+        body.questions = parsed;
+      } else {
+        body.questions = parsed;
+      }
+      const r = await fetch(`${BASE}/api/questions/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await r.json();
+      if (!r.ok) { setError(data.error ?? "Upload failed"); return; }
+      setResult(data);
+      toast({ title: `✅ Uploaded ${data.inserted} of ${data.total} questions` });
+      if (data.inserted === data.total) {
+        setParsed([]); setFileName("");
+        if (fileRef.current) fileRef.current.value = "";
+      }
+    } catch {
+      setError("Network error — check your connection and try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Instructions */}
+      <Section title="Bulk Question Upload">
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <p className="text-sm text-white/55 leading-relaxed">
+              Upload dozens of questions at once using a <strong className="text-white/80">CSV</strong> or <strong className="text-white/80">JSON</strong> file.
+              Optionally let AI automatically generate academic explanations for any question that doesn't have one.
+            </p>
+            <button onClick={downloadTemplate}
+              className="flex items-center gap-2 text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors border border-violet-500/20 hover:border-violet-400/40 rounded-xl px-3 py-2 bg-violet-500/5 hover:bg-violet-500/10">
+              <Download className="h-3.5 w-3.5" />
+              Download CSV Template
+            </button>
+          </div>
+          <div className="text-xs text-white/35 space-y-1 bg-white/3 rounded-xl p-3 border border-white/8">
+            <p className="font-semibold text-white/50 mb-2">Required CSV columns:</p>
+            <p><span className="text-white/60">subjectId</span> — numeric subject ID</p>
+            <p><span className="text-white/60">paper</span> — 001, 002, 003, 004</p>
+            <p><span className="text-white/60">year</span> — e.g. 2024</p>
+            <p><span className="text-white/60">questionType</span> — objective / theory</p>
+            <p><span className="text-white/60">questionText</span> — the question</p>
+            <p><span className="text-white/60">optionA–D</span> — for objective only</p>
+            <p><span className="text-white/60">correctOption</span> — A, B, C or D</p>
+          </div>
+        </div>
+      </Section>
+
+      {/* File picker / drop zone */}
+      <Section title="Select File">
+        <input ref={fileRef} type="file" accept=".json,.csv" className="hidden" onChange={handleFile} />
+        <div
+          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+          onClick={() => fileRef.current?.click()}
+          className={cn(
+            "flex flex-col items-center justify-center gap-4 py-12 rounded-2xl border-2 border-dashed cursor-pointer transition-all",
+            dragOver ? "border-violet-400/60 bg-violet-500/8" :
+            fileName ? "border-violet-500/30 bg-violet-500/5" :
+            "border-white/10 hover:border-white/20 hover:bg-white/3"
+          )}
+        >
+          <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center",
+            fileName ? "bg-violet-500/20" : "bg-white/5")}>
+            <FileText className={cn("h-6 w-6", fileName ? "text-violet-400" : "text-white/30")} />
+          </div>
+          <div className="text-center">
+            {fileName ? (
+              <>
+                <p className="text-sm font-bold text-white">{fileName}</p>
+                <p className="text-xs text-violet-400 mt-1">{parsed.length} questions parsed — click to change file</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-semibold text-white/60">Drop your CSV or JSON file here</p>
+                <p className="text-xs text-white/30 mt-1">or click to browse</p>
+              </>
+            )}
+          </div>
+        </div>
+
+        {error && (
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            {error}
+          </div>
+        )}
+      </Section>
+
+      {/* Preview */}
+      {parsed.length > 0 && (
+        <Section title={`Preview — ${parsed.length} Questions`}>
+          <div className="overflow-x-auto rounded-xl border border-white/8">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-white/8 bg-white/3">
+                  {["#","Subject ID","Paper","Year","Type","Question (preview)","Has Options","Has Answer"].map(h => (
+                    <th key={h} className="px-3 py-2.5 text-left text-white/40 font-semibold whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {parsed.slice(0, 10).map((q, i) => (
+                  <tr key={i} className="border-b border-white/5 hover:bg-white/2 transition-colors">
+                    <td className="px-3 py-2.5 text-white/30">{i + 1}</td>
+                    <td className="px-3 py-2.5 text-white/70">{q.subjectId}</td>
+                    <td className="px-3 py-2.5 text-white/70">{q.paper}</td>
+                    <td className="px-3 py-2.5 text-white/70">{q.year}</td>
+                    <td className="px-3 py-2.5">
+                      <span className={cn("px-2 py-0.5 rounded-md text-[10px] font-semibold",
+                        (q.questionType ?? "").toLowerCase() === "objective"
+                          ? "bg-blue-500/15 text-blue-300"
+                          : "bg-amber-500/15 text-amber-300")}>
+                        {q.questionType}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-white/60 max-w-[200px] truncate">{q.questionText}</td>
+                    <td className="px-3 py-2.5 text-center">
+                      {q.optionA ? <CheckCircle className="h-3.5 w-3.5 text-emerald-400 mx-auto" />
+                                 : <X className="h-3.5 w-3.5 text-red-400/50 mx-auto" />}
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      {q.correctOption ? <CheckCircle className="h-3.5 w-3.5 text-emerald-400 mx-auto" />
+                                       : <X className="h-3.5 w-3.5 text-red-400/50 mx-auto" />}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {parsed.length > 10 && (
+              <p className="px-4 py-2.5 text-xs text-white/30 border-t border-white/8">
+                … and {parsed.length - 10} more questions
+              </p>
+            )}
+          </div>
+
+          {/* AI Explain option */}
+          <div
+            onClick={() => setAutoExplain(p => !p)}
+            className={cn(
+              "flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all",
+              autoExplain
+                ? "bg-violet-500/10 border-violet-500/30"
+                : "bg-white/3 border-white/8 hover:bg-white/5"
+            )}
+          >
+            <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0",
+              autoExplain ? "bg-violet-500/20" : "bg-white/5")}>
+              <Brain className={cn("h-4 w-4", autoExplain ? "text-violet-400" : "text-white/30")} />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-white">AI-Generate Explanations</p>
+              <p className="text-xs text-white/40 mt-0.5">
+                Use Gemini to auto-write academic explanations for questions that don't have one. Slower but very thorough.
+              </p>
+            </div>
+            <div className={cn(
+              "w-5 h-5 rounded-md border flex items-center justify-center transition-all",
+              autoExplain ? "bg-violet-500 border-violet-400" : "bg-white/5 border-white/15"
+            )}>
+              {autoExplain && <CheckCircle2 className="h-3 w-3 text-white" />}
+            </div>
+          </div>
+
+          <Button
+            onClick={handleUpload}
+            disabled={uploading || parsed.length === 0}
+            className="w-full h-12 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 font-bold text-white rounded-xl"
+          >
+            {uploading ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Uploading{autoExplain ? " & Generating Explanations" : ""}…</>
+            ) : (
+              <><Upload className="h-4 w-4 mr-2" /> Upload {parsed.length} Questions</>
+            )}
+          </Button>
+        </Section>
+      )}
+
+      {/* Result */}
+      {result && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <Section title="Upload Result">
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                <p className="text-2xl font-bold text-emerald-400">{result.inserted}</p>
+                <p className="text-xs text-white/40 mt-1">Inserted</p>
+              </div>
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                <p className="text-2xl font-bold text-red-400">{result.failed}</p>
+                <p className="text-xs text-white/40 mt-1">Failed</p>
+              </div>
+              <div className="p-4 rounded-xl bg-white/5 border border-white/8">
+                <p className="text-2xl font-bold text-white">{result.total}</p>
+                <p className="text-xs text-white/40 mt-1">Total</p>
+              </div>
+            </div>
+            {result.errors.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-white/40 uppercase tracking-wider">Errors</p>
+                {result.errors.map((e, i) => (
+                  <div key={i} className="flex gap-3 p-2.5 rounded-lg bg-red-500/8 border border-red-500/15 text-xs text-red-300">
+                    <span className="font-bold flex-shrink-0">Row {e.row}</span>
+                    <span className="text-red-300/70">{e.error}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+// ─── App Settings Tab ──────────────────────────────────────────────────────
+
+function AppSettingsTab() {
+  const { toast } = useToast();
+  const [settings, setSettings] = useState<Record<string, string>>({});
+  const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState<string | null>(null);
+
+  const load = async () => {
+    const r = await fetch(`${BASE}/api/settings`);
+    if (r.ok) { setSettings(await r.json()); setLoaded(true); }
+  };
+  if (!loaded) { load(); }
+
+  const save = async (key: string, value: string) => {
+    setSaving(key);
+    try {
+      const r = await fetch(`${BASE}/api/settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, value, adminPin: "JUPEB2024" }),
+      });
+      if (r.ok) {
+        setSettings(p => ({ ...p, [key]: value }));
+        toast({ title: "Setting saved" });
+      } else {
+        toast({ title: "Failed to save", variant: "destructive" });
+      }
+    } finally { setSaving(null); }
+  };
+
+  const TimerField = ({ label, settingKey, desc }: { label: string; settingKey: string; desc: string }) => {
+    const [val, setVal] = useState("");
+    const current = settings[settingKey] ?? "";
+
+    return (
+      <div className="flex items-center justify-between p-4 rounded-xl bg-white/3 border border-white/8 gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+            <Timer className="h-4 w-4 text-amber-400" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">{label}</p>
+            <p className="text-xs text-white/40">{desc}</p>
+            <p className="text-xs text-white/25 mt-0.5">Current: <span className="text-amber-400">{current} minutes</span></p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Input
+            type="number"
+            min="10" max="360"
+            placeholder={current}
+            value={val}
+            onChange={e => setVal(e.target.value)}
+            className={cn(inputCls, "w-24 text-center")}
+          />
+          <Button
+            size="sm"
+            disabled={!val || saving === settingKey}
+            onClick={() => { if (val) { save(settingKey, val); setVal(""); } }}
+            className="bg-violet-600 hover:bg-violet-500 text-white h-9 px-4"
+          >
+            {saving === settingKey ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save"}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      <Section title="Exam Timer Durations">
+        <p className="text-xs text-white/40 -mt-2 leading-relaxed">
+          Configure default exam durations. Students will see these times on the quiz launcher. Changes take effect immediately.
+        </p>
+        <div className="space-y-3">
+          <TimerField
+            label="Objective (MCQ) Timer"
+            settingKey="obj_timer_minutes"
+            desc="Duration for Papers 001, 002, 003 — multiple choice"
+          />
+          <TimerField
+            label="Theory Timer"
+            settingKey="theory_timer_minutes"
+            desc="Duration for written / essay type questions"
+          />
+          <TimerField
+            label="Mock Exam Timer"
+            settingKey="mock_timer_minutes"
+            desc="Duration for full mock / Paper 004 exams"
+          />
+        </div>
+      </Section>
+
+      <Section title="About Timer Settings">
+        <div className="grid sm:grid-cols-3 gap-3 text-center">
+          {[
+            { label: "Objective", key: "obj_timer_minutes", default: "60 min" },
+            { label: "Theory", key: "theory_timer_minutes", default: "120 min" },
+            { label: "Mock Exam", key: "mock_timer_minutes", default: "120 min" },
+          ].map(item => (
+            <div key={item.key} className="p-4 rounded-xl bg-white/3 border border-white/8">
+              <p className="text-2xl font-bold text-amber-400">{settings[item.key] ?? item.default.split(" ")[0]}</p>
+              <p className="text-xs text-white/30 mt-1">min — {item.label}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+    </div>
+  );
+}
+
+// ─── Branding Tab ──────────────────────────────────────────────────────────
 
 function BrandingTab() {
   const { toast } = useToast();
@@ -201,12 +624,10 @@ function BrandingTab() {
     <div className="space-y-6">
       <Section title="LexBot Identity Image">
         <p className="text-xs text-white/40 leading-relaxed -mt-2">
-          Upload a custom image for LexBot — it will appear in the chat header, message bubbles, and AI generate dialogs across the entire app.
+          Upload a custom image for LexBot — it will appear in the chat header, message bubbles, and AI generate dialogs.
           Recommended: square image, at least 128 × 128 px, under 2 MB.
         </p>
-
         <div className="grid md:grid-cols-2 gap-6">
-          {/* Upload control */}
           <div className="space-y-3">
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
             <button
@@ -226,42 +647,31 @@ function BrandingTab() {
                 <p className="text-xs text-white/30 mt-0.5">PNG, JPG, WebP · Max 2 MB</p>
               </div>
             </button>
-
             {botImage && (
-              <button
-                onClick={handleClear}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm text-red-400/70 hover:text-red-400 hover:bg-red-500/8 border border-red-500/15 hover:border-red-500/30 transition-all"
-              >
+              <button onClick={handleClear}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm text-red-400/70 hover:text-red-400 hover:bg-red-500/8 border border-red-500/15 hover:border-red-500/30 transition-all">
                 <X className="h-3.5 w-3.5" />
                 Remove image
               </button>
             )}
           </div>
-
-          {/* Preview */}
           <div className="space-y-3">
             <p className="text-xs font-semibold text-white/40 uppercase tracking-wider">Preview</p>
             <div className="glass-card p-4 space-y-4">
-              {/* Chat header preview */}
               <div className="flex items-center gap-3 pb-3 border-b border-white/8">
                 <div className="w-10 h-10 rounded-2xl overflow-hidden flex items-center justify-center bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/20 flex-shrink-0">
-                  {botImage
-                    ? <img src={botImage} alt="LexBot" className="w-full h-full object-cover" />
-                    : <Sparkles className="h-5 w-5 text-white" />
-                  }
+                  {botImage ? <img src={botImage} alt="LexBot" className="w-full h-full object-cover" />
+                             : <Sparkles className="h-5 w-5 text-white" />}
                 </div>
                 <div>
                   <p className="text-sm font-bold text-white">LexBot</p>
                   <p className="text-[10px] text-white/35">JUPEB Study Assistant · Online</p>
                 </div>
               </div>
-              {/* Message bubble preview */}
               <div className="flex gap-2.5 items-start">
                 <div className="w-8 h-8 rounded-2xl overflow-hidden flex items-center justify-center bg-gradient-to-br from-amber-400 to-orange-500 flex-shrink-0">
-                  {botImage
-                    ? <img src={botImage} alt="LexBot" className="w-full h-full object-cover" />
-                    : <Sparkles className="h-3.5 w-3.5 text-white" />
-                  }
+                  {botImage ? <img src={botImage} alt="LexBot" className="w-full h-full object-cover" />
+                             : <Sparkles className="h-3.5 w-3.5 text-white" />}
                 </div>
                 <div className="bg-white/[0.06] border border-white/[0.08] rounded-2xl rounded-tl-sm px-3 py-2">
                   <p className="text-xs text-white/70">Hey! I'm LexBot, your JUPEB study assistant 🎓</p>
@@ -289,6 +699,8 @@ function BrandingTab() {
     </div>
   );
 }
+
+// ─── Announcements Tab ────────────────────────────────────────────────────
 
 const TYPE_OPTIONS = [
   { value: "info",    label: "ℹ️  Info",    color: "text-sky-400" },
@@ -321,7 +733,6 @@ function AnnouncementsTab() {
     const r = await fetch(`${BASE}/api/announcements`);
     if (r.ok) { setAnnouncements(await r.json()); setLoaded(true); }
   };
-
   if (!loaded) { load(); }
 
   const handlePost = async (e: React.FormEvent) => {
@@ -368,7 +779,6 @@ function AnnouncementsTab() {
 
   return (
     <div className="space-y-6">
-      {/* Post form */}
       <Section title="Post New Announcement">
         <form onSubmit={handlePost} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -389,13 +799,11 @@ function AnnouncementsTab() {
               </Select>
             </Field>
           </div>
-
           <Field label="Content *">
             <Textarea value={form.content} onChange={e => setForm(p => ({ ...p, content: e.target.value }))}
               placeholder="Write your message to scholars…"
               className={cn(inputCls, "min-h-[100px] resize-none")} />
           </Field>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Author Name">
               <Input value={form.authorName} onChange={e => setForm(p => ({ ...p, authorName: e.target.value }))}
@@ -419,28 +827,21 @@ function AnnouncementsTab() {
               </div>
             </Field>
           </div>
-
           <label className="flex items-center gap-3 cursor-pointer">
-            <div
-              onClick={() => setForm(p => ({ ...p, isPinned: !p.isPinned }))}
+            <div onClick={() => setForm(p => ({ ...p, isPinned: !p.isPinned }))}
               className={cn(
                 "w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer",
                 form.isPinned ? "bg-violet-500 border-violet-400" : "bg-white/5 border-white/15"
-              )}
-            >
+              )}>
               {form.isPinned && <CheckCircle2 className="h-3 w-3 text-white" />}
             </div>
             <span className="text-sm text-white/60 flex items-center gap-1.5">
               <Pin className="h-3.5 w-3.5" />Pin to top of Dashboard
             </span>
           </label>
-
-          {/* Preview */}
           {form.title && form.content && (
-            <div className={cn(
-              "p-4 rounded-xl border border-l-4 bg-white/3",
-              BORDER_MAP[form.type] || "border-l-sky-400", "border-white/8"
-            )}>
+            <div className={cn("p-4 rounded-xl border border-l-4 bg-white/3",
+              BORDER_MAP[form.type] || "border-l-sky-400", "border-white/8")}>
               <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2 font-semibold">Preview</p>
               <div className="flex items-start gap-3">
                 <span className="text-xl flex-shrink-0">{form.emoji}</span>
@@ -455,7 +856,6 @@ function AnnouncementsTab() {
               </div>
             </div>
           )}
-
           <Button type="submit" disabled={posting || !form.title.trim() || !form.content.trim()}
             className="bg-violet-600 hover:bg-violet-500 text-white font-bold h-11 px-8">
             <Megaphone className="h-4 w-4 mr-2" />
@@ -464,7 +864,6 @@ function AnnouncementsTab() {
         </form>
       </Section>
 
-      {/* Existing */}
       <Section title={`Posted Announcements (${announcements.length})`}>
         {announcements.length === 0 ? (
           <div className="text-center py-10 text-white/25">
@@ -474,10 +873,8 @@ function AnnouncementsTab() {
         ) : (
           <div className="space-y-3">
             {announcements.map(a => (
-              <div key={a.id} className={cn(
-                "flex items-start gap-4 p-4 rounded-2xl border border-l-4 bg-white/2",
-                BORDER_MAP[a.type] || "border-l-sky-400", "border-white/6"
-              )}>
+              <div key={a.id} className={cn("flex items-start gap-4 p-4 rounded-2xl border border-l-4 bg-white/2",
+                BORDER_MAP[a.type] || "border-l-sky-400", "border-white/6")}>
                 <span className="text-2xl flex-shrink-0">{a.emoji}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-0.5">
@@ -488,11 +885,8 @@ function AnnouncementsTab() {
                   <p className="text-xs text-white/55 leading-relaxed">{a.content}</p>
                   <p className="text-[10px] text-white/25 mt-1">— {a.authorName} · {format(new Date(a.createdAt), "MMM d, yyyy h:mm a")}</p>
                 </div>
-                <button
-                  onClick={() => handleDelete(a.id)}
-                  disabled={deleting === a.id}
-                  className="flex-shrink-0 w-8 h-8 rounded-xl bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center text-red-400 transition-colors"
-                >
+                <button onClick={() => handleDelete(a.id)} disabled={deleting === a.id}
+                  className="flex-shrink-0 w-8 h-8 rounded-xl bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center text-red-400 transition-colors">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -503,6 +897,8 @@ function AnnouncementsTab() {
     </div>
   );
 }
+
+// ─── Add Question Form ─────────────────────────────────────────────────────
 
 function AddQuestionForm() {
   const { data: subjects } = useListSubjects();
@@ -639,6 +1035,8 @@ function AddQuestionForm() {
     </form>
   );
 }
+
+// ─── Manage Questions ──────────────────────────────────────────────────────
 
 function ManageQuestionsList() {
   const { data: questions, refetch } = useListQuestions({ limit: 50 });

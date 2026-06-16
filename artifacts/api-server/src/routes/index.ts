@@ -2,17 +2,20 @@ import { Router, type IRouter } from "express";
 import healthRouter from "./health";
 import subjectsRouter from "./subjects";
 import questionsRouter from "./questions";
+import questionsBulkRouter from "./questions-bulk";
 import notesRouter from "./notes";
 import quizRouter from "./quiz";
 import dashboardRouter from "./dashboard";
 import aiRouter from "./ai";
 import communityRouter from "./community";
 import announcementsRouter from "./announcements";
+import settingsRouter from "./settings";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(subjectsRouter);
+router.use(questionsBulkRouter);
 router.use(questionsRouter);
 router.use(notesRouter);
 router.use(quizRouter);
@@ -20,5 +23,6 @@ router.use(dashboardRouter);
 router.use(aiRouter);
 router.use(communityRouter);
 router.use(announcementsRouter);
+router.use(settingsRouter);
 
 export default router;
