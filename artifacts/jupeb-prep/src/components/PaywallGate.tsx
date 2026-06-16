@@ -1,4 +1,4 @@
-import { Lock, Zap, BookOpen, Brain, ChevronRight, Star } from "lucide-react";
+import { Lock, Zap, BookOpen, Brain, ChevronRight, Star, GraduationCap } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,14 @@ const FEATURE_CONFIG = {
     accent: "rose",
     perks: ["Unlimited quiz questions", "Full explanations after every answer", "Track your progress & streaks", "Compete on the leaderboard"],
   },
+  class: {
+    icon: GraduationCap,
+    title: "Class is locked",
+    subtitle: "Activate your account to access interactive AI-powered lectures with real-time streaming content and timed reading sessions.",
+    color: "from-emerald-600/20 to-teal-900/10",
+    accent: "emerald",
+    perks: ["Live AI lectures for any topic", "Auto-timed reading sessions", "Practice questions after each class", "Read-aloud in Nigerian English"],
+  },
 } as const;
 
 type FeatureKey = keyof typeof FEATURE_CONFIG;
@@ -36,9 +44,10 @@ export function PaywallGate({ feature }: { feature: FeatureKey }) {
   const cfg = FEATURE_CONFIG[feature];
   const Icon = cfg.icon;
   const accentMap = {
-    violet: { border: "border-violet-500/30", bg: "bg-violet-500/15", text: "text-violet-400", btn: "bg-violet-600 hover:bg-violet-500 shadow-violet-500/25", dot: "bg-violet-500" },
-    amber: { border: "border-amber-500/30", bg: "bg-amber-500/15", text: "text-amber-400", btn: "bg-amber-600 hover:bg-amber-500 shadow-amber-500/25", dot: "bg-amber-500" },
-    rose: { border: "border-rose-500/30", bg: "bg-rose-500/15", text: "text-rose-400", btn: "bg-rose-600 hover:bg-rose-500 shadow-rose-500/25", dot: "bg-rose-500" },
+    violet:  { border: "border-violet-500/30",  bg: "bg-violet-500/15",  text: "text-violet-400",  btn: "bg-violet-600 hover:bg-violet-500 shadow-violet-500/25",   dot: "bg-violet-500"  },
+    amber:   { border: "border-amber-500/30",   bg: "bg-amber-500/15",   text: "text-amber-400",   btn: "bg-amber-600 hover:bg-amber-500 shadow-amber-500/25",     dot: "bg-amber-500"   },
+    rose:    { border: "border-rose-500/30",    bg: "bg-rose-500/15",    text: "text-rose-400",    btn: "bg-rose-600 hover:bg-rose-500 shadow-rose-500/25",       dot: "bg-rose-500"    },
+    emerald: { border: "border-emerald-500/30", bg: "bg-emerald-500/15", text: "text-emerald-400", btn: "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/25", dot: "bg-emerald-500" },
   };
   const ac = accentMap[cfg.accent];
 

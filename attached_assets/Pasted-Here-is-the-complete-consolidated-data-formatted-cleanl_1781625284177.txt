@@ -1,0 +1,244 @@
+Here is the complete consolidated data formatted cleanly as a unified table for the multiple-choice section (Questions 1 to 40), followed by the theory essay section.
+You can directly highlight, copy, and paste this entire layout straight into Microsoft Excel or Google Sheets.
+### **SECTION A: MULTIPLE CHOICE QUESTIONS**
+| Question Number | Question / Context / Options |
+|---|---|
+| **1** | One major departure between Classical Greek drama and the Shakespearean drama is |
+|  | A. choice of thematic focus. |
+|  | B. rejection of poetic language. |
+|  | C. use of supernatural elements. |
+|  | D. structure of the plot. |
+| **2** | The tragic atmosphere of a typical Classical drama is intensified through the |
+|  | A. interventions of the chorus. |
+|  | B. absence of comic characters. |
+|  | C. protagonist's lack of knowledge of his people. |
+|  | D. use of incantation in dialogue. |
+| **3** | In Aristotle's critical interventions on Classical drama in *The Poetics* |
+|  | A. Comedy is superior to Tragedy. |
+|  | B. Tragedy is about the history of Athens. |
+|  | C. the three unities are less important. |
+|  | D. there are six major elements of a tragic play. |
+| **4** | Choral odes in a typical Classical play |
+|  | A. consists of miming actions. |
+|  | B. consists of strophe and antistrophe sections. |
+|  | C. are sung by the protagonist from different sections of the theatre. |
+|  | D. are composed the audience for the playwright. |
+| **5** | In drama, the term "anagnorisis" refers to |
+|  | A. a sudden discovery that produces a change from ignorance to knowledge. |
+|  | B. the representation of the hero as a victim of fate and destiny |
+|  | C. the act of keeping a crucial information away from the hero |
+|  | D. a moment of confrontation between the hero and the seer. |
+| **6** | The dominant theme of Medieval drama is the theme of |
+|  | A. unrequited love. |
+|  | B. religion. |
+|  | C. idol worship. |
+|  | D. politics. |
+| **7** | Mystery and Morality plays are genres of drama which developed |
+|  | A. exactly during the classical period. |
+|  | B. shortly after the Victorian period. |
+|  | C. during the Medieval period. |
+|  | D. almost around late Elizabethan period. |
+| **8** | All of the following dramatists are William Shakespeare's contemporaries except |
+|  | A. John Fletcher |
+|  | B. Christopher Marlowe |
+|  | C. Ben Jonson |
+|  | D. William Congreve. |
+| **9** | The concept which influenced the development of Modern drama is known as |
+|  | A. Classicism. |
+|  | B. Realism. |
+|  | C. Modernism. |
+|  | D. Poeticism. |
+| **10** | The development of literary African drama was influenced majorly by |
+|  | A. Christianity and Islam. |
+|  | B. Colonial education and African traditional materials. |
+|  | C. colonialism and slavery. |
+|  | D. African tradition and Asian dramatic models. |
+| **11** | Realism, social commentary and moral purpose are the characteristics of |
+|  | A. the Victorian novel. |
+|  | B. the Postmodern novel. |
+|  | C. the Elizabethan novel. |
+|  | D. the Romantic novel. |
+| **12** | In reading a novel written in omniscient narrative technique, the reader is |
+|  | A. allowed to distinguish the protagonist from the villain. |
+|  | B. familiarised with the shortcomings of the protagonist. |
+|  | C. given the window to have an in-depth knowledge of characters in the story. |
+|  | D. alienated from the realism of the story. |
+| **13** | A play is termed melodrama if the |
+|  | A. atmosphere of the story is highly tense. |
+|  | B. conflict in the story is poetic. |
+|  | C. language of the dialogue poetic. |
+|  | D. story is highly sensational. |
+| **14** | In a typical picaresque novel, the picaro is |
+|  | A. the anti-hero. |
+|  | B. the hero's foil. |
+|  | C. a roguish romantic character. |
+|  | D. a roguish adventurist character. |
+| **15** | In a novel, an event or action which foreshadows what is to happen later |
+|  | A. exaggerates past events with suspense in the story. |
+|  | B. must foretell what is to come later in the story. |
+|  | C. exaggerates the actions of the protagonist in the story. |
+|  | D. must foretell the death of major characters in the story. |
+| **16** | In Greek theatre, the *theatron* refers to |
+|  | A. the space where the audience sat during performance of a play. |
+|  | B. the circular space where actions take place during performance. |
+|  | C. the masque worn by actors. |
+|  | D. the masque worn by parodos. |
+| **17** | According to Aristotle, the major elements of Greek tragedy are |
+|  | A. plot, character, spectacle, diction, thought and action. |
+|  | B. plot, character, action and spectacle |
+|  | C. song, plot, thought, spectacle, diction and character. |
+|  | D. spectacle, diction, thought and song. |
+| **18** | Basically, the emergence of realism as narrative technique was to reject |
+|  | A. historical elements of story telling. |
+|  | B. mythical elements of story telling. |
+|  | C. Romanticism |
+|  | D. Modernism. |
+| **19** | The study and analysis of types characters in prose fiction and drama focuses on |
+|  | A. knowledge of the effects of setting in a text. |
+|  | B. personality traits of individual characters in a text. |
+|  | C. type of conflict in a text. |
+|  | D. the historical context of the text. |
+| **20** | Modernist novels use non-linear order of plot to |
+|  | A. project stock characters as heroes. |
+|  | B. develop the art of poetic story telling. |
+|  | C. achieve cause-effect, chronological style of narration. |
+|  | D. break with traditional cause-effect plot structure. |
+| **21** | The concept of 'total theatre" is original to the |
+|  | A. African drama and performance space. |
+|  | B. English drama and performance theatre. |
+|  | C. American ballet performance. |
+|  | D. African novel and poetry performance. |
+| **22** | One of the major modernist novelists to introduce the stream of consciousness technique is |
+|  | A. Charlotte Bronte. |
+|  | B. Emily Bronte. |
+|  | C. Elizabeth Bishop. |
+|  | D. Virginia Woolf. |
+| **23** | In African novel history and development, the name Olaudah Equiano is associated with |
+|  | A. An African former slave who wrote *The Interesting Narrative of the Life of Olaudah Equiano* (1789). |
+|  | B. An African former slave who wrote *A Farewell to the Slavery of Olaudah Equiano* (1789). |
+|  | C. An African former colonial citizen who wrote *Ethiopia Unbound* (1911). |
+|  | D. An African novelist who wrote *O escravo (The Slave)* in 1856. |
+| **24** | Which of the following statements is not true about Amos Tutuola's *Palm Wine Drinkard*? |
+|  | A. It was published before *Things Fall Apart* |
+|  | B. It draws from African oral tradition of mythic tales. |
+|  | C. It is written in English. |
+|  | D. It is a pre-modern novel. |
+| **25** | It is believed that Chinua Achebe's *Things Fall Apart* is a novel written as a reaction to |
+|  | A. Jonathan Swift's depiction of Africa in *Gulliver's Travels* |
+|  | B. Joseph Conrad's depiction of African civilisation in *Mister Johnson*. |
+|  | C. Joyce Cary's depiction of Nigeria in *Mister Johnson*. |
+|  | D. James Joyce's depiction of Africa in *Ulysses*. |
+| **26** | A key characteristic of expressionism in 20th century American drama and theatre is |
+|  | A. a realistic setting |
+|  | B. a focus on renaissance subject matters |
+|  | C. rejection of themes of social alienation and industrialisation. |
+|  | D. presentation of distorted reality and symbolic representation. |
+| **27** | Epic theatre, as a form and style, is linked to the |
+|  | A. theatre theory and practice of Eugene O'Neill in 20th century |
+|  | B. dramatic formulations of Aristotle in *The Poetics* |
+|  | C. theatre theory and practice of Bertolt Brecht in the 20th century |
+|  | D. dramatic formulations of Arthur Miller in *Tragedy and the Common Man*. |
+| **28** | The setting of a gothic novel is commonly in and around |
+|  | A. an old castle or manor. |
+|  | B. the palace of feudal monarchs. |
+|  | C. a war front. |
+|  | D. a modern city. |
+| **29** | In comparison to the English novel, contemporary African novel |
+|  | A. primarily entertains the reader. |
+|  | B. primarily educates the reader. |
+|  | C. is interested in precolonial themes only. |
+|  | D. is interested in both precolonial and postcolonial themes. |
+| **30** | To consider a novel an African Diaspora novel is to |
+|  | A. underscore its ambiguous style. |
+|  | B. highlight its focus on African past with colonialism |
+|  | C. highlight its interests in the experiences of Africans outside Africa. |
+|  | D. underscore its lack of cultural taste. |
+| **Context** | **Questions 31 to 35 are taken from William Shakespeare's *Othello*. Read the extract and answer the questions that follow them.**
+
+Despise me, if I do not. Three great ones of the city,
+In personal suit to make me his lieutenant,
+Off-capp'd to him: and, by the faith of man,
+I know my price, I am worth no worse a place:
+But he; as loving his own pride and purposes,
+Evades them, with a bombast circumstance
+Horribly stuff'd with epithets of war;
+And, in conclusion,
+Nonsuits my mediators; for, 'Certes,' says he,
+'I have already chose my officer.'
+And what was he? (Act 1, Scene 1) |
+| **31** | The speaker in the excerpt is |
+|  | A. Roderigo |
+|  | B. Iago |
+|  | C. Brabantio |
+|  | D. Othello |
+| **32** | The character being addressed is |
+|  | A. Brabantio |
+|  | B. Cassio |
+|  | C. Roderigo |
+|  | D. Duke of Venice. |
+| **33** | By saying "Despise me, if I do not." the speaker means that |
+|  | A. he loves Desdemona. |
+|  | B. he hates Emilia. |
+|  | C. he loves Cassio. |
+|  | D. He hates Othello. |
+| **34** | The setting of the scene is |
+|  | A. A Council Chamber. |
+|  | B. Another Street in Venice. |
+|  | C. A street in Venice. |
+|  | D. A sea port in Cyprus. |
+| **35** | The scene highlights the theme of |
+|  | A. love in the play |
+|  | B. conspiracy in the play. |
+|  | C. marriage in the play. |
+|  | D. friendship in the play. |
+| **Context** | **Questions 36-40 are taken from the excerpt below:**
+
+**A:** In happy time, B
+**B:** You have not been a-bed, then?
+**A:** Why, no; the day had broke
+Before we parted. I have made bold, A.
+To send in to your wife: my suit to her
+Is, that she will to virtuous ...
+Procure me some access.
+**B:** I'll send her to you presently;
+And I'll devise a mean to draw the Moor
+Out of the way, that your converse and business
+May be more free
+**A:** I humbly thank you for't (Act III, Scene 1) |
+| **36** | Speaker A is |
+|  | A. Emilia |
+|  | B. Clown |
+|  | C. Iago |
+|  | D. Cassio |
+| **37** | Speaker B is |
+|  | A. Iago |
+|  | B. Othello |
+|  | C. Brabantio |
+|  | D. Cassio |
+| **38** | What happens just before the dialogue? |
+|  | A. Speaker A arrives from a battle in Cyprus |
+|  | B. Both characters arrive from a battle in Cyprus |
+|  | C. Speaker A speaks to Clown |
+|  | D. Speaker B speaks to Clown |
+| **39** | The scene takes place |
+|  | A. in a Street in Venice. |
+|  | B. Before the castle. |
+|  | C. in a Street in Cyprus. |
+|  | D. Before the Council chamber. |
+| **40** | "Your wife" in line 5 refers to |
+|  | A. Desdemona. |
+|  | B. Bianca. |
+|  | C. Clown. |
+|  | D. Emilia. |
+### **SECTION B: ESSAY QUESTIONS**
+| Heading / Course | Question Number | Theory Essay Prompt | Marks |
+|---|---|---|---|
+| **SECTION B Instructions** |  | **Answer FOUR questions; TWO questions from each Course. MAKE SURE YOU MAKE AT LEAST FIVE POINTS IN ANSWER TO EACH QUESTION.** |  |
+| **LIT 001: Introduction to Drama** | **1** | Discuss how power consciousness underscores the conflict between the secular and the spiritual life in T. S. Eliot's *Murder in the Cathedral*. | 15 marks |
+|  | **2** | Examine Tewfik Al-Hakim's presentation of the struggle mentality in *Fate of a Cockroach*. | 15 marks |
+|  | **3** | Examine the significance of the women's occupation of the Acropolis in Aristophanes' *Lysistrata*. | 15 marks |
+|  | **4** | Comment critically on the relevance of the title of Bosede Afolayan's *Once Upon an Elephant* to contemporary African experience. | 15 marks |
+| **LIT 002: Introduction to Prose Fiction** | **5** | How does the encounter between Robinson Crusoe and Friday in Daniel Defoe's *Robinson Crusoe* underscore the theme of slavery and colonialism in the novel? | 15 marks |
+|  | **6** | Highlight and discuss elements that make Charlotte Bronte's *Jane Eyre* a suitable Victorian bildungsroman. | 15 marks |
+|  | **7** | Discuss the significance of Xuma's relationships with Leah, Eliza and Maisy in Peter Abraham's *Mine Boy*. What do relationships portray about women in the novel? | 15 marks |
+|  | **8** | Idede Oseyande's *Warri No Dey Carry Last* can be described as a social realist novel. Discuss. | 15 marks |

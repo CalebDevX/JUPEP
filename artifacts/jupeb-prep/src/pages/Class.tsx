@@ -189,6 +189,23 @@ Write in clear, confident Nigerian academic English. Aim for 700–900 words. Be
       setTimeLeft(readSecs);
       setTimerRunning(true);
       setDone(true);
+
+      // Save to lecture history in localStorage
+      try {
+        const prev = JSON.parse(localStorage.getItem("jupeb_lecture_history") || "[]");
+        const record = {
+          id: `${Date.now()}`,
+          subjectName,
+          paper,
+          topic,
+          wordCount: words,
+          savedAt: new Date().toISOString(),
+        };
+        // keep most recent 50
+        const updated = [record, ...prev.filter((r: any) => r.id !== record.id)].slice(0, 50);
+        localStorage.setItem("jupeb_lecture_history", JSON.stringify(updated));
+      } catch {}
+
     } catch (err: any) {
       if (err.name !== "AbortError") {
         setError("Failed to load lecture. Please try again.");
