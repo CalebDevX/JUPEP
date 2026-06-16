@@ -2,8 +2,22 @@ import { Router } from "express";
 import { db, pool } from "@workspace/db";
 import { accessCodesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { OAuth2Client } from "google-auth-library";
+import { readFileSync, existsSync } from "fs";
+import { join } from "path";
 
 const router = Router();
+
+function getSetting(key: string): string | null {
+  try {
+    const file = join(process.cwd(), "settings.json");
+    if (existsSync(file)) {
+      const data = JSON.parse(readFileSync(file, "utf8"));
+      return data[key] || null;
+    }
+  } catch {}
+  return null;
+}
 
 router.post("/auth/register", async (req, res) => {
   const { fullName, phone, email, subjects, targetUniversity, targetGrade, accessCode } = req.body;
@@ -127,6 +141,65 @@ router.post("/auth/login", async (req, res) => {
     res.json({ success: true, profile });
   } catch (err: any) {
     res.status(500).json({ error: "Login failed. Please try again.", detail: err?.message });
+  }
+});
+
+// ── Google OAuth ────────────────────────────────────────────────────────────
+
+router.get("/auth/google/config", (_req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID || getSetting("google_client_id");
+  res.json({ clientId: clientId || null });
+});
+
+router.post("/auth/google", async (req, res) => {
+  const { credential } = req.body;
+  if (!credential) return res.status(400).json({ error: "Missing Google credential." });
+
+  const clientId = process.env.GOOGLE_CLIENT_ID || getSetting("google_client_id");
+  if (!clientId) {
+    return res.status(503).json({ error: "Google Sign-In is not configured yet.", code: "NOT_CONFIGURED" });
+  }
+
+  try {
+    const client = new OAuth2Client(clientId);
+    const ticket = await client.verifyIdToken({ idToken: credential, audience: clientId });
+    const payload = ticket.getPayload();
+    if (!payload) return res.status(400).json({ error: "Invalid Google credential." });
+
+    const { email, name, picture, sub: googleId } = payload;
+    if (!email) return res.status(400).json({ error: "Google account has no email address." });
+
+    const result = await pool.query(
+      "SELECT * FROM students WHERE email=$1 OR google_id=$2",
+      [email, googleId || null]
+    ).catch(async () => {
+      return pool.query("SELECT * FROM students WHERE email=$1", [email]);
+    });
+
+    if (result.rows.length) {
+      const s = result.rows[0];
+      const profile = {
+        fullName: s.full_name,
+        firstName: s.full_name.split(" ")[0],
+        phone: s.phone,
+        email: s.email || email,
+        subjects: s.subjects,
+        targetUniversity: s.target_university,
+        targetGrade: s.target_grade,
+        accessCode: null,
+        picture: picture || null,
+      };
+      return res.json({ success: true, profile });
+    }
+
+    return res.json({
+      success: false,
+      needsRegistration: true,
+      googleData: { name: name || "", email, picture: picture || null },
+    });
+  } catch (err: any) {
+    console.error("Google auth error:", err);
+    res.status(500).json({ error: err.message || "Google authentication failed." });
   }
 });
 

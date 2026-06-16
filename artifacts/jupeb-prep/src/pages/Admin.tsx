@@ -1272,6 +1272,42 @@ function SettingsTab() {
     );
   };
 
+  const CredentialField = ({ label, settingKey, desc, isSecret }: {
+    label: string; settingKey: string; desc: string; isSecret?: boolean;
+  }) => {
+    const [val, setVal] = useState("");
+    const current = settings[settingKey] ?? "";
+    const display = isSecret && current ? "••••••••" + current.slice(-4) : current;
+    return (
+      <div className="p-4 rounded-xl bg-white/3 border border-white/8 space-y-3">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+            <KeyRound className="h-4 w-4 text-blue-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white">{label}</p>
+            <p className="text-xs text-white/40">{desc}</p>
+            {current && <p className="text-[10px] text-emerald-400 mt-0.5 font-mono truncate">✓ {display}</p>}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Input
+            type={isSecret ? "password" : "text"}
+            placeholder={`Paste ${label}…`}
+            value={val}
+            onChange={e => setVal(e.target.value)}
+            className={cn(inputCls, "flex-1 text-xs font-mono")}
+          />
+          <Button size="sm" disabled={!val.trim() || saving === settingKey}
+            onClick={() => { if (val.trim()) { save(settingKey, val.trim()); setVal(""); } }}
+            className="bg-blue-600 hover:bg-blue-500 text-white h-9 px-4 flex-shrink-0">
+            {saving === settingKey ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save"}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <Section title="Exam Timer Durations">
@@ -1291,6 +1327,52 @@ function SettingsTab() {
             </div>
           ))}
         </div>
+      </Section>
+
+      <Section title="Google Sign-In (OAuth 2.0)">
+        <p className="text-xs text-white/40 -mt-2 leading-relaxed">
+          Allows students to register and sign in with their Google account.
+          Get credentials from{" "}
+          <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer"
+            className="text-blue-400 hover:underline">Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client ID</a>.
+          Set the Authorised redirect URI to <span className="font-mono text-[10px] text-white/50">{typeof window !== "undefined" ? window.location.origin : ""}/api/auth/google/callback</span>.
+        </p>
+        <div className="space-y-3">
+          <CredentialField label="Google Client ID" settingKey="google_client_id" desc="OAuth 2.0 Client ID — safe to expose publicly" />
+          <CredentialField label="Google Client Secret" settingKey="google_client_secret" desc="Client Secret — kept server-side only" isSecret />
+        </div>
+        {settings["google_client_id"] ? (
+          <div className="flex items-center gap-2 px-4 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-sm text-emerald-400">
+            <CheckCircle className="h-4 w-4 flex-shrink-0" />
+            Google Sign-In is active. The button appears on the login/register page automatically.
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-4 py-3 bg-white/3 border border-white/8 rounded-xl text-sm text-white/35">
+            <AlertCircle className="h-4 w-4 flex-shrink-0 text-white/25" />
+            Add your Client ID above to enable Google Sign-In for students.
+          </div>
+        )}
+      </Section>
+
+      <Section title="HuggingFace Token (Voice AI)">
+        <p className="text-xs text-white/40 -mt-2 leading-relaxed">
+          Required to enable the Voice AI Teacher (YarnGPT Nigerian accent).
+          Get a free token from{" "}
+          <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer"
+            className="text-green-400 hover:underline">huggingface.co/settings/tokens</a>.
+        </p>
+        <CredentialField label="HuggingFace Token" settingKey="huggingface_token" desc="Read-only token is sufficient" isSecret />
+        {settings["huggingface_token"] ? (
+          <div className="flex items-center gap-2 px-4 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-sm text-emerald-400">
+            <CheckCircle className="h-4 w-4 flex-shrink-0" />
+            Voice AI is configured. Students can use the Voice Teacher page.
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-4 py-3 bg-white/3 border border-white/8 rounded-xl text-sm text-white/35">
+            <AlertCircle className="h-4 w-4 flex-shrink-0 text-white/25" />
+            Add your HuggingFace token above to enable Voice AI.
+          </div>
+        )}
       </Section>
     </div>
   );

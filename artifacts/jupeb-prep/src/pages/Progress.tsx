@@ -26,28 +26,28 @@ export default function ProgressPage() {
 
   return (
     <Shell>
-      <div className="p-6 max-w-5xl mx-auto w-full space-y-6">
+      <div className="p-3 md:p-6 max-w-5xl mx-auto w-full space-y-5 md:space-y-6">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-2xl md:text-3xl font-bold font-serif text-white flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/15 flex items-center justify-center">
+          <h1 className="text-xl md:text-2xl font-bold font-serif text-white flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/15 flex items-center justify-center flex-shrink-0">
               <TrendingUp className="h-5 w-5 text-cyan-400" />
             </div>
             Your Progress
           </h1>
-          <p className="text-white/40 text-sm mt-1">Track performance and identify where to improve.</p>
+          <p className="text-white/40 text-sm mt-1 ml-[52px]">Track performance and identify where to improve.</p>
         </motion.div>
 
         {isLoading ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
               {[1,2,3].map(i => <Skeleton key={i} className="h-28 bg-white/5 rounded-2xl" />)}
             </div>
-            <Skeleton className="h-72 bg-white/5 rounded-2xl" />
+            <Skeleton className="h-64 bg-white/5 rounded-2xl" />
           </div>
         ) : progress ? (
           <>
             {/* Stat cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
               {[
                 {
                   icon: Target,
@@ -94,16 +94,16 @@ export default function ProgressPage() {
             </div>
 
             {/* Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="glass-card p-5"
+                className="glass-card p-4 md:p-5"
               >
                 <h2 className="text-sm font-semibold text-white/70 mb-1">Performance by Subject</h2>
-                <p className="text-xs text-white/30 mb-5">Average score across all papers</p>
-                <div className="h-[240px]">
+                <p className="text-xs text-white/30 mb-4">Average score across all papers</p>
+                <div className="h-[200px] md:h-[240px]">
                   {(progress.subjectProgress ?? []).length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={progress.subjectProgress ?? []} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
@@ -113,7 +113,7 @@ export default function ProgressPage() {
                           axisLine={false}
                           tickLine={false}
                           tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }}
-                          tickFormatter={v => v.length > 8 ? v.slice(0, 8) + "…" : v}
+                          tickFormatter={v => v.length > 6 ? v.slice(0, 6) + "…" : v}
                         />
                         <YAxis
                           axisLine={false}
@@ -127,7 +127,7 @@ export default function ProgressPage() {
                           dataKey="averageScore"
                           fill="url(#barGradient)"
                           radius={[6, 6, 0, 0]}
-                          barSize={36}
+                          barSize={28}
                           name="Avg Score"
                         />
                         <defs>
@@ -151,11 +151,11 @@ export default function ProgressPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="glass-card p-5"
+                className="glass-card p-4 md:p-5"
               >
                 <h2 className="text-sm font-semibold text-white/70 mb-1">Performance by Paper</h2>
-                <p className="text-xs text-white/30 mb-5">How you perform across different exam formats</p>
-                <div className="h-[240px]">
+                <p className="text-xs text-white/30 mb-4">How you perform across different exam formats</p>
+                <div className="h-[200px] md:h-[240px]">
                   {(progress.paperProgress ?? []).length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={progress.paperProgress ?? []} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
@@ -201,22 +201,22 @@ export default function ProgressPage() {
               </motion.div>
             </div>
 
-            {/* Subject breakdown table */}
+            {/* Subject breakdown */}
             {(progress.subjectProgress ?? []).length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="glass-card p-5"
+                className="glass-card p-4 md:p-5"
               >
-                <h2 className="text-sm font-semibold text-white/70 mb-4">Subject Detail</h2>
+                <h2 className="text-sm font-semibold text-white/70 mb-4">Subject Breakdown</h2>
                 <div className="space-y-3">
                   {(progress.subjectProgress ?? []).map((sub, i) => {
                     const scoreColor = sub.averageScore >= 70 ? "text-emerald-400" : sub.averageScore >= 50 ? "text-amber-400" : "text-red-400";
                     const barColor = sub.averageScore >= 70 ? "bg-emerald-500" : sub.averageScore >= 50 ? "bg-amber-500" : "bg-red-500";
                     return (
-                      <div key={i} className="flex items-center gap-4">
-                        <div className="w-36 text-xs text-white/60 truncate">{sub.subjectName}</div>
+                      <div key={i} className="flex items-center gap-2 md:gap-4">
+                        <div className="w-20 sm:w-28 md:w-36 text-xs text-white/60 truncate flex-shrink-0">{sub.subjectName}</div>
                         <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
                           <motion.div
                             initial={{ width: 0 }}
@@ -225,10 +225,10 @@ export default function ProgressPage() {
                             className={cn("h-full rounded-full", barColor)}
                           />
                         </div>
-                        <div className={cn("w-14 text-right text-sm font-bold", scoreColor)}>
+                        <div className={cn("w-12 md:w-14 text-right text-sm font-bold flex-shrink-0", scoreColor)}>
                           {sub.averageScore.toFixed(0)}%
                         </div>
-                        <div className="w-20 text-right text-xs text-white/30">
+                        <div className="hidden sm:block w-16 md:w-20 text-right text-xs text-white/30 flex-shrink-0">
                           {sub.quizzesTaken} quiz{sub.quizzesTaken !== 1 ? "zes" : ""}
                         </div>
                       </div>
