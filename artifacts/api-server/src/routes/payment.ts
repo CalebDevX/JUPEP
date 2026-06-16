@@ -23,7 +23,7 @@ router.post("/payment/initialize", async (req, res) => {
     }
     const student = studentResult.rows[0];
     const payEmail = email || student.email || `${phone.replace(/\D/g, "")}@jupeb.app`;
-    const payAmount = amount || (await getSessionPrice()) || 500000; // fallback ₦5000 in kobo
+    const payAmount = amount || (await getSessionPrice()) || 100000; // fallback ₦1000 in kobo
 
     const reference = `JUPEB-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
 
@@ -136,9 +136,9 @@ router.get("/payment/config", async (_req, res) => {
 async function getSessionPrice(): Promise<number> {
   try {
     const r = await pool.query("SELECT value FROM app_settings WHERE key='session_price'");
-    return r.rows.length ? parseInt(r.rows[0].value) : 500000; // ₦5000 in kobo
+    return r.rows.length ? parseInt(r.rows[0].value) : 100000; // ₦1000 in kobo
   } catch {
-    return 500000;
+    return 100000;
   }
 }
 

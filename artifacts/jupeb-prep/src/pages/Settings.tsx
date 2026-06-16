@@ -100,22 +100,28 @@ export default function Settings() {
   };
 
   const handleLogout = () => {
-    if (!confirm("Clear all local session data and return to the app?")) return;
-    localStorage.removeItem("admin_auth");
-    localStorage.removeItem("user_display_name");
-    localStorage.removeItem("user_goal");
-    localStorage.removeItem("notif_enabled");
-    toast({ title: "Session cleared", description: "Local data has been reset." });
+    if (!confirm("Sign out? You will need to log in again with your phone number.")) return;
+    // Keep profile picture on device — it's personal to this device
+    const pic = localStorage.getItem("jupeb_profile_picture");
+    localStorage.clear();
+    if (pic) localStorage.setItem("jupeb_profile_picture", pic);
+    toast({ title: "Signed out", description: "See you next time!" });
+    setTimeout(() => { window.location.href = "/auth"; }, 800);
   };
 
   const handleClearData = () => {
-    if (!confirm("This will clear all local app data including session info. Continue?")) return;
-    const keep = ["user_display_name", "user_goal", "notif_enabled"];
+    if (!confirm("Clear app cache? Your login and profile picture will be kept.")) return;
+    const keep = [
+      "user_display_name", "user_goal", "notif_enabled",
+      "jupeb_profile", "jupeb_session_token", "jupeb_profile_picture",
+      "jupeb_display_name", "jupeb_exam_date", "jupeb_community_name",
+      "jupeb_joined_communities",
+    ];
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i);
       if (key && !keep.includes(key)) localStorage.removeItem(key);
     }
-    toast({ title: "Data cleared", description: "App cache and session data reset." });
+    toast({ title: "Cache cleared", description: "Quiz sessions and cached data reset." });
   };
 
   const selectedGoal = GOAL_OPTIONS.find(g => g.value === goal);

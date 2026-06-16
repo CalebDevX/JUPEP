@@ -49,7 +49,25 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   const isAuth = !!profile;
 
   useEffect(() => {
-    if (!isAuth) navigate("/auth");
+    if (!isAuth) { navigate("/auth"); return; }
+    // Session check: if someone else logged in with the same phone, this token is stale
+    const token = localStorage.getItem("jupeb_session_token");
+    if (token && profile?.phone) {
+      fetch(`/api/auth/verify-session?phone=${encodeURIComponent(profile.phone)}`, {
+        headers: { "x-session-token": token },
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.valid === false) {
+            // Another login invalidated this session — force sign out
+            const pic = localStorage.getItem("jupeb_profile_picture");
+            localStorage.clear();
+            if (pic) localStorage.setItem("jupeb_profile_picture", pic);
+            navigate("/auth");
+          }
+        })
+        .catch(() => {}); // network errors → stay logged in
+    }
   }, [isAuth]);
 
   if (!isAuth) return null;

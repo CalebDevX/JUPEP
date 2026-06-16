@@ -21,12 +21,62 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+function getStudentProfile() {
+  try { return JSON.parse(localStorage.getItem("jupeb_profile") || "null"); } catch { return null; }
+}
+function getProfilePic(): string | null {
+  try { return localStorage.getItem("jupeb_profile_picture"); } catch { return null; }
+}
+const GRADE_LABEL: Record<string, string> = {
+  aaa1: "AAA+1 — 16 pts", aab1: "AAB+1 — 15 pts",
+  bbb1: "BBB+1 — 12 pts", ccc1: "CCC+1 — 9 pts",
+};
+
 export default function ProgressPage() {
   const { data: progress, isLoading } = useGetProgress();
+  const profile = getStudentProfile();
+  const pic = getProfilePic();
+  const initials = profile?.fullName
+    ? profile.fullName.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2)
+    : "S";
 
   return (
     <Shell>
       <div className="p-3 md:p-6 max-w-5xl mx-auto w-full space-y-5 md:space-y-6">
+
+        {/* Student profile card */}
+        {profile && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+            className="glass-card p-5 flex items-center gap-4"
+          >
+            <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 ring-2 ring-white/10">
+              {pic ? (
+                <img src={pic} alt={profile.fullName} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl">
+                  {initials}
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-bold font-serif text-white truncate">{profile.fullName}</h2>
+              {profile.targetGrade && (
+                <p className="text-xs text-violet-300 mt-0.5">🎯 Target: {GRADE_LABEL[profile.targetGrade] || profile.targetGrade}</p>
+              )}
+              {profile.subjects?.length > 0 && (
+                <p className="text-xs text-white/40 mt-0.5 truncate">
+                  {(profile.subjects as string[]).join(" · ")}
+                </p>
+              )}
+            </div>
+            <div className="text-right flex-shrink-0">
+              <TrendingUp className="h-5 w-5 text-cyan-400 ml-auto" />
+              <p className="text-[10px] text-white/30 mt-1">Progress</p>
+            </div>
+          </motion.div>
+        )}
+
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-xl md:text-2xl font-bold font-serif text-white flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-cyan-500/15 flex items-center justify-center flex-shrink-0">

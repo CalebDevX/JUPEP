@@ -1,8 +1,24 @@
 import { Router } from "express";
+import { GoogleGenAI } from "@google/genai";
 
 const router = Router();
 
-const SPACE = "https://saheedniyi-yarngpt.hf.space";
+export const YARNGPT_SPEAKERS = [
+  "idera", "jide", "tolu", "emma", "zainab",
+  "joke", "adaeze", "umar", "chisom", "remi",
+  "amaka", "kemi", "ngozi", "kehinde", "taiwo",
+];
+
+export const YARNGPT_LANGUAGES = ["english", "yoruba", "igbo", "hausa", "pidgin"];
+
+function getAI() {
+  const apiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("AI API key not configured");
+  const baseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
+  return new GoogleGenAI(
+    baseUrl ? { apiKey, httpOptions: { apiVersion: "", baseUrl } } : { apiKey }
+  );
+}
 
 async function callRailwayAPI(
   text: string,
@@ -19,121 +35,45 @@ async function callRailwayAPI(
   });
   if (!res.ok) {
     const msg = await res.text().catch(() => res.statusText);
-    throw new Error(`Railway TTS error (${res.status}): ${msg}`);
+    throw new Error(`Voice service error (${res.status}): ${msg}`);
   }
   return Buffer.from(await res.arrayBuffer());
 }
 
-export const YARNGPT_SPEAKERS = [
-  "idera", "jide", "tolu", "emma", "zainab",
-  "joke", "adaeze", "umar", "chisom", "remi",
-  "amaka", "kemi", "ngozi", "kehinde", "taiwo",
-];
-
-export const YARNGPT_LANGUAGES = ["english", "yoruba", "igbo", "hausa", "pidgin"];
-
-function randomHash(len = 12) {
-  return Math.random().toString(36).substring(2, 2 + len);
-}
-
-async function callGradioNewAPI(text: string, language: string, speaker: string): Promise<Buffer> {
-  const joinRes = await fetch(`${SPACE}/call/predict`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ data: [text.trim(), language, speaker] }),
-    signal: AbortSignal.timeout(20000),
+async function callGeminiTTS(text: string): Promise<Buffer> {
+  const ai = getAI();
+  const result = await (ai.models as any).generateContent({
+    model: "gemini-2.5-flash-preview-tts",
+    config: {
+      responseModalities: ["AUDIO"],
+      speechConfig: {
+        voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } },
+      },
+    },
+    contents: [{ parts: [{ text: text.substring(0, 4000) }] }],
   });
 
-  if (!joinRes.ok) throw new Error(`Gradio join failed (${joinRes.status})`);
-  const { event_id } = await joinRes.json() as { event_id: string };
-  if (!event_id) throw new Error("No event_id from Gradio");
+  const part = (result as any).candidates?.[0]?.content?.parts?.[0];
+  const audioData: string | undefined = part?.inlineData?.data;
+  const rawMime: string = part?.inlineData?.mimeType || "audio/L16;rate=24000";
 
-  const sseRes = await fetch(`${SPACE}/call/predict/${event_id}`, {
-    signal: AbortSignal.timeout(120000),
-  });
-  if (!sseRes.ok) throw new Error(`Gradio SSE failed (${sseRes.status})`);
+  if (!audioData) throw new Error("No audio generated");
 
-  return await parseGradioSSE(sseRes);
-}
-
-async function callGradioQueueAPI(text: string, language: string, speaker: string): Promise<Buffer> {
-  const sessionHash = randomHash();
-
-  const joinRes = await fetch(`${SPACE}/queue/join`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      data: [text.trim(), language, speaker],
-      fn_index: 0,
-      session_hash: sessionHash,
-    }),
-    signal: AbortSignal.timeout(20000),
-  });
-
-  if (!joinRes.ok) throw new Error(`Queue join failed (${joinRes.status})`);
-
-  const sseRes = await fetch(`${SPACE}/queue/data?session_hash=${sessionHash}`, {
-    signal: AbortSignal.timeout(120000),
-  });
-  if (!sseRes.ok) throw new Error(`Queue SSE failed (${sseRes.status})`);
-
-  return await parseGradioSSE(sseRes);
-}
-
-async function parseGradioSSE(sseRes: Response): Promise<Buffer> {
-  const reader = sseRes.body!.getReader();
-  const decoder = new TextDecoder();
-  let buf = "";
-  let audioUrl: string | null = null;
-  let b64Audio: string | null = null;
-
-  outer: while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buf += decoder.decode(value, { stream: true });
-    const lines = buf.split("\n");
-    buf = lines.pop() ?? "";
-
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const raw = line.slice(6).trim();
-      if (!raw || raw === "null") continue;
-
-      let event: any;
-      try { event = JSON.parse(raw); } catch { continue; }
-
-      const msg: string = event.msg ?? event.status ?? "";
-
-      if (msg === "process_completed" || msg === "complete") {
-        const output = event.output?.data?.[0] ?? event.data?.[0];
-        if (output?.url) {
-          audioUrl = output.url.startsWith("http")
-            ? output.url
-            : `${SPACE}${output.url}`;
-        } else if (output?.path) {
-          audioUrl = `${SPACE}/file=${output.path}`;
-        } else if (output?.name) {
-          audioUrl = `${SPACE}/file=${output.name}`;
-        } else if (typeof output === "string" && output.startsWith("data:audio")) {
-          b64Audio = output.split(",")[1];
-        }
-        break outer;
-      }
-
-      if (msg === "queue_full") throw new Error("YarnGPT is busy — please try again in a moment.");
-      if (msg === "error") throw new Error(event.output?.error ?? "YarnGPT error");
-    }
-  }
-  reader.cancel().catch(() => {});
-
-  if (b64Audio) return Buffer.from(b64Audio, "base64");
-
-  if (!audioUrl) throw new Error("No audio in YarnGPT response");
-
-  const audioRes = await fetch(audioUrl, { signal: AbortSignal.timeout(30000) });
-  if (!audioRes.ok) throw new Error(`Audio download failed (${audioRes.status})`);
-  return Buffer.from(await audioRes.arrayBuffer());
+  const rateMatch = rawMime.match(/rate=(\d+)/);
+  const sampleRate = rateMatch ? parseInt(rateMatch[1]) : 24000;
+  const pcmBuf = Buffer.from(audioData, "base64");
+  const numChannels = 1, bitsPerSample = 16;
+  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+  const blockAlign = numChannels * (bitsPerSample / 8);
+  const hdr = Buffer.alloc(44);
+  hdr.write("RIFF", 0); hdr.writeUInt32LE(36 + pcmBuf.length, 4);
+  hdr.write("WAVE", 8); hdr.write("fmt ", 12);
+  hdr.writeUInt32LE(16, 16); hdr.writeUInt16LE(1, 20);
+  hdr.writeUInt16LE(numChannels, 22); hdr.writeUInt32LE(sampleRate, 24);
+  hdr.writeUInt32LE(byteRate, 28); hdr.writeUInt16LE(blockAlign, 32);
+  hdr.writeUInt16LE(bitsPerSample, 34); hdr.write("data", 36);
+  hdr.writeUInt32LE(pcmBuf.length, 40);
+  return Buffer.concat([hdr, pcmBuf]);
 }
 
 router.get("/tts/speakers", (_req, res) => {
@@ -162,13 +102,8 @@ router.post("/tts", async (req, res) => {
       console.info(`Using Railway YarnGPT at ${railwayUrl}`);
       audioBuffer = await callRailwayAPI(text, lang, spk, railwayUrl);
     } else {
-      console.info("YARNGPT_URL not set — using free HuggingFace Gradio space");
-      try {
-        audioBuffer = await callGradioNewAPI(text, lang, spk);
-      } catch (e1: any) {
-        console.warn("YarnGPT new Gradio API failed, trying queue API:", e1.message);
-        audioBuffer = await callGradioQueueAPI(text, lang, spk);
-      }
+      console.info("YARNGPT_URL not set — using built-in AI voice");
+      audioBuffer = await callGeminiTTS(text);
     }
 
     res.set({
@@ -178,11 +113,10 @@ router.post("/tts", async (req, res) => {
     });
     res.send(audioBuffer);
   } catch (err: any) {
-    console.error("YarnGPT TTS error:", err.message);
-    const isBusy = err.message?.toLowerCase().includes("busy");
-    res.status(isBusy ? 503 : 500).json({
+    console.error("TTS error:", err.message);
+    res.status(500).json({
       error: err.message || "Failed to generate audio.",
-      code: isBusy ? "MODEL_LOADING" : "TTS_ERROR",
+      code: "TTS_ERROR",
     });
   }
 });

@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import {
   communitiesTable, communityMembersTable, communityPostsTable, postCommentsTable,
 } from "@workspace/db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -143,6 +143,74 @@ router.post("/communities/:slug/posts/:postId/like", async (req, res) => {
     res.json({ likeCount: updated.likeCount });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to like post" });
+  }
+});
+
+// ── Admin: pending member management ────────────────────────────────────────
+
+const ADMIN_PIN = process.env.ADMIN_PIN || "JUPEB2024";
+
+function requireAdminPin(req: any, res: any): boolean {
+  const pin = req.headers["x-admin-pin"] || req.query.adminPin;
+  if (pin !== ADMIN_PIN) { res.status(401).json({ error: "Unauthorized" }); return false; }
+  return true;
+}
+
+router.get("/communities/pending-members", async (req, res) => {
+  if (!requireAdminPin(req, res)) return;
+  try {
+    const rows = await db
+      .select({
+        id: communityMembersTable.id,
+        communityId: communityMembersTable.communityId,
+        displayName: communityMembersTable.displayName,
+        whatsappNumber: communityMembersTable.whatsappNumber,
+        role: communityMembersTable.role,
+        status: communityMembersTable.status,
+        joinedAt: communityMembersTable.joinedAt,
+        communityName: communitiesTable.name,
+        communitySlug: communitiesTable.slug,
+      })
+      .from(communityMembersTable)
+      .innerJoin(communitiesTable, eq(communityMembersTable.communityId, communitiesTable.id))
+      .where(eq(communityMembersTable.status, "pending"))
+      .orderBy(desc(communityMembersTable.joinedAt));
+    res.json(rows);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/communities/:slug/members/:memberId/approve", async (req, res) => {
+  if (!requireAdminPin(req, res)) return;
+  try {
+    const memberId = parseInt(req.params.memberId);
+    const [member] = await db.select().from(communityMembersTable).where(eq(communityMembersTable.id, memberId));
+    if (!member) return res.status(404).json({ error: "Member not found" });
+
+    await db.update(communityMembersTable)
+      .set({ status: "approved" })
+      .where(eq(communityMembersTable.id, memberId));
+
+    // Increment member count
+    await db.update(communitiesTable)
+      .set({ memberCount: sql`${communitiesTable.memberCount} + 1` })
+      .where(eq(communitiesTable.id, member.communityId));
+
+    res.json({ success: true, message: "Member approved" });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete("/communities/:slug/members/:memberId", async (req, res) => {
+  if (!requireAdminPin(req, res)) return;
+  try {
+    const memberId = parseInt(req.params.memberId);
+    await db.delete(communityMembersTable).where(eq(communityMembersTable.id, memberId));
+    res.json({ success: true, message: "Member removed" });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 

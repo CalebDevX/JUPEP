@@ -433,7 +433,7 @@ function CommunityView({ slug, onBack, myName }: { slug: string; onBack: () => v
 
 function JoinModal({
   community, onClose, onJoined,
-}: { community: Community; onClose: () => void; onJoined: (name: string) => void }) {
+}: { community: Community; onClose: () => void; onJoined: (name: string, slug: string) => void }) {
   const [name, setName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [loading, setLoading] = useState(false);
@@ -456,7 +456,7 @@ function JoinModal({
       if (!res.ok) { setError(data.error || "Join failed"); return; }
       setSuccess(true);
       setIsPending(data.status === "pending");
-      if (data.status === "approved") setTimeout(() => { onJoined(name.trim()); onClose(); }, 1500);
+      if (data.status === "approved") setTimeout(() => { onJoined(name.trim(), community.slug); }, 1500);
     } catch { setError("Network error. Please try again."); }
     finally { setLoading(false); }
   };
@@ -546,8 +546,8 @@ function JoinModal({
   );
 }
 
-function CommunityCard({ community, onView, onJoin }: {
-  community: Community; onView: () => void; onJoin: () => void;
+function CommunityCard({ community, onView, onJoin, joinedName }: {
+  community: Community; onView: () => void; onJoin: () => void; joinedName?: string;
 }) {
   const typeLabel = community.type === "tutorial_center" ? "Tutorial Centre" : community.type === "study_group" ? "Study Group" : "General";
   const typeColor = community.type === "tutorial_center"
@@ -592,17 +592,26 @@ function CommunityCard({ community, onView, onJoin }: {
           <span className="flex items-center gap-1"><MessageSquare className="h-3 w-3" />{community.postCount}</span>
         </div>
 
-        <button
-          onClick={e => { e.stopPropagation(); onJoin(); }}
-          className={cn(
-            "w-full py-2 rounded-xl text-xs font-bold transition-all",
-            community.requiresApproval
-              ? "bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/20"
-              : "bg-sky-600/80 hover:bg-sky-500 text-white"
-          )}
-        >
-          {community.requiresApproval ? "Request to Join" : "Join Community"}
-        </button>
+        {joinedName ? (
+          <button
+            onClick={e => { e.stopPropagation(); onView(); }}
+            className="w-full py-2 rounded-xl text-xs font-bold bg-emerald-600/80 hover:bg-emerald-500 text-white transition-all"
+          >
+            ✓ Enter Community
+          </button>
+        ) : (
+          <button
+            onClick={e => { e.stopPropagation(); onJoin(); }}
+            className={cn(
+              "w-full py-2 rounded-xl text-xs font-bold transition-all",
+              community.requiresApproval
+                ? "bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/20"
+                : "bg-sky-600/80 hover:bg-sky-500 text-white"
+            )}
+          >
+            {community.requiresApproval ? "Request to Join" : "Join Community"}
+          </button>
+        )}
       </div>
     </motion.div>
   );
@@ -614,6 +623,9 @@ export default function Community() {
   const [viewSlug, setViewSlug] = useState<string | null>(null);
   const [joinTarget, setJoinTarget] = useState<Community | null>(null);
   const [myName, setMyName] = useState(() => localStorage.getItem("jupeb_community_name") || "");
+  const [joinedCommunities, setJoinedCommunities] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem("jupeb_joined_communities") || "{}"); } catch { return {}; }
+  });
   const [filter, setFilter] = useState<"all" | "tutorial_center" | "study_group" | "general">("all");
 
   useEffect(() => {
@@ -623,10 +635,15 @@ export default function Community() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleJoined = (name: string) => {
+  const handleJoined = (name: string, slug: string) => {
     setMyName(name);
     localStorage.setItem("jupeb_community_name", name);
-    setCommunities(prev => prev.map(c => c.slug === joinTarget?.slug ? { ...c, memberCount: c.memberCount + 1 } : c));
+    const newJoined = { ...joinedCommunities, [slug]: name };
+    setJoinedCommunities(newJoined);
+    localStorage.setItem("jupeb_joined_communities", JSON.stringify(newJoined));
+    setCommunities(prev => prev.map(c => c.slug === slug ? { ...c, memberCount: c.memberCount + 1 } : c));
+    setJoinTarget(null);
+    setViewSlug(slug);
   };
 
   const filtered = communities.filter(c => filter === "all" || c.type === filter);
@@ -637,7 +654,7 @@ export default function Community() {
         <AnimatePresence mode="wait">
           {viewSlug ? (
             <motion.div key="view" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <CommunityView slug={viewSlug} onBack={() => setViewSlug(null)} myName={myName} />
+              <CommunityView slug={viewSlug} onBack={() => setViewSlug(null)} myName={joinedCommunities[viewSlug] || myName} />
             </motion.div>
           ) : (
             <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
@@ -693,6 +710,7 @@ export default function Community() {
                       community={c}
                       onView={() => setViewSlug(c.slug)}
                       onJoin={() => setJoinTarget(c)}
+                      joinedName={joinedCommunities[c.slug]}
                     />
                   ))}
                 </div>

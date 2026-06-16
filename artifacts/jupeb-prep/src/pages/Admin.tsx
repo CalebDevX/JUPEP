@@ -20,7 +20,7 @@ import { format, formatDistanceToNow } from "date-fns";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const ADMIN_PIN_KEY = "JUPEB2024";
 
-type AdminTab = "overview" | "students" | "codes" | "revenue" | "questions" | "anticheat" | "announcements" | "notes" | "settings" | "branding" | "whatsapp";
+type AdminTab = "overview" | "students" | "codes" | "revenue" | "questions" | "anticheat" | "announcements" | "notes" | "settings" | "branding" | "whatsapp" | "communities";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -913,7 +913,7 @@ function QuestionsTab() {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-white">AI-Generate Explanations</p>
-                  <p className="text-xs text-white/40 mt-0.5">Auto-write academic explanations using Gemini for questions without one.</p>
+                  <p className="text-xs text-white/40 mt-0.5">Auto-write academic explanations using AI for questions without one.</p>
                 </div>
                 <div className={cn("w-5 h-5 rounded-md border flex items-center justify-center transition-all",
                   autoExplain ? "bg-violet-500 border-violet-400" : "bg-white/5 border-white/15")}>
@@ -1922,10 +1922,113 @@ const ADMIN_TABS: { id: AdminTab; label: string; icon: any; desc: string }[] = [
   { id: "anticheat",     label: "Anti-cheat",    icon: ShieldAlert,     desc: "Audit log" },
   { id: "announcements", label: "Announcements", icon: Megaphone,       desc: "Post updates" },
   { id: "notes",         label: "Notes",         icon: FileText,        desc: "Upload study notes" },
+  { id: "communities",   label: "Communities",   icon: Users,           desc: "Approve members" },
   { id: "whatsapp",      label: "WhatsApp",      icon: Megaphone,       desc: "Bot & notifications" },
   { id: "settings",      label: "Settings",      icon: Timer,           desc: "Timers & config" },
   { id: "branding",      label: "Branding",      icon: ImagePlus,       desc: "Bot image" },
 ];
+
+// ─── Communities Tab ──────────────────────────────────────────────────────────
+
+function CommunitiesTab({ pin }: { pin: string }) {
+  const { toast } = useToast();
+  const [pending, setPending] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionId, setActionId] = useState<number | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/communities/pending-members`, {
+        headers: { "x-admin-pin": pin },
+      });
+      const data = await res.json();
+      if (Array.isArray(data)) setPending(data);
+    } catch { toast({ title: "Failed to load pending members", variant: "destructive" }); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const approve = async (slug: string, memberId: number) => {
+    setActionId(memberId);
+    try {
+      const res = await fetch(`${BASE}/api/communities/${slug}/members/${memberId}/approve`, {
+        method: "POST", headers: { "x-admin-pin": pin },
+      });
+      if (res.ok) {
+        toast({ title: "Member approved ✓" });
+        setPending(prev => prev.filter(m => m.id !== memberId));
+      } else { toast({ title: "Approval failed", variant: "destructive" }); }
+    } finally { setActionId(null); }
+  };
+
+  const reject = async (slug: string, memberId: number) => {
+    if (!confirm("Remove this join request?")) return;
+    setActionId(memberId);
+    try {
+      const res = await fetch(`${BASE}/api/communities/${slug}/members/${memberId}`, {
+        method: "DELETE", headers: { "x-admin-pin": pin },
+      });
+      if (res.ok) {
+        toast({ title: "Request removed" });
+        setPending(prev => prev.filter(m => m.id !== memberId));
+      } else { toast({ title: "Action failed", variant: "destructive" }); }
+    } finally { setActionId(null); }
+  };
+
+  return (
+    <Section title="Community Join Requests">
+      <div className="flex justify-between items-center mb-4">
+        <p className="text-white/50 text-sm">{pending.length} pending approval{pending.length !== 1 ? "s" : ""}</p>
+        <button onClick={load} className="text-xs text-white/40 hover:text-white flex items-center gap-1.5">
+          <RefreshCw className="h-3.5 w-3.5" /> Refresh
+        </button>
+      </div>
+      {loading ? (
+        <div className="text-center py-12 text-white/40">Loading…</div>
+      ) : pending.length === 0 ? (
+        <div className="text-center py-12">
+          <CheckCircle2 className="h-10 w-10 text-emerald-400/50 mx-auto mb-3" />
+          <p className="text-white/40">No pending requests — all caught up!</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {pending.map(m => (
+            <div key={m.id} className="bg-white/5 rounded-xl p-4 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-violet-500/20 flex items-center justify-center flex-shrink-0">
+                <User className="h-4 w-4 text-violet-300" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white truncate">{m.displayName}</p>
+                <p className="text-xs text-white/40 truncate">{m.whatsappNumber} · {m.communityName}</p>
+                <p className="text-[10px] text-white/25 mt-0.5">
+                  {m.joinedAt ? new Date(m.joinedAt).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" }) : ""}
+                </p>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <button
+                  onClick={() => approve(m.communitySlug, m.id)}
+                  disabled={actionId === m.id}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600/80 hover:bg-emerald-500 text-white disabled:opacity-50"
+                >
+                  {actionId === m.id ? "…" : "Approve"}
+                </button>
+                <button
+                  onClick={() => reject(m.communitySlug, m.id)}
+                  disabled={actionId === m.id}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-500/20 hover:bg-red-500/40 text-red-300 disabled:opacity-50"
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Section>
+  );
+}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -2036,6 +2139,7 @@ export default function AdminPanel() {
               {tab === "anticheat"     && <AntiCheatTab pin={pin} />}
               {tab === "announcements" && <AnnouncementsTab />}
               {tab === "notes"         && <NotesTab />}
+              {tab === "communities"   && <CommunitiesTab pin={pin} />}
               {tab === "whatsapp"      && <WhatsAppTab pin={pin} />}
               {tab === "settings"      && <SettingsTab />}
               {tab === "branding"      && <BrandingTab />}

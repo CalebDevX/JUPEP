@@ -248,6 +248,7 @@ function LoginForm({ onGoogleClick, googleLoading }: { onGoogleClick: () => void
       if (!res.ok) throw new Error(data.error || "Login failed.");
       localStorage.setItem("jupeb_profile", JSON.stringify(data.profile));
       localStorage.setItem("jupeb_display_name", data.profile.fullName);
+      if (data.profile.sessionToken) localStorage.setItem("jupeb_session_token", data.profile.sessionToken);
       navigate("/");
     } catch (err: any) { setError(err.message); }
     finally { setLoading(false); }
@@ -334,6 +335,7 @@ function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
       if (!res.ok) throw new Error(data.error || "Registration failed.");
       localStorage.setItem("jupeb_profile", JSON.stringify(data.profile));
       localStorage.setItem("jupeb_display_name", data.profile.fullName);
+      if (data.profile.sessionToken) localStorage.setItem("jupeb_session_token", data.profile.sessionToken);
       navigate("/");
     } catch (err: any) { setError(err.message); }
     finally { setLoading(false); }
@@ -544,6 +546,7 @@ export default function Auth() {
       if (data.profile) {
         localStorage.setItem("jupeb_profile", JSON.stringify(data.profile));
         localStorage.setItem("jupeb_display_name", data.profile.fullName);
+        if (data.profile.sessionToken) localStorage.setItem("jupeb_session_token", data.profile.sessionToken);
         navigate("/");
       } else if (data.needsRegistration) {
         setGooglePreFill(data.googleData);

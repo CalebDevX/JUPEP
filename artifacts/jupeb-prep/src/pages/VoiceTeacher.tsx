@@ -115,7 +115,7 @@ export default function VoiceTeacher() {
       const errData = await ttsRes.json().catch(() => ({})) as any;
       if (errData.code === "MODEL_LOADING") {
         setPhase("ready");
-        setError("Voice model is warming up on HuggingFace — wait a moment then tap 'Speak Lesson' to retry.");
+        setError("Voice service is warming up — wait a moment then tap 'Speak Lesson' to retry.");
         return;
       }
       throw new Error(errData.error || "Audio generation failed.");
@@ -340,7 +340,7 @@ export default function VoiceTeacher() {
               <Wand2 className="h-4 w-4 text-violet-400 animate-pulse flex-shrink-0" />
               <div>
                 <p className="text-sm font-semibold text-violet-300">AI is preparing your lesson…</p>
-                <p className="text-[11px] text-white/35 mt-0.5">Gemini is writing a clear explanation for you</p>
+                <p className="text-[11px] text-white/35 mt-0.5">Crafting a clear explanation for your lesson</p>
               </div>
             </motion.div>
           )}

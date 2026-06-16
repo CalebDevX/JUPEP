@@ -5,6 +5,10 @@ import { eq } from "drizzle-orm";
 import { OAuth2Client } from "google-auth-library";
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
+import crypto from "crypto";
+
+// Ensure session_token column exists (non-blocking)
+pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS session_token TEXT`).catch(() => {});
 
 const router = Router();
 
@@ -54,6 +58,9 @@ router.post("/auth/register", async (req, res) => {
       ]
     );
 
+    const sessionToken = crypto.randomUUID();
+    await pool.query("UPDATE students SET session_token=$1 WHERE phone=$2", [sessionToken, phone.trim()]).catch(() => {});
+
     const profile = {
       fullName: fullName.trim(),
       firstName: fullName.trim().split(" ")[0],
@@ -63,6 +70,7 @@ router.post("/auth/register", async (req, res) => {
       targetUniversity: targetUniversity?.trim() || null,
       targetGrade: targetGrade || "aaa1",
       accessCode: isFreeTrialRegistration ? null : code,
+      sessionToken,
     };
 
     res.json({ success: true, profile, freeTrial: isFreeTrialRegistration });
@@ -130,6 +138,9 @@ router.post("/auth/login", async (req, res) => {
     const expiresAt = s.expires_at ? new Date(s.expires_at) : null;
     const sessionActive = expiresAt ? expiresAt > new Date() : false;
 
+    const sessionToken = crypto.randomUUID();
+    await pool.query("UPDATE students SET session_token=$1 WHERE phone=$2", [sessionToken, phone.trim()]).catch(() => {});
+
     const profile = {
       fullName: s.full_name,
       firstName: s.full_name.split(" ")[0],
@@ -142,6 +153,7 @@ router.post("/auth/login", async (req, res) => {
       expiresAt: s.expires_at || null,
       sessionActive,
       paymentStatus: s.payment_status || "unpaid",
+      sessionToken,
     };
 
     res.json({ success: true, profile });
@@ -206,6 +218,23 @@ router.post("/auth/google", async (req, res) => {
   } catch (err: any) {
     console.error("Google auth error:", err);
     res.status(500).json({ error: err.message || "Google authentication failed." });
+  }
+});
+
+// ── Session verification ─────────────────────────────────────────────────────
+// Returns {valid: true} only if the token matches what's stored in the DB.
+// Calling this endpoint from a new login will have already replaced the token,
+// so the previous device's token becomes invalid automatically.
+router.get("/auth/verify-session", async (req, res) => {
+  const phone = (req.query.phone as string)?.trim();
+  const token = req.headers["x-session-token"] as string;
+  if (!phone || !token) return res.json({ valid: false });
+  try {
+    const r = await pool.query("SELECT session_token FROM students WHERE phone=$1", [phone]);
+    if (!r.rows.length) return res.json({ valid: false });
+    res.json({ valid: r.rows[0].session_token === token });
+  } catch {
+    res.json({ valid: true }); // fail-open so DB issues don't lock users out
   }
 });
 
