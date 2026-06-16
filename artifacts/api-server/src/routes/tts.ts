@@ -4,6 +4,26 @@ const router = Router();
 
 const SPACE = "https://saheedniyi-yarngpt.hf.space";
 
+async function callRailwayAPI(
+  text: string,
+  language: string,
+  speaker: string,
+  baseUrl: string,
+): Promise<Buffer> {
+  const url = `${baseUrl.replace(/\/$/, "")}/tts`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: text.trim(), speaker, language }),
+    signal: AbortSignal.timeout(60000),
+  });
+  if (!res.ok) {
+    const msg = await res.text().catch(() => res.statusText);
+    throw new Error(`Railway TTS error (${res.status}): ${msg}`);
+  }
+  return Buffer.from(await res.arrayBuffer());
+}
+
 export const YARNGPT_SPEAKERS = [
   "idera", "jide", "tolu", "emma", "zainab",
   "joke", "adaeze", "umar", "chisom", "remi",
@@ -133,13 +153,22 @@ router.post("/tts", async (req, res) => {
   const spk = YARNGPT_SPEAKERS.includes(speaker) ? speaker : "idera";
   const lang = YARNGPT_LANGUAGES.includes(language) ? language : "english";
 
+  const railwayUrl = process.env.YARNGPT_URL;
+
   try {
     let audioBuffer: Buffer;
-    try {
-      audioBuffer = await callGradioNewAPI(text, lang, spk);
-    } catch (e1: any) {
-      console.warn("YarnGPT new API failed, trying queue API:", e1.message);
-      audioBuffer = await callGradioQueueAPI(text, lang, spk);
+
+    if (railwayUrl) {
+      console.info(`Using Railway YarnGPT at ${railwayUrl}`);
+      audioBuffer = await callRailwayAPI(text, lang, spk, railwayUrl);
+    } else {
+      console.info("YARNGPT_URL not set — using free HuggingFace Gradio space");
+      try {
+        audioBuffer = await callGradioNewAPI(text, lang, spk);
+      } catch (e1: any) {
+        console.warn("YarnGPT new Gradio API failed, trying queue API:", e1.message);
+        audioBuffer = await callGradioQueueAPI(text, lang, spk);
+      }
     }
 
     res.set({
