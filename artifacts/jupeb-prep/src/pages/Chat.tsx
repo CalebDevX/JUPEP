@@ -23,51 +23,51 @@ interface Message {
 const SUGGESTED_PROMPTS = [
   {
     icon: BookOpen,
-    label: "Literature",
+    label: "Study Strategy",
     color: "from-violet-500/20 to-purple-500/10 border-violet-500/20 hover:border-violet-400/40",
     iconColor: "text-violet-400",
     bgColor: "bg-violet-500/10",
-    text: "Explain the concept of dramatic irony in Literature-in-English with JUPEB examples.",
+    text: "What's the best study strategy to score A in all my JUPEB papers this semester?",
   },
   {
     icon: Brain,
-    label: "Government",
+    label: "Explain a Topic",
     color: "from-blue-500/20 to-cyan-500/10 border-blue-500/20 hover:border-blue-400/40",
     iconColor: "text-blue-400",
     bgColor: "bg-blue-500/10",
-    text: "What are the functions of the Nigerian National Assembly under the 1999 Constitution?",
+    text: "Pick one of my subjects and explain its most important concept using a Nigerian real-world example.",
   },
   {
     icon: GraduationCap,
-    label: "CRS",
+    label: "Past Questions",
     color: "from-emerald-500/20 to-teal-500/10 border-emerald-500/20 hover:border-emerald-400/40",
     iconColor: "text-emerald-400",
     bgColor: "bg-emerald-500/10",
-    text: "Explain the significance of the Sermon on the Mount in Christian Religious Studies.",
+    text: "Give me 5 likely JUPEB essay questions for Paper 002 with model answers.",
   },
   {
     icon: Lightbulb,
-    label: "Exam Strategy",
+    label: "Mnemonics",
     color: "from-amber-500/20 to-orange-500/10 border-amber-500/20 hover:border-amber-400/40",
     iconColor: "text-amber-400",
     bgColor: "bg-amber-500/10",
-    text: "Give me the best strategy to score A in JUPEB Literature-in-English Paper 002.",
+    text: "Create mnemonics and memory tricks to help me remember key facts across my subjects.",
   },
   {
     icon: Target,
-    label: "Score 16 Points",
+    label: "Exam Structure",
     color: "from-rose-500/20 to-pink-500/10 border-rose-500/20 hover:border-rose-400/40",
     iconColor: "text-rose-400",
     bgColor: "bg-rose-500/10",
-    text: "What subjects and grades do I need to score exactly 16 JUPEB points for UNILAG direct entry?",
+    text: "Explain the JUPEB exam structure — Papers 001, 002, 003, 004 and the Final — and what to focus on in each.",
   },
   {
     icon: FlaskConical,
-    label: "Past Questions",
+    label: "Quick Quiz",
     color: "from-indigo-500/20 to-blue-500/10 border-indigo-500/20 hover:border-indigo-400/40",
     iconColor: "text-indigo-400",
     bgColor: "bg-indigo-500/10",
-    text: "Give me 3 likely JUPEB Government essay questions and how to answer them.",
+    text: "Quiz me on 5 important topics across my JUPEB subjects right now. Give options and explain the answers.",
   },
 ];
 
@@ -348,7 +348,12 @@ export default function Chat() {
       const response = await fetch(`${BASE}/api/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text.trim(), history }),
+        body: JSON.stringify({
+          message: text.trim(),
+          history,
+          studentName: (() => { try { const p = JSON.parse(localStorage.getItem("jupeb_profile") || "null"); return p?.firstName || p?.fullName; } catch { return undefined; } })(),
+          studentSubjects: (() => { try { const p = JSON.parse(localStorage.getItem("jupeb_profile") || "null"); return p?.subjects; } catch { return undefined; } })(),
+        }),
         signal: controller.signal,
       });
 

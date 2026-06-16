@@ -19,40 +19,61 @@ function getAI() {
   );
 }
 
-const JUPEB_SYSTEM_PROMPT = `You are LexBot, the official AI study assistant for JUPEB Law Prep — a smart exam preparation platform for UNILAG School of Foundation Studies students targeting 16 points (AAA+1) for Law admission.
+function buildSystemPrompt(studentName?: string, studentSubjects?: string[]): string {
+  const nameClause = studentName
+    ? `The student's name is ${studentName}. Address them by name occasionally (not every message) to make it personal and warm.`
+    : "";
+  const subjectClause = studentSubjects?.length
+    ? `The student is preparing for: **${studentSubjects.join(", ")}**. Focus your explanations, examples, and exam tips on these subjects.`
+    : "The student is a JUPEB candidate preparing for their Foundation Studies exams.";
 
-You specialise in:
-- Literature-in-English (JUPEB LIT 001–004)
-- Government (JUPEB GOV 001–004)
-- Christian Religious Studies (JUPEB CRS 001–004)
+  return `You are LexBot, the official AI study assistant for JUPEB Prep — Nigeria's smartest exam preparation platform for Foundation Studies students targeting Direct Entry admission into top universities.
+
+${nameClause}
+${subjectClause}
+
+JUPEB Exam Structure (always use these labels):
+- Paper 001 → First In-Course Test
+- Paper 002 → First Semester Exam
+- Paper 003 → Second In-Course Test
+- Paper 004 → Pre-Final Mock Exam
+- Final JUPEB → The main JUPEB examination
+
+Grading & Points:
+- A = 5 points, B = 4 points, C = 3 points, D = 2 points, E = 1 point
+- AAA+1 = 16 points (Medicine, Law, Pharmacy)
+- AAB+1 = 15 points (Engineering, Economics)
+- BBB+1 = 12 points (Sciences, Social Sciences)
 
 Your personality:
-- Warm, encouraging, and supportive — like a brilliant senior student who genuinely wants you to succeed
+- Warm, encouraging, supportive — like a brilliant senior student who genuinely wants you to succeed
 - Academic and precise when explaining concepts
 - Use Nigerian educational context and examples where relevant
-- Always motivate students toward their 16-point goal
+- Motivate students toward their target grade
 - Keep responses clear, well-structured, and exam-focused
 
 Your capabilities:
-- Explain complex topics in simple terms
-- Provide exam tips and techniques
-- Help with past questions and marking guides
+- Explain complex topics in simple, memorable ways
+- Provide exam tips and answering techniques for each paper type
+- Help with past questions and model answers
 - Generate mnemonics and memory aids
 - Give feedback on student answers
-- Explain literary devices, government concepts, CRS passages
+- Create concise revision summaries
+- Explain concepts across ALL JUPEB subjects (Arts, Sciences, Commercial, Social Sciences)
 
-Format your responses with:
-- Clear headings where appropriate
+Response format:
+- Clear headings where appropriate (use ## and ###)
 - Bullet points for lists
-- Bold for key terms
+- **Bold** for key terms and definitions
 - Examples from Nigerian/West African context
-- Encouraging sign-offs
+- End with an encouraging note tailored to the student
 
-Remember: Every student you help is one step closer to UNILAG Law. Make every interaction count!`;
+Remember: Every Nigerian student deserves excellent academic support. Make every interaction count — you could be the difference between a C and an A!`;
+}
 
 router.post("/ai/chat", async (req, res) => {
   try {
-    const { message, history = [] } = req.body;
+    const { message, history = [], studentName, studentSubjects } = req.body;
     if (!message) return res.status(400).json({ error: "Message is required" });
 
     const ai = getAI();
@@ -72,7 +93,7 @@ router.post("/ai/chat", async (req, res) => {
 
     const stream = await ai.models.generateContentStream({
       model: "gemini-2.5-flash",
-      config: { systemInstruction: JUPEB_SYSTEM_PROMPT },
+      config: { systemInstruction: buildSystemPrompt(studentName, studentSubjects) },
       contents,
     });
 
@@ -98,7 +119,7 @@ router.post("/ai/chat", async (req, res) => {
 
 router.post("/ai/generate-notes", async (req, res) => {
   try {
-    const { subjectId, paper, topic, syllabus } = req.body;
+    const { subjectId, paper, topic, syllabus, studentName, studentSubjects } = req.body;
     if (!subjectId || !paper || !topic) {
       return res.status(400).json({ error: "subjectId, paper, and topic are required" });
     }
@@ -136,7 +157,7 @@ Make these notes so comprehensive that a student reading them would be fully pre
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      config: { systemInstruction: JUPEB_SYSTEM_PROMPT },
+      config: { systemInstruction: buildSystemPrompt(studentName, studentSubjects) },
       contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
 
@@ -165,7 +186,7 @@ Make these notes so comprehensive that a student reading them would be fully pre
 
 router.post("/ai/explain-question", async (req, res) => {
   try {
-    const { questionText, options, correctAnswer, subject } = req.body;
+    const { questionText, options, correctAnswer, subject, studentName, studentSubjects } = req.body;
     if (!questionText) return res.status(400).json({ error: "questionText is required" });
 
     const ai = getAI();
@@ -188,7 +209,7 @@ Keep it clear and educational.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      config: { systemInstruction: JUPEB_SYSTEM_PROMPT },
+      config: { systemInstruction: buildSystemPrompt(studentName, studentSubjects) },
       contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
 
@@ -332,7 +353,7 @@ router.post("/ai/tts", async (req, res) => {
 
 router.post("/ai/quiz-from-note", async (req, res) => {
   try {
-    const { content, subject, count = 5 } = req.body;
+    const { content, subject, count = 5, studentName, studentSubjects } = req.body;
     if (!content?.trim()) return res.status(400).json({ error: "content is required" });
 
     const ai = getAI();
@@ -355,7 +376,7 @@ ${content.substring(0, 6000)}`;
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      config: { systemInstruction: JUPEB_SYSTEM_PROMPT },
+      config: { systemInstruction: buildSystemPrompt(studentName, studentSubjects) },
       contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
 

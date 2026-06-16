@@ -95,11 +95,23 @@ const PAPERS = [
   { code: "004", label: "Mock Exam",           short: "Mock",       color: "text-amber-400",  bg: "bg-amber-500/10",  dot: "bg-amber-500"  },
 ];
 
-const SUBJECTS = [
-  { name: "Literature-in-English", color: "text-violet-400", bg: "bg-violet-500/10", dot: "bg-violet-500" },
-  { name: "Government",            color: "text-blue-400",   bg: "bg-blue-500/10",   dot: "bg-blue-500"   },
-  { name: "CRS",                   color: "text-emerald-400",bg: "bg-emerald-500/10",dot: "bg-emerald-500" },
+const SUBJECT_COLORS = [
+  { color: "text-violet-400", bg: "bg-violet-500/10", dot: "bg-violet-500" },
+  { color: "text-blue-400",   bg: "bg-blue-500/10",   dot: "bg-blue-500"   },
+  { color: "text-emerald-400",bg: "bg-emerald-500/10",dot: "bg-emerald-500" },
+  { color: "text-amber-400",  bg: "bg-amber-500/10",  dot: "bg-amber-500"  },
 ];
+
+const GRADE_LABELS: Record<string, { label: string; pts: string }> = {
+  aaa1: { label: "AAA+1", pts: "16 pts" },
+  aab1: { label: "AAB+1", pts: "15 pts" },
+  bbb1: { label: "BBB+1", pts: "12 pts" },
+  ccc1: { label: "CCC+1", pts: "9 pts" },
+};
+
+function getProfile() {
+  try { return JSON.parse(localStorage.getItem("jupeb_profile") || "null"); } catch { return null; }
+}
 
 function gradeColor(score: number) {
   if (score >= 70) return "text-emerald-400";
@@ -157,8 +169,12 @@ export default function Dashboard() {
 
   const level = getLevel(gState.xp);
   const xpNext = getXPToNextLevel(gState.xp);
-  const displayName = localStorage.getItem("jupeb_display_name") || localStorage.getItem("user_display_name") || "Scholar";
-  const firstName = displayName.split(" ")[0];
+  const profile = getProfile();
+  const displayName = profile?.fullName || localStorage.getItem("jupeb_display_name") || "Scholar";
+  const firstName = profile?.firstName || displayName.split(" ")[0];
+  const subjects = ((profile?.subjects as string[]) || ["Literature-in-English", "Government", "CRS"])
+    .map((name: string, i: number) => ({ name, ...SUBJECT_COLORS[i % SUBJECT_COLORS.length] }));
+  const gradeInfo = GRADE_LABELS[profile?.targetGrade || "aaa1"] || GRADE_LABELS.aaa1;
 
   const stats = [
     { icon: Trophy,       label: "Avg Score",     value: `${(summary?.averageScore ?? 0).toFixed(0)}%`,  color: "bg-amber-500/12 text-amber-400"   },
@@ -180,7 +196,7 @@ export default function Dashboard() {
           <p className="ed-label mb-3 flex items-center gap-2">
             <span>{format(new Date(), "EEEE, MMMM d")}</span>
             <span className="opacity-40">·</span>
-            <span>JUPEB Law Prep</span>
+            <span>JUPEB Prep</span>
           </p>
           <div className="flex items-end justify-between gap-4">
             <div>
@@ -191,13 +207,14 @@ export default function Dashboard() {
               </h1>
               <p className="text-white/35 text-sm font-light mt-3 leading-relaxed max-w-md">
                 Every question you practise brings you closer to{" "}
-                <span className="text-amber-400/75 font-normal">16 points</span> and UNILAG Law.
+                <span className="text-amber-400/75 font-normal">{gradeInfo.pts}</span>
+                {profile?.targetUniversity ? ` and ${profile.targetUniversity.replace(/\s*\(.*\)/, "")}` : " — your target"}.
               </p>
             </div>
             <div className="hidden md:flex flex-col items-end gap-0.5 flex-shrink-0 pb-1">
               <span className="ed-label">Target</span>
-              <span className="ed-stat text-3xl text-amber-400/60 mt-1.5">AAA+1</span>
-              <span className="text-[10px] text-amber-400/35 mt-0.5 tracking-wide">16 Points</span>
+              <span className="ed-stat text-3xl text-amber-400/60 mt-1.5">{gradeInfo.label}</span>
+              <span className="text-[10px] text-amber-400/35 mt-0.5 tracking-wide">{gradeInfo.pts}</span>
             </div>
           </div>
         </motion.div>
@@ -516,7 +533,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {SUBJECTS.map((sub, i) => {
+                  {subjects.map((sub, i) => {
                     const data = summary?.subjectBreakdown?.find(s => s.subjectName === sub.name);
                     const qCount = data?.questionCount ?? 0;
                     const nCount = data?.noteCount ?? 0;

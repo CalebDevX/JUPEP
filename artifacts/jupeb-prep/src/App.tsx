@@ -1,8 +1,11 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { useEffect } from "react";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
+import Register from "@/pages/Register";
+import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Subjects from "@/pages/Subjects";
 import Questions from "@/pages/Questions";
@@ -21,14 +24,23 @@ import Flashcards from "@/pages/Flashcards";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: {
-      retry: false,
-      refetchOnWindowFocus: false,
-    },
+    queries: { retry: false, refetchOnWindowFocus: false },
   },
 });
 
-function Router() {
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const [, navigate] = useLocation();
+  const isAuth = !!localStorage.getItem("jupeb_profile");
+
+  useEffect(() => {
+    if (!isAuth) navigate("/register");
+  }, [isAuth]);
+
+  if (!isAuth) return null;
+  return <>{children}</>;
+}
+
+function ProtectedRoutes() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
@@ -47,6 +59,20 @@ function Router() {
       <Route path="/admin" component={AdminPanel} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+function Router() {
+  return (
+    <Switch>
+      <Route path="/register" component={Register} />
+      <Route path="/login" component={Login} />
+      <Route>
+        <RequireAuth>
+          <ProtectedRoutes />
+        </RequireAuth>
+      </Route>
     </Switch>
   );
 }

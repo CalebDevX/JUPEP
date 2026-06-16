@@ -40,16 +40,18 @@ const navItems = [
   { href: "/learn",     label: "AI Learn",     icon: Wand2,           color: "text-rose-500"   },
   { href: "/notes",     label: "Study Notes",  icon: GraduationCap,   color: "text-pink-500"   },
   { href: "/progress",  label: "Progress",     icon: TrendingUp,      color: "text-cyan-500"   },
-  { href: "/chat",      label: "LexBot AI",    icon: MessageCircle,   color: "text-amber-500"  },
+  { href: "/chat",      label: "AI Tutor",     icon: MessageCircle,   color: "text-amber-500"  },
 ];
 
 function useProfile() {
-  const displayName = localStorage.getItem("jupeb_display_name") || localStorage.getItem("user_display_name") || "Scholar";
+  const profile = (() => { try { return JSON.parse(localStorage.getItem("jupeb_profile") || "null"); } catch { return null; } })();
+  const displayName = profile?.fullName || localStorage.getItem("jupeb_display_name") || "Scholar";
   const initial = displayName.trim().charAt(0).toUpperCase() || "S";
   const profilePic = localStorage.getItem("jupeb_profile_picture");
   const botImage = localStorage.getItem("jupeb_bot_image");
   const gState = getGamificationState();
-  return { displayName, initial, profilePic, botImage, streak: gState.streak, xp: gState.xp };
+  const gradeLabel = ({ aaa1: "AAA+1 — 16 pts", aab1: "AAB+1 — 15 pts", bbb1: "BBB+1 — 12 pts", ccc1: "CCC+1 — 9 pts" } as Record<string,string>)[profile?.targetGrade] || "Target Grade";
+  return { displayName, initial, profilePic, botImage, streak: gState.streak, xp: gState.xp, gradeLabel };
 }
 
 function UserAvatar({ pic, initial, size = "md" }: { pic?: string | null; initial: string; size?: "sm" | "md" | "lg" }) {
@@ -78,11 +80,12 @@ function ProfileDropdown({
   const [, navigate] = useLocation();
 
   const handleLogout = () => {
+    localStorage.removeItem("jupeb_profile");
     localStorage.removeItem("jupeb_display_name");
     localStorage.removeItem("jupeb_study_goal");
     localStorage.removeItem("jupeb_onboarded");
     onClose();
-    navigate("/");
+    navigate("/register");
     window.location.reload();
   };
 
@@ -177,7 +180,7 @@ export function Shell({ children }: ShellProps) {
   const [mobileProfileOpen, setMobileProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const mobileProfileRef = useRef<HTMLDivElement>(null);
-  const { displayName, initial, profilePic, streak, xp } = useProfile();
+  const { displayName, initial, profilePic, streak, xp, gradeLabel } = useProfile();
 
   const activeItem = useMemo(
     () => navItems.find(item =>
@@ -200,12 +203,13 @@ export function Shell({ children }: ShellProps) {
   }, []);
 
   const handleLogout = () => {
+    localStorage.removeItem("jupeb_profile");
     localStorage.removeItem("jupeb_display_name");
     localStorage.removeItem("jupeb_study_goal");
     localStorage.removeItem("jupeb_onboarded");
     setMobileProfileOpen(false);
     setMobileOpen(false);
-    navigate("/");
+    navigate("/register");
     window.location.reload();
   };
 
@@ -240,7 +244,7 @@ export function Shell({ children }: ShellProps) {
             <Target className="h-4 w-4 text-amber-400 flex-shrink-0" />
             <div>
               <p className="text-[10px] text-white/50">Your Goal</p>
-              <p className="text-xs font-bold text-amber-400">16 Points — AAA+1</p>
+              <p className="text-xs font-bold text-amber-400">{gradeLabel}</p>
             </div>
           </div>
         </div>
