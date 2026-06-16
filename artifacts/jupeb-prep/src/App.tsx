@@ -23,6 +23,9 @@ import Flashcards from "@/pages/Flashcards";
 import Leaderboard from "@/pages/Leaderboard";
 import Activate from "@/pages/Activate";
 import VoiceTeacher from "@/pages/VoiceTeacher";
+import Subscribe from "@/pages/Subscribe";
+import PaymentCallback from "@/pages/PaymentCallback";
+import { SessionExpiredGate } from "@/components/SessionExpiredGate";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,15 +33,32 @@ const queryClient = new QueryClient({
   },
 });
 
+function getProfile() {
+  try { return JSON.parse(localStorage.getItem("jupeb_profile") || "null"); } catch { return null; }
+}
+
+function isSessionExpired(profile: any): boolean {
+  if (!profile) return false;
+  if (!profile.expiresAt) return false;
+  return new Date(profile.expiresAt) < new Date();
+}
+
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const [, navigate] = useLocation();
-  const isAuth = !!localStorage.getItem("jupeb_profile");
+  const profile = getProfile();
+  const isAuth = !!profile;
 
   useEffect(() => {
     if (!isAuth) navigate("/auth");
   }, [isAuth]);
 
   if (!isAuth) return null;
+
+  // Session expired — show gate instead of content
+  if (isSessionExpired(profile)) {
+    return <SessionExpiredGate />;
+  }
+
   return <>{children}</>;
 }
 
@@ -70,11 +90,13 @@ function ProtectedRoutes() {
 function Router() {
   return (
     <Switch>
-      {/* Public auth routes */}
+      {/* Public routes */}
       <Route path="/auth" component={Auth} />
       <Route path="/login" component={Auth} />
       <Route path="/register" component={Auth} />
-      {/* Admin — PIN-protected separately, no auth redirect */}
+      <Route path="/subscribe" component={Subscribe} />
+      <Route path="/payment/callback" component={PaymentCallback} />
+      {/* Admin — PIN-protected standalone */}
       <Route path="/admin" component={AdminPanel} />
       {/* All other routes require login */}
       <Route>

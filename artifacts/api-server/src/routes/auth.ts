@@ -127,6 +127,9 @@ router.post("/auth/login", async (req, res) => {
 
     const s = result.rows[0];
     const rawCode = s.access_code_used;
+    const expiresAt = s.expires_at ? new Date(s.expires_at) : null;
+    const sessionActive = expiresAt ? expiresAt > new Date() : false;
+
     const profile = {
       fullName: s.full_name,
       firstName: s.full_name.split(" ")[0],
@@ -136,6 +139,9 @@ router.post("/auth/login", async (req, res) => {
       targetUniversity: s.target_university,
       targetGrade: s.target_grade,
       accessCode: rawCode === "FREE_TRIAL" ? null : rawCode,
+      expiresAt: s.expires_at || null,
+      sessionActive,
+      paymentStatus: s.payment_status || "unpaid",
     };
 
     res.json({ success: true, profile });

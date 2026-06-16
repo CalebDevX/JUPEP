@@ -91,7 +91,7 @@ export function PaywallGate({ feature }: { feature: FeatureKey }) {
 
         {/* CTAs */}
         <div className="px-6 pb-6 space-y-3">
-          <Link href="/activate">
+          <Link href="/subscribe">
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -101,7 +101,7 @@ export function PaywallGate({ feature }: { feature: FeatureKey }) {
               )}
             >
               <Star className="h-4 w-4" />
-              Activate My Account
+              Subscribe Now
               <ChevronRight className="h-4 w-4 ml-auto" />
             </motion.button>
           </Link>
@@ -120,7 +120,7 @@ export function PaywallGate({ feature }: { feature: FeatureKey }) {
         transition={{ delay: 0.5 }}
         className="text-xs text-white/25 text-center mt-5 max-w-xs"
       >
-        Get an activation code from your JUPEB Prep coordinator to unlock full access.
+        Pay once for full access until end of August.
       </motion.p>
     </div>
   );

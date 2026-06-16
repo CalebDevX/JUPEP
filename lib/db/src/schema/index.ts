@@ -6,3 +6,5 @@ export * from "./communities";
 export * from "./announcements";
 export * from "./access_codes";
 export * from "./settings";
+export * from "./payments";
+export * from "./wa_notifications";

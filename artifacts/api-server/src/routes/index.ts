@@ -14,6 +14,8 @@ import settingsRouter from "./settings";
 import adminRouter from "./admin";
 import leaderboardRouter from "./leaderboard";
 import ttsRouter from "./tts";
+import paymentRouter from "./payment";
+import whatsappRouter from "./whatsapp";
 
 const router: IRouter = Router();
 
@@ -32,5 +34,7 @@ router.use(settingsRouter);
 router.use(adminRouter);
 router.use(leaderboardRouter);
 router.use(ttsRouter);
+router.use(paymentRouter);
+router.use(whatsappRouter);
 
 export default router;

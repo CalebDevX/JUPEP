@@ -20,7 +20,7 @@ import { format, formatDistanceToNow } from "date-fns";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const ADMIN_PIN_KEY = "JUPEB2024";
 
-type AdminTab = "overview" | "students" | "codes" | "revenue" | "questions" | "anticheat" | "announcements" | "notes" | "settings" | "branding";
+type AdminTab = "overview" | "students" | "codes" | "revenue" | "questions" | "anticheat" | "announcements" | "notes" | "settings" | "branding" | "whatsapp";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -1380,6 +1380,48 @@ function SettingsTab() {
     } finally { setSaving(null); }
   };
 
+  const SessionPriceField = ({ settingKey, settings: s, save: sv, saving: sving }: { settingKey: string; settings: Record<string,string>; save: (k:string,v:string)=>void; saving: string|null }) => {
+    const [val, setVal] = useState("");
+    const [naira, setNaira] = useState("");
+    return (
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-white/40">₦</span>
+          <Input
+            type="number" min="100" placeholder="e.g. 5000"
+            value={naira}
+            onChange={e => { setNaira(e.target.value); setVal(String(Math.round(parseFloat(e.target.value || "0") * 100))); }}
+            className={cn(inputCls, "pl-7")}
+          />
+        </div>
+        <span className="text-xs text-white/30">= {val ? parseInt(val).toLocaleString() : "0"} kobo</span>
+        <Button size="sm" disabled={!val || sving === settingKey}
+          onClick={() => { if (val) { sv(settingKey, val); setNaira(""); setVal(""); } }}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white h-9 px-4 flex-shrink-0">
+          {sving === settingKey ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save"}
+        </Button>
+      </div>
+    );
+  };
+
+  const SessionDateField = ({ settingKey, settings: s, save: sv, saving: sving }: { settingKey: string; settings: Record<string,string>; save: (k:string,v:string)=>void; saving: string|null }) => {
+    const [val, setVal] = useState(s[settingKey] || "");
+    return (
+      <div className="flex items-center gap-2">
+        <Input
+          type="date" value={val}
+          onChange={e => setVal(e.target.value)}
+          className={cn(inputCls, "flex-1")}
+        />
+        <Button size="sm" disabled={!val || sving === settingKey}
+          onClick={() => { if (val) sv(settingKey, val); }}
+          className="bg-amber-600 hover:bg-amber-500 text-white h-9 px-4 flex-shrink-0">
+          {sving === settingKey ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save"}
+        </Button>
+      </div>
+    );
+  };
+
   const TimerField = ({ label, settingKey, desc }: { label: string; settingKey: string; desc: string }) => {
     const [val, setVal] = useState("");
     const current = settings[settingKey] ?? "";
@@ -1444,6 +1486,48 @@ function SettingsTab() {
 
   return (
     <div className="space-y-6">
+      <Section title="Session Management">
+        <p className="text-xs text-white/40 -mt-2 leading-relaxed">
+          Set the price students pay and the date access expires. Changes apply to new payments immediately.
+        </p>
+        <div className="space-y-3">
+          {/* Session price */}
+          <div className="p-4 rounded-xl bg-white/3 border border-white/8 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                <DollarSign className="h-4 w-4 text-emerald-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-white">Session Price</p>
+                <p className="text-xs text-white/40">Amount students pay in Kobo (divide by 100 for Naira). e.g. 500000 = ₦5,000</p>
+                {settings["session_price"] && (
+                  <p className="text-xs text-emerald-400 mt-0.5">Current: ₦{(parseInt(settings["session_price"]) / 100).toLocaleString()}</p>
+                )}
+              </div>
+            </div>
+            <SessionPriceField settingKey="session_price" settings={settings} save={save} saving={saving} />
+          </div>
+          {/* Session end date */}
+          <div className="p-4 rounded-xl bg-white/3 border border-white/8 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                <Clock className="h-4 w-4 text-amber-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-white">Session End Date</p>
+                <p className="text-xs text-white/40">Students with an active subscription lose access after this date.</p>
+                {settings["session_end_date"] && (
+                  <p className="text-xs text-amber-400 mt-0.5">
+                    Current: {new Date(settings["session_end_date"]).toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" })}
+                  </p>
+                )}
+              </div>
+            </div>
+            <SessionDateField settingKey="session_end_date" settings={settings} save={save} saving={saving} />
+          </div>
+        </div>
+      </Section>
+
       <Section title="Exam Timer Durations">
         <p className="text-xs text-white/40 -mt-2 leading-relaxed">Configure default exam durations. Changes take effect immediately for all students.</p>
         <div className="space-y-3">
@@ -1505,6 +1589,228 @@ function SettingsTab() {
           <div className="flex items-center gap-2 px-4 py-3 bg-white/3 border border-white/8 rounded-xl text-sm text-white/35">
             <AlertCircle className="h-4 w-4 flex-shrink-0 text-white/25" />
             Add your HuggingFace token above to enable Voice AI.
+          </div>
+        )}
+      </Section>
+    </div>
+  );
+}
+
+// ─── WhatsApp Tab ─────────────────────────────────────────────────────────────
+
+function WhatsAppTab({ pin }: { pin: string }) {
+  const { toast } = useToast();
+  const [botStatus, setBotStatus] = useState<any>(null);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loadingStatus, setLoadingStatus] = useState(true);
+  const [loadingNotifs, setLoadingNotifs] = useState(true);
+  const [broadcastMsg, setBroadcastMsg] = useState("");
+  const [sending, setSending] = useState(false);
+  const [broadcasting, setBroadcasting] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const loadStatus = async () => {
+    setLoadingStatus(true);
+    try { setBotStatus(await adminFetch(pin, "/api/bot/status")); } catch {}
+    setLoadingStatus(false);
+  };
+
+  const loadNotifs = async () => {
+    setLoadingNotifs(true);
+    try { setNotifications(await adminFetch(pin, "/api/bot/notifications")); } catch {}
+    setLoadingNotifs(false);
+  };
+
+  useEffect(() => {
+    loadStatus();
+    loadNotifs();
+    // Poll status every 5s when connecting (waiting for QR scan)
+    pollRef.current = setInterval(() => {
+      loadStatus();
+    }, 5000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, []);
+
+  const disconnect = async () => {
+    try {
+      await adminFetch(pin, "/api/bot/disconnect", "POST");
+      toast({ title: "Bot disconnected" });
+      loadStatus();
+    } catch (e: any) { toast({ title: e.message, variant: "destructive" }); }
+  };
+
+  const broadcastAll = async () => {
+    if (!broadcastMsg.trim()) return;
+    setBroadcasting(true);
+    try {
+      const r = await adminFetch(pin, "/api/bot/broadcast", "POST", { message: broadcastMsg.trim() });
+      toast({ title: `Queued ${r.queued} messages for active students` });
+      setBroadcastMsg("");
+      loadNotifs();
+    } catch (e: any) { toast({ title: e.message, variant: "destructive" }); }
+    setBroadcasting(false);
+  };
+
+  const broadcastExpired = async () => {
+    if (!broadcastMsg.trim()) return;
+    setBroadcasting(true);
+    try {
+      const r = await adminFetch(pin, "/api/bot/broadcast-expired", "POST", { message: broadcastMsg.trim() });
+      toast({ title: `Queued ${r.queued} messages for expired students` });
+      setBroadcastMsg("");
+      loadNotifs();
+    } catch (e: any) { toast({ title: e.message, variant: "destructive" }); }
+    setBroadcasting(false);
+  };
+
+  const statusColor = botStatus?.status === "connected" ? "emerald" : botStatus?.status === "connecting" ? "amber" : "red";
+  const statusLabel = botStatus?.status === "connected" ? "Connected" : botStatus?.status === "connecting" ? "Waiting for scan…" : "Disconnected";
+
+  const pending = notifications.filter(n => n.status === "pending").length;
+  const sent = notifications.filter(n => n.status === "sent").length;
+  const failed = notifications.filter(n => n.status === "failed").length;
+
+  return (
+    <div className="space-y-6">
+
+      {/* Bot Status */}
+      <Section title="Bot Connection">
+        <p className="text-xs text-white/40 -mt-2 leading-relaxed">
+          Your WhatsApp bot connects to this panel automatically. Start the bot with{" "}
+          <span className="font-mono text-violet-400 text-[11px]">pnpm --filter @workspace/whatsapp-bot run dev</span>,
+          then scan the QR code that appears here.
+        </p>
+
+        <div className="flex items-center justify-between p-4 rounded-xl bg-white/3 border border-white/8">
+          <div className="flex items-center gap-3">
+            <div className={cn("w-2.5 h-2.5 rounded-full animate-pulse", `bg-${statusColor}-400`)} />
+            <div>
+              <p className="text-sm font-bold text-white">{statusLabel}</p>
+              {botStatus?.phoneNumber && (
+                <p className="text-xs text-white/40 font-mono">+{botStatus.phoneNumber}</p>
+              )}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={loadStatus} className="text-xs text-white/40 hover:text-white/70 transition-colors flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/8">
+              <RefreshCw className="h-3 w-3" /> Refresh
+            </button>
+            {botStatus?.status === "connected" && (
+              <button onClick={disconnect} className="text-xs text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20">
+                Disconnect
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* QR Code */}
+        {botStatus?.qrCode && botStatus?.status !== "connected" && (
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+            className="p-6 rounded-2xl border border-amber-500/20 bg-amber-500/5 text-center space-y-4">
+            <p className="text-sm font-bold text-amber-400">📱 Scan with WhatsApp → Linked Devices</p>
+            <div className="bg-white p-4 rounded-2xl inline-block mx-auto">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(botStatus.qrCode)}`}
+                alt="WhatsApp QR"
+                className="w-48 h-48 block"
+              />
+            </div>
+            <p className="text-xs text-white/40">QR refreshes every 60 seconds. If expired, restart your bot.</p>
+          </motion.div>
+        )}
+
+        {botStatus?.status === "connected" && (
+          <div className="flex items-center gap-2 px-4 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-sm text-emerald-400">
+            <CheckCircle className="h-4 w-4 flex-shrink-0" />
+            Bot is online. Notifications will be sent automatically when queued.
+          </div>
+        )}
+
+        {botStatus?.status === "disconnected" && (
+          <div className="flex items-center gap-2 px-4 py-3 bg-white/3 border border-white/8 rounded-xl text-sm text-white/35">
+            <AlertCircle className="h-4 w-4 flex-shrink-0 text-white/25" />
+            Bot is offline. Start it locally to enable WhatsApp messaging.
+          </div>
+        )}
+      </Section>
+
+      {/* Notification stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="glass-card p-4 text-center">
+          <p className="text-2xl font-bold text-amber-400">{pending}</p>
+          <p className="text-xs text-white/40 mt-0.5">Pending</p>
+        </div>
+        <div className="glass-card p-4 text-center">
+          <p className="text-2xl font-bold text-emerald-400">{sent}</p>
+          <p className="text-xs text-white/40 mt-0.5">Sent</p>
+        </div>
+        <div className="glass-card p-4 text-center">
+          <p className={cn("text-2xl font-bold", failed > 0 ? "text-red-400" : "text-white/30")}>{failed}</p>
+          <p className="text-xs text-white/40 mt-0.5">Failed</p>
+        </div>
+      </div>
+
+      {/* Broadcast composer */}
+      <Section title="Send Broadcast">
+        <p className="text-xs text-white/40 -mt-2">Compose a message and send it to all active students, or all expired students.</p>
+        <Textarea
+          value={broadcastMsg}
+          onChange={e => setBroadcastMsg(e.target.value)}
+          placeholder={`e.g. 🎓 Hi [Name]! Don't forget to study tonight. Session ends August 31. Visit the app: ${typeof window !== "undefined" ? window.location.origin : ""}`}
+          rows={5}
+          className={cn(inputCls, "resize-none text-sm font-mono")}
+        />
+        <p className="text-xs text-white/25">{broadcastMsg.length} chars</p>
+        <div className="flex gap-3 flex-wrap">
+          <Button
+            onClick={broadcastAll}
+            disabled={!broadcastMsg.trim() || broadcasting}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm flex-1"
+          >
+            {broadcasting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Megaphone className="h-4 w-4 mr-2" />}
+            Broadcast to Active Students
+          </Button>
+          <Button
+            onClick={broadcastExpired}
+            disabled={!broadcastMsg.trim() || broadcasting}
+            className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-sm flex-1"
+          >
+            {broadcasting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Megaphone className="h-4 w-4 mr-2" />}
+            Broadcast to Expired Students
+          </Button>
+        </div>
+      </Section>
+
+      {/* Notification log */}
+      <Section title="Notification Log">
+        <div className="flex justify-end mb-2">
+          <button onClick={loadNotifs} className="text-xs text-white/40 hover:text-white/70 flex items-center gap-1.5">
+            <RefreshCw className="h-3 w-3" /> Refresh
+          </button>
+        </div>
+        {loadingNotifs ? (
+          <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="h-12 rounded-xl bg-white/3 animate-pulse" />)}</div>
+        ) : notifications.length === 0 ? (
+          <p className="text-white/30 text-sm text-center py-6">No notifications yet.</p>
+        ) : (
+          <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+            {notifications.map(n => (
+              <div key={n.id} className="flex items-start gap-3 p-3 rounded-xl bg-white/3 border border-white/5">
+                <div className={cn("w-2 h-2 rounded-full mt-1.5 flex-shrink-0",
+                  n.status === "sent" ? "bg-emerald-400" : n.status === "failed" ? "bg-red-400" : "bg-amber-400"
+                )} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-mono text-violet-300">{n.phone}</span>
+                    <span className={cn("text-[10px] font-bold uppercase tracking-wider",
+                      n.status === "sent" ? "text-emerald-400" : n.status === "failed" ? "text-red-400" : "text-amber-400"
+                    )}>{n.status}</span>
+                  </div>
+                  <p className="text-xs text-white/50 truncate mt-0.5">{n.message?.slice(0, 80)}…</p>
+                  <p className="text-[10px] text-white/25 mt-0.5">{n.created_at ? new Date(n.created_at).toLocaleString() : ""}</p>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </Section>
@@ -1616,6 +1922,7 @@ const ADMIN_TABS: { id: AdminTab; label: string; icon: any; desc: string }[] = [
   { id: "anticheat",     label: "Anti-cheat",    icon: ShieldAlert,     desc: "Audit log" },
   { id: "announcements", label: "Announcements", icon: Megaphone,       desc: "Post updates" },
   { id: "notes",         label: "Notes",         icon: FileText,        desc: "Upload study notes" },
+  { id: "whatsapp",      label: "WhatsApp",      icon: Megaphone,       desc: "Bot & notifications" },
   { id: "settings",      label: "Settings",      icon: Timer,           desc: "Timers & config" },
   { id: "branding",      label: "Branding",      icon: ImagePlus,       desc: "Bot image" },
 ];
@@ -1729,6 +2036,7 @@ export default function AdminPanel() {
               {tab === "anticheat"     && <AntiCheatTab pin={pin} />}
               {tab === "announcements" && <AnnouncementsTab />}
               {tab === "notes"         && <NotesTab />}
+              {tab === "whatsapp"      && <WhatsAppTab pin={pin} />}
               {tab === "settings"      && <SettingsTab />}
               {tab === "branding"      && <BrandingTab />}
             </motion.div>
