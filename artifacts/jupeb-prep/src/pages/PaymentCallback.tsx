@@ -18,11 +18,12 @@ export default function PaymentCallback() {
         if (data.success) {
           setStatus("success");
           setMessage(data.message || "Access granted until end of August.");
-          // Update local profile
+          // Update local profile with payment activation
           try {
             const profile = JSON.parse(localStorage.getItem("jupeb_profile") || "{}");
             profile.sessionActive = true;
             profile.paymentStatus = "paid";
+            if (data.expiresAt) profile.expiresAt = data.expiresAt;
             localStorage.setItem("jupeb_profile", JSON.stringify(profile));
           } catch {}
         } else {

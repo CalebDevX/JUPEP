@@ -19,6 +19,9 @@ const TRIAL_COUNT_KEY = "jupeb_trial_q";
 export function isActivated(): boolean {
   const profile = getProfile();
   if (!profile) return false;
+  // Paystack payment path
+  if ((profile as any).paymentStatus === "paid") return true;
+  // Access code path
   const code = profile.accessCode;
   return !!(code && code !== "FREE_TRIAL" && code !== "");
 }

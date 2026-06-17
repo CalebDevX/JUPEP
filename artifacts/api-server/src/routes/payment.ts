@@ -77,7 +77,9 @@ router.get("/payment/verify/:reference", async (req, res) => {
 
     await activateStudent(phone, reference, data.data.amount, data.data.channel);
 
-    res.json({ success: true, message: "Payment verified. Access granted until end of August." });
+    const sessionEnd = await getSessionEnd();
+    const expiresAt = new Date(sessionEnd + "T23:59:59Z").toISOString();
+    res.json({ success: true, message: `Payment verified. Access granted until ${new Date(sessionEnd).toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" })}.`, expiresAt });
   } catch (err: any) {
     console.error("Verify error:", err);
     res.status(500).json({ error: err.message });

@@ -63,6 +63,8 @@ export function SessionExpiredGate() {
                   .then(data => {
                     if (data.isActive) {
                       profile.sessionActive = true;
+                      profile.paymentStatus = "paid";
+                      if (data.expiresAt) profile.expiresAt = data.expiresAt;
                       localStorage.setItem("jupeb_profile", JSON.stringify(profile));
                       window.location.reload();
                     }
