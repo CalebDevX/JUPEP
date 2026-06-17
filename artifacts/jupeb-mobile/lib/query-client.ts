@@ -22,6 +22,11 @@ export function getApiUrl(): string {
   return resolveApiUrl();
 }
 
+/** Returns the API base URL (alias used by notes/textbook screens) */
+export function getApiBase(): string {
+  return getApiUrl();
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

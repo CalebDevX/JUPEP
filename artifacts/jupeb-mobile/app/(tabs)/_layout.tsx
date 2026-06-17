@@ -1,43 +1,34 @@
 import { Tabs } from 'expo-router';
-import { Platform, View } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/constants/colors';
+import { LightColors, DarkColors } from '@/constants/colors';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-function TabIcon({ name, focused }: { name: IoniconName; focused: boolean }) {
-  return (
-    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-      <Ionicons
-        name={focused ? name : (`${name}-outline` as IoniconName)}
-        size={24}
-        color={focused ? Colors.primary : Colors.mutedForeground}
-      />
-    </View>
-  );
-}
-
 export default function TabsLayout() {
-  const bottomInset = Platform.OS === 'web' ? 34 : 0;
+  const scheme = useColorScheme();
+  const C = scheme === 'dark' ? DarkColors : LightColors;
+
+  const bottomInset = Platform.OS === 'ios' ? 26 : Platform.OS === 'web' ? 10 : 8;
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: Colors.tabBar,
-          borderTopColor: Colors.tabBarBorder,
+          backgroundColor: C.tabBar,
+          borderTopColor: C.tabBarBorder,
           borderTopWidth: 1,
-          height: 60 + bottomInset,
-          paddingBottom: bottomInset + 8,
+          height: Platform.OS === 'ios' ? 88 : 62,
+          paddingBottom: bottomInset,
           paddingTop: 8,
         },
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.mutedForeground,
+        tabBarActiveTintColor: C.primary,
+        tabBarInactiveTintColor: C.mutedForeground,
         tabBarLabelStyle: {
-          fontFamily: 'Inter_500Medium',
-          fontSize: 11,
-          marginTop: 2,
+          fontFamily: 'Inter_600SemiBold',
+          fontSize: 10,
+          letterSpacing: 0.2,
         },
       }}
     >
@@ -45,30 +36,39 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ focused }) => <TabIcon name="home" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="subjects"
-        options={{
-          title: 'Subjects',
-          tabBarIcon: ({ focused }) => <TabIcon name="book" focused={focused} />,
+          tabBarIcon: ({ color, focused, size }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline' as IoniconName} size={22} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="quiz"
         options={{
           title: 'Practice',
-          tabBarIcon: ({ focused }) => <TabIcon name="documents" focused={focused} />,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'help-circle' : 'help-circle-outline' as IoniconName} size={22} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="notes"
+        options={{
+          title: 'Notes',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'book' : 'book-outline' as IoniconName} size={22} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ focused }) => <TabIcon name="person" focused={focused} />,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'person' : 'person-outline' as IoniconName} size={22} color={color} />
+          ),
         }}
       />
+      <Tabs.Screen name="subjects" options={{ href: null }} />
     </Tabs>
   );
 }
