@@ -3,7 +3,7 @@ import { Shell } from "@/components/layout/Shell";
 import { motion } from "framer-motion";
 import {
   Trophy, Flame, Zap, RefreshCw, Medal, Crown,
-  TrendingUp, Star, Users, GraduationCap,
+  TrendingUp, Star, Users, GraduationCap, Share2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
@@ -103,6 +103,11 @@ function PodiumCard({ entry }: { entry: LeaderboardEntry }) {
   );
 }
 
+function openWhatsApp(text: string) {
+  const encoded = encodeURIComponent(text);
+  window.open(`https://wa.me/?text=${encoded}`, "_blank");
+}
+
 export default function Leaderboard() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,6 +133,37 @@ export default function Leaderboard() {
     e.full_name === profile.fullName
   ) : null;
 
+  const shareMyRank = () => {
+    if (!myEntry) return;
+    const grade = GRADE_LABELS[myEntry.target_grade] || myEntry.target_grade;
+    const streakLine = myEntry.streak > 0 ? `🔥 ${myEntry.streak}-day study streak\n` : "";
+    const subjectLine = Array.isArray(myEntry.subjects) && myEntry.subjects.length
+      ? `📚 Subjects: ${myEntry.subjects.join(", ")}\n`
+      : "";
+    const msg =
+      `🏆 *JUPEB Prep Leaderboard*\n\n` +
+      `I'm ranked *#${myEntry.rank}* with *${myEntry.xp.toLocaleString()} XP*!\n` +
+      streakLine +
+      subjectLine +
+      `🎯 Target grade: *${grade}*\n\n` +
+      `Think you can beat me? 😤 We're competing on JUPEB Prep — the ultimate JUPEB exam study app!\n\n` +
+      `📲 Join us and level up your study game! 💪`;
+    openWhatsApp(msg);
+  };
+
+  const shareTop3 = () => {
+    const top3 = entries.filter(e => e.rank <= 3);
+    if (!top3.length) return;
+    const podium = top3.map(e =>
+      `${e.rank === 1 ? "🥇" : e.rank === 2 ? "🥈" : "🥉"} #${e.rank} ${e.full_name} — ${e.xp.toLocaleString()} XP`
+    ).join("\n");
+    const msg =
+      `🏆 *JUPEB Prep — Top Students*\n\n` +
+      `${podium}\n\n` +
+      `These scholars are putting in the work! 💪\nJoin JUPEB Prep and compete for the top spot. Study smarter, score higher! 📚`;
+    openWhatsApp(msg);
+  };
+
   const top3 = entries.filter(e => e.rank <= 3);
   const rest = entries.filter(e => e.rank > 3);
 
@@ -138,7 +174,7 @@ export default function Leaderboard() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
+          className="flex items-center justify-between gap-3 flex-wrap"
         >
           <div>
             <p className="ed-label mb-1 flex items-center gap-2">
@@ -148,14 +184,26 @@ export default function Leaderboard() {
             <h1 className="text-2xl font-bold text-white">Leaderboard</h1>
             <p className="text-sm text-white/40 mt-0.5">Top students by XP earned through quizzes & study</p>
           </div>
-          <button
-            onClick={fetchLeaderboard}
-            disabled={loading}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white/60 hover:text-white transition-all text-xs font-medium disabled:opacity-40"
-          >
-            <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {entries.length >= 3 && (
+              <button
+                onClick={shareTop3}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-500/10 border border-green-500/20 hover:bg-green-500/15 text-green-400 hover:text-green-300 transition-all text-xs font-medium"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Share Top 3</span>
+                <span className="sm:hidden">Share</span>
+              </button>
+            )}
+            <button
+              onClick={fetchLeaderboard}
+              disabled={loading}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white/60 hover:text-white transition-all text-xs font-medium disabled:opacity-40"
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
+              Refresh
+            </button>
+          </div>
         </motion.div>
 
         {/* My rank banner */}
@@ -166,11 +214,18 @@ export default function Leaderboard() {
             className="px-4 py-3 bg-violet-500/10 border border-violet-500/30 rounded-2xl flex items-center gap-3"
           >
             <Star className="h-4 w-4 text-violet-400 flex-shrink-0" />
-            <p className="text-sm text-violet-200">
+            <p className="text-sm text-violet-200 flex-1">
               You are ranked <span className="font-bold">#{myEntry.rank}</span> with{" "}
               <span className="font-bold">{myEntry.xp.toLocaleString()} XP</span>
               {myEntry.streak > 0 && <span className="ml-1 text-orange-300">· {myEntry.streak}d streak 🔥</span>}
             </p>
+            <button
+              onClick={shareMyRank}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#25D366]/10 border border-[#25D366]/25 hover:bg-[#25D366]/20 text-[#25D366] hover:text-green-300 transition-all text-xs font-bold flex-shrink-0 whitespace-nowrap"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              Share Rank
+            </button>
           </motion.div>
         )}
 
