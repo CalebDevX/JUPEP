@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Shell } from "@/components/layout/Shell";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
@@ -7,8 +7,18 @@ import { cn } from "@/lib/utils";
 import {
   User, Target, Bell, Shield, Info,
   Trash2, ChevronRight, CheckCircle2,
-  LogOut, Camera, Calendar, Clock, Flame, Trophy,
+  LogOut, Camera, Calendar, Clock, Flame, Trophy, Loader2,
 } from "lucide-react";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+function getAuthInfo() {
+  try {
+    const profile = JSON.parse(localStorage.getItem("jupeb_profile") || "null");
+    const token = localStorage.getItem("jupeb_session_token");
+    return { phone: profile?.phone || null, token };
+  } catch { return { phone: null, token: null }; }
+}
 
 const GOAL_OPTIONS = [
   { value: "aaa1", label: "AAA+1", points: "16 pts", desc: "Medicine · Law · Pharmacy" },
@@ -74,6 +84,38 @@ export default function Settings() {
   const [examDate, setExamDate] = useState(
     () => localStorage.getItem("jupeb_exam_date") || ""
   );
+  const [saving, setSaving] = useState(false);
+
+  // On mount: if no local pic, try to pull from DB
+  useEffect(() => {
+    const { phone, token } = getAuthInfo();
+    if (!phone || !token || profilePic) return;
+    fetch(`${BASE}/api/student/profile-picture?phone=${encodeURIComponent(phone)}`, {
+      headers: { "x-session-token": token },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.image) {
+          setProfilePic(data.image);
+          localStorage.setItem("jupeb_profile_picture", data.image);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const syncPicToDb = async (image: string | null) => {
+    const { phone, token } = getAuthInfo();
+    if (!phone || !token) return false;
+    try {
+      const res = await fetch(`${BASE}/api/student/profile-picture`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, token, image }),
+      });
+      const data = await res.json();
+      return data.success === true;
+    } catch { return false; }
+  };
 
   const handlePicUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -81,7 +123,7 @@ export default function Settings() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         const canvas = document.createElement("canvas");
         canvas.width = 150; canvas.height = 150;
         const ctx = canvas.getContext("2d");
@@ -91,11 +133,26 @@ export default function Settings() {
         const b64 = canvas.toDataURL("image/jpeg", 0.85);
         setProfilePic(b64);
         localStorage.setItem("jupeb_profile_picture", b64);
-        toast({ title: "Photo updated!" });
+        setSaving(true);
+        const synced = await syncPicToDb(b64);
+        setSaving(false);
+        toast({
+          title: synced ? "Photo saved to your account ✓" : "Photo saved locally",
+          description: synced ? "It will appear on any device you log into." : "Couldn't reach server — saved on this device.",
+        });
       };
       img.src = ev.target?.result as string;
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = async () => {
+    setProfilePic(null);
+    localStorage.removeItem("jupeb_profile_picture");
+    setSaving(true);
+    await syncPicToDb(null);
+    setSaving(false);
+    toast({ title: "Photo removed" });
   };
 
   const saveProfile = () => {
@@ -177,7 +234,7 @@ export default function Settings() {
             <div className="flex items-center gap-4">
               <div className="relative flex-shrink-0 group">
                 <div
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => !saving && fileInputRef.current?.click()}
                   className="w-16 h-16 rounded-2xl overflow-hidden cursor-pointer ring-2 ring-white/10 hover:ring-violet-500/40 transition-all relative"
                 >
                   {profilePic ? (
@@ -188,15 +245,16 @@ export default function Settings() {
                     </div>
                   )}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Camera className="h-5 w-5 text-white" />
+                    {saving ? <Loader2 className="h-5 w-5 text-white animate-spin" /> : <Camera className="h-5 w-5 text-white" />}
                   </div>
                 </div>
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePicUpload} />
                 <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-violet-600 border-2 border-[#0d0d14] flex items-center justify-center hover:bg-violet-500 transition-colors"
+                  onClick={() => !saving && fileInputRef.current?.click()}
+                  disabled={saving}
+                  className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-violet-600 border-2 border-[#0d0d14] flex items-center justify-center hover:bg-violet-500 transition-colors disabled:opacity-60"
                 >
-                  <Camera className="h-3.5 w-3.5 text-white" />
+                  {saving ? <Loader2 className="h-3 w-3 text-white animate-spin" /> : <Camera className="h-3.5 w-3.5 text-white" />}
                 </button>
               </div>
 
@@ -213,10 +271,11 @@ export default function Settings() {
             </div>
             {profilePic && (
               <button
-                onClick={() => { setProfilePic(null); localStorage.removeItem("jupeb_profile_picture"); }}
-                className="text-xs text-white/30 hover:text-red-400 transition-colors"
+                onClick={handleRemovePhoto}
+                disabled={saving}
+                className="text-xs text-white/30 hover:text-red-400 transition-colors disabled:opacity-40"
               >
-                Remove photo
+                {saving ? "Saving…" : "Remove photo"}
               </button>
             )}
           </div>

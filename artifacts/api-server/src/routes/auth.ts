@@ -222,6 +222,43 @@ router.post("/auth/google", async (req, res) => {
   }
 });
 
+// ── Profile picture ──────────────────────────────────────────────────────────
+
+router.post("/student/profile-picture", async (req, res) => {
+  const { phone, token } = req.body;
+  const image: string | null = req.body.image ?? null;
+  if (!phone?.trim() || !token?.trim()) {
+    return res.status(400).json({ error: "Phone and token are required." });
+  }
+  if (image !== null && image.length > 700000) {
+    return res.status(400).json({ error: "Image too large. Please use a smaller photo." });
+  }
+  try {
+    const r = await pool.query("SELECT session_token FROM students WHERE phone=$1", [phone.trim()]);
+    if (!r.rows.length) return res.status(404).json({ error: "Student not found." });
+    if (r.rows[0].session_token !== token) return res.status(401).json({ error: "Invalid session. Please log in again." });
+    await pool.query("UPDATE students SET profile_picture=$1 WHERE phone=$2", [image, phone.trim()]);
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error("Profile picture save error:", err);
+    res.status(500).json({ error: "Failed to save profile picture." });
+  }
+});
+
+router.get("/student/profile-picture", async (req, res) => {
+  const phone = (req.query.phone as string)?.trim();
+  const token = req.headers["x-session-token"] as string;
+  if (!phone || !token) return res.status(400).json({ error: "Phone and token are required." });
+  try {
+    const r = await pool.query("SELECT session_token, profile_picture FROM students WHERE phone=$1", [phone]);
+    if (!r.rows.length) return res.status(404).json({ error: "Student not found." });
+    if (r.rows[0].session_token !== token) return res.status(401).json({ error: "Invalid session." });
+    res.json({ image: r.rows[0].profile_picture || null });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to fetch profile picture." });
+  }
+});
+
 // ── Session verification ─────────────────────────────────────────────────────
 // Returns {valid: true} only if the token matches what's stored in the DB.
 // Calling this endpoint from a new login will have already replaced the token,
