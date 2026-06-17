@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { GoogleGenAI } from "@google/genai";
+import { getAI } from "../lib/gemini-keys";
 
 const router = Router();
 
@@ -10,15 +10,6 @@ export const YARNGPT_SPEAKERS = [
 ];
 
 export const YARNGPT_LANGUAGES = ["english", "yoruba", "igbo", "hausa", "pidgin"];
-
-function getAI() {
-  const apiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("AI API key not configured");
-  const baseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
-  return new GoogleGenAI(
-    baseUrl ? { apiKey, httpOptions: { apiVersion: "", baseUrl } } : { apiKey }
-  );
-}
 
 async function callRailwayAPI(
   text: string,

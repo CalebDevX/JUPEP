@@ -28,19 +28,23 @@ export default function Questions() {
   const [subjectId, setSubjectId] = useState<string>(searchParams.get("subjectId") || "all");
   const [paper, setPaper] = useState<string>(searchParams.get("paper") || "all");
   const [type, setType] = useState<string>("all");
+  const [year, setYear] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const limit = 10;
 
   const { data: subjects } = useListSubjects();
 
+  const YEAR_OPTIONS = Array.from({ length: 10 }, (_, i) => String(new Date().getFullYear() - i));
+
   const queryParams = useMemo(() => ({
     ...(subjectId !== "all" ? { subjectId: Number(subjectId) } : {}),
     ...(paper !== "all" ? { paper: paper as ListQuestionsPaper } : {}),
     ...(type !== "all" ? { questionType: type as ListQuestionsQuestionType } : {}),
+    ...(year !== "all" ? { year: Number(year) } : {}),
     limit,
     offset: (page - 1) * limit,
-  }), [subjectId, paper, type, page]);
+  } as any), [subjectId, paper, type, year, page]);
 
   const { data: questions, isLoading } = useListQuestions(queryParams);
 
@@ -64,6 +68,18 @@ export default function Questions() {
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3">
+          <Select value={year} onValueChange={v => { setYear(v); setPage(1); }}>
+            <SelectTrigger className="w-[110px] bg-white/5 border-white/10 text-white h-9 text-sm">
+              <SelectValue placeholder="All Years" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#1e1e28] border-white/10">
+              <SelectItem value="all" className="text-white">All Years</SelectItem>
+              {YEAR_OPTIONS.map(y => (
+                <SelectItem key={y} value={y} className="text-white">{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Select value={subjectId} onValueChange={v => { setSubjectId(v); setPage(1); }}>
             <SelectTrigger className="w-[165px] bg-white/5 border-white/10 text-white h-9 text-sm">
               <SelectValue placeholder="All Subjects" />

@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
+const SCIENCE_CODES = ["BIO", "CHE", "PHY", "MTH"];
+
 const ALL_SUBJECTS = [
   { code: "LIT", name: "Literature in English", emoji: "📖", sel: "bg-violet-500/15 border-violet-500/50 text-violet-200" },
   { code: "GOV", name: "Government", emoji: "🏛️", sel: "bg-blue-500/15 border-blue-500/50 text-blue-200" },
@@ -72,10 +74,13 @@ export default function Register() {
   const [phone, setPhone] = useState("");
   const [targetGrade, setTargetGrade] = useState("aaa1");
   const [subjects, setSubjects] = useState<string[]>([]);
+  const [isScience, setIsScience] = useState(false);
   const [accessCode, setAccessCode] = useState("");
   const [hasCode, setHasCode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const visibleSubjects = ALL_SUBJECTS.filter(s => isScience || !SCIENCE_CODES.includes(s.code));
 
   const toggleSubject = (name: string) => {
     setSubjects(prev =>
@@ -299,8 +304,32 @@ export default function Register() {
                     </span>
                   </div>
 
+                  {/* Science/Non-science toggle */}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setIsScience(false); setSubjects(prev => prev.filter(n => !SCIENCE_CODES.includes(ALL_SUBJECTS.find(s => s.name === n)?.code || ""))); }}
+                      className={cn(
+                        "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold transition-all",
+                        !isScience ? "border-violet-500/50 bg-violet-500/15 text-violet-300" : "border-white/10 bg-white/3 text-white/40 hover:border-white/20"
+                      )}
+                    >
+                      📚 Arts / Social / Commercial
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsScience(true)}
+                      className={cn(
+                        "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border text-xs font-semibold transition-all",
+                        isScience ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-300" : "border-white/10 bg-white/3 text-white/40 hover:border-white/20"
+                      )}
+                    >
+                      🔬 Science
+                    </button>
+                  </div>
+
                   <div className="flex flex-wrap gap-2">
-                    {ALL_SUBJECTS.map(s => {
+                    {visibleSubjects.map(s => {
                       const selected = subjects.includes(s.name);
                       const maxed = !selected && subjects.length >= 4;
                       return (

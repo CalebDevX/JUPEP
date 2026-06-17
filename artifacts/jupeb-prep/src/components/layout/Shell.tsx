@@ -23,6 +23,8 @@ import {
   Trophy,
   Mic,
   History,
+  Calendar,
+  Medal,
 } from "lucide-react";
 import { getGamificationState, getLevel } from "@/lib/gamification";
 import { cn } from "@/lib/utils";
@@ -44,6 +46,8 @@ const navItems = [
   { href: "/leaderboard",label: "Leaderboard",  icon: Trophy,          color: "text-amber-500"   },
   { href: "/learn",      label: "AI Learn",     icon: Wand2,           color: "text-rose-500"    },
   { href: "/voice",      label: "Voice AI",     icon: Mic,             color: "text-green-500"   },
+  { href: "/planner",    label: "Study Planner",icon: Calendar,        color: "text-violet-500"  },
+  { href: "/achievements",label: "Achievements", icon: Medal,           color: "text-amber-500"   },
   { href: "/history",    label: "History",      icon: History,         color: "text-indigo-500"  },
   { href: "/progress",   label: "Progress",     icon: TrendingUp,      color: "text-cyan-500"    },
   { href: "/chat",       label: "AI Tutor",     icon: MessageCircle,   color: "text-amber-500"   },

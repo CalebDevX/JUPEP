@@ -27,6 +27,8 @@ import Activate from "@/pages/Activate";
 import VoiceTeacher from "@/pages/VoiceTeacher";
 import Subscribe from "@/pages/Subscribe";
 import PaymentCallback from "@/pages/PaymentCallback";
+import StudyPlanner from "@/pages/StudyPlanner";
+import Achievements from "@/pages/Achievements";
 import { SessionExpiredGate } from "@/components/SessionExpiredGate";
 
 const queryClient = new QueryClient({
@@ -109,6 +111,8 @@ function ProtectedRoutes() {
       <Route path="/activate" component={Activate} />
       <Route path="/voice" component={VoiceTeacher} />
       <Route path="/settings" component={Settings} />
+      <Route path="/planner" component={StudyPlanner} />
+      <Route path="/achievements" component={Achievements} />
       <Route component={NotFound} />
     </Switch>
   );

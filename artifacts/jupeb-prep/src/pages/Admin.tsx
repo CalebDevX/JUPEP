@@ -1361,6 +1361,8 @@ function SettingsTab() {
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
+  const [newGeminiKey, setNewGeminiKey] = useState("");
+  const [geminiSaving, setGeminiSaving] = useState(false);
 
   const load = async () => {
     const r = await fetch(`${BASE}/api/settings`);
@@ -1378,6 +1380,23 @@ function SettingsTab() {
       if (r.ok) { setSettings(p => ({ ...p, [key]: value })); toast({ title: "Setting saved" }); }
       else toast({ title: "Failed to save", variant: "destructive" });
     } finally { setSaving(null); }
+  };
+
+  let geminiKeys: string[] = [];
+  try { const raw = settings["gemini_api_keys"]; if (raw) geminiKeys = JSON.parse(raw); } catch {}
+
+  const saveGeminiKeys = async (keys: string[]) => {
+    setGeminiSaving(true);
+    try {
+      const r = await fetch(`${BASE}/api/settings`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "gemini_api_keys", value: JSON.stringify(keys), adminPin: ADMIN_PIN_KEY }),
+      });
+      if (r.ok) {
+        setSettings(p => ({ ...p, gemini_api_keys: JSON.stringify(keys) }));
+        toast({ title: `✅ ${keys.length} key${keys.length !== 1 ? "s" : ""} in rotation pool` });
+      } else { toast({ title: "Failed to save keys", variant: "destructive" }); }
+    } finally { setGeminiSaving(false); }
   };
 
   const SessionPriceField = ({ settingKey, settings: s, save: sv, saving: sving }: { settingKey: string; settings: Record<string,string>; save: (k:string,v:string)=>void; saving: string|null }) => {
@@ -1525,6 +1544,67 @@ function SettingsTab() {
             </div>
             <SessionDateField settingKey="session_end_date" settings={settings} save={save} saving={saving} />
           </div>
+        </div>
+      </Section>
+
+      <Section title="Gemini AI Keys — Rotation Pool">
+        <p className="text-xs text-white/40 -mt-2 leading-relaxed">
+          Add multiple free API keys from{" "}
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:underline">Google AI Studio</a>.
+          When one key hits its daily quota, the server automatically rotates to the next one — zero downtime.
+        </p>
+        <div className="space-y-2 mb-3">
+          {geminiKeys.length === 0 ? (
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/8 border border-amber-500/20 text-sm text-amber-400/80">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              No admin-added keys yet. The server uses your environment key as the fallback.
+            </div>
+          ) : geminiKeys.map((k, i) => (
+            <div key={i} className="flex items-center justify-between px-4 py-3 rounded-xl bg-white/3 border border-white/8">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-violet-500/15 flex items-center justify-center flex-shrink-0">
+                  <span className="text-[11px] font-black text-violet-400">K{i + 1}</span>
+                </div>
+                <span className="font-mono text-xs text-emerald-400 truncate">
+                  ••••••••••••••••{k.slice(-6)}
+                </span>
+              </div>
+              <button
+                disabled={geminiSaving}
+                onClick={() => saveGeminiKeys(geminiKeys.filter((_, j) => j !== i))}
+                className="ml-3 text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 px-3 py-1.5 rounded-lg transition-all flex-shrink-0"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+        {geminiKeys.length > 0 && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/8 border border-emerald-500/20 rounded-xl text-xs text-emerald-400 mb-3">
+            <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" />
+            {geminiKeys.length} key{geminiKeys.length !== 1 ? "s" : ""} in pool — rotating round-robin on every AI request.
+          </div>
+        )}
+        <div className="flex gap-2">
+          <Input
+            type="password"
+            placeholder="Paste Gemini API key (AIza…)"
+            value={newGeminiKey}
+            onChange={e => setNewGeminiKey(e.target.value)}
+            className={cn(inputCls, "flex-1 text-xs font-mono")}
+          />
+          <Button
+            size="sm"
+            disabled={!newGeminiKey.trim() || geminiSaving}
+            onClick={() => {
+              if (!newGeminiKey.trim()) return;
+              saveGeminiKeys([...geminiKeys, newGeminiKey.trim()]);
+              setNewGeminiKey("");
+            }}
+            className="bg-violet-600 hover:bg-violet-500 text-white h-9 px-5 flex-shrink-0"
+          >
+            {geminiSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Add Key"}
+          </Button>
         </div>
       </Section>
 

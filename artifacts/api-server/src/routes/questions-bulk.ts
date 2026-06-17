@@ -2,20 +2,12 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { questionsTable, subjectsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { GoogleGenAI } from "@google/genai";
+import { getAI } from "../lib/gemini-keys";
 
 const router = Router();
 
-function getAI() {
-  const apiKey =
-    process.env.AI_INTEGRATIONS_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-  const baseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
-  return new GoogleGenAI(
-    baseUrl
-      ? { apiKey, httpOptions: { apiVersion: "", baseUrl } }
-      : { apiKey }
-  );
+function safeGetAI() {
+  try { return getAI(); } catch { return null; }
 }
 
 function parseCSV(csv: string): Record<string, string>[] {
@@ -119,7 +111,7 @@ router.post("/questions/bulk", async (req, res) => {
       return res.status(400).json({ error: "Maximum 500 questions per upload" });
     }
 
-    const ai = autoExplain ? getAI() : null;
+    const ai = autoExplain ? safeGetAI() : null;
 
     const subjects = await db.select().from(subjectsTable);
     const subjectMap = new Map(subjects.map(s => [s.id, s.name]));

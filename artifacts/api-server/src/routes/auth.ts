@@ -7,8 +7,9 @@ import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import crypto from "crypto";
 
-// Ensure session_token column exists (non-blocking)
+// Ensure required columns exist (non-blocking)
 pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS session_token TEXT`).catch(() => {});
+pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS profile_picture TEXT`).catch(() => {});
 
 const router = Router();
 
