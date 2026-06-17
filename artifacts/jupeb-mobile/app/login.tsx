@@ -1,30 +1,22 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-  Alert,
-  ScrollView,
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Alert, ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useAuth } from '@/context/AuthContext';
-import { Colors } from '@/constants/colors';
+import { useTheme } from '@/hooks/useTheme';
+import type { AppColors } from '@/constants/colors';
 
 export default function LoginScreen() {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const insets = useSafeAreaInsets();
-
-  const topInset = Platform.OS === 'web' ? 67 : insets.top;
-  const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
+  const C = useTheme();
+  const styles = useMemo(() => makeStyles(C), [C]);
 
   async function handleLogin() {
     const cleaned = phone.replace(/\s/g, '');
@@ -44,34 +36,37 @@ export default function LoginScreen() {
     }
   }
 
+  const topPad = Platform.OS === 'web' ? 0 : insets.top;
+  const botPad = Platform.OS === 'web' ? 0 : insets.bottom;
+
   return (
     <KeyboardAvoidingView
       style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: topInset, paddingBottom: bottomInset + 24 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: topPad + 48, paddingBottom: botPad + 32 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.logoArea}>
-          <View style={styles.logoCircle}>
+        {/* Brand mark */}
+        <View style={styles.brand}>
+          <View style={styles.logoBox}>
             <Text style={styles.logoLetter}>J</Text>
           </View>
           <Text style={styles.appName}>JUPEB Prep</Text>
-          <Text style={styles.appTagline}>Study smarter. Pass better.</Text>
+          <Text style={styles.tagline}>Study smarter. Pass better.</Text>
         </View>
 
-        <View style={styles.formCard}>
-          <Text style={styles.formTitle}>Welcome back</Text>
-          <Text style={styles.formSubtitle}>Enter your phone number to continue</Text>
-
-          <View style={styles.inputWrapper}>
-            <Ionicons name="call-outline" size={18} color={Colors.mutedForeground} style={styles.inputIcon} />
+        {/* Form */}
+        <View style={styles.form}>
+          <Text style={styles.formLabel}>Phone number</Text>
+          <View style={styles.inputRow}>
+            <Ionicons name="call-outline" size={18} color={C.mutedForeground} style={{ marginRight: 10 }} />
             <TextInput
               style={styles.input}
               placeholder="08012345678"
-              placeholderTextColor={Colors.mutedForeground}
+              placeholderTextColor={C.mutedForeground}
               keyboardType="phone-pad"
               value={phone}
               onChangeText={setPhone}
@@ -83,153 +78,64 @@ export default function LoginScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.loginBtn, loading && styles.loginBtnDisabled]}
+            style={[styles.btn, loading && { opacity: 0.6 }]}
             onPress={handleLogin}
             disabled={loading}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
           >
             {loading ? (
-              <ActivityIndicator color={Colors.primaryForeground} />
+              <ActivityIndicator color={C.primaryForeground} />
             ) : (
               <>
-                <Text style={styles.loginBtnText}>Continue</Text>
-                <Ionicons name="arrow-forward" size={18} color={Colors.primaryForeground} />
+                <Text style={styles.btnText}>Continue</Text>
+                <Ionicons name="arrow-forward" size={18} color={C.primaryForeground} />
               </>
             )}
           </TouchableOpacity>
 
-          <Text style={styles.disclaimer}>
-            For registered JUPEB students only. Access requires a valid subscription.
-          </Text>
-        </View>
-
-        <View style={styles.footer}>
-          <Ionicons name="shield-checkmark-outline" size={14} color={Colors.mutedForeground} />
-          <Text style={styles.footerText}>Secured &amp; device-locked</Text>
+          <Text style={styles.note}>For registered JUPEB students only</Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scroll: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-    minHeight: '100%',
-  },
-  logoArea: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  logoCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 24,
-    backgroundColor: Colors.primaryDim,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-  },
-  logoLetter: {
-    fontSize: 36,
-    fontFamily: 'Inter_700Bold',
-    color: Colors.primary,
-  },
-  appName: {
-    fontSize: 28,
-    fontFamily: 'Inter_700Bold',
-    color: Colors.foreground,
-    letterSpacing: -0.5,
-  },
-  appTagline: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.mutedForeground,
-    marginTop: 4,
-  },
-  formCard: {
-    backgroundColor: Colors.card,
-    borderRadius: Colors.radiusLg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: 24,
-    marginBottom: 20,
-  },
-  formTitle: {
-    fontSize: 20,
-    fontFamily: 'Inter_600SemiBold',
-    color: Colors.foreground,
-    marginBottom: 4,
-  },
-  formSubtitle: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.mutedForeground,
-    marginBottom: 24,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.muted,
-    borderRadius: Colors.radius,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: 14,
-    marginBottom: 16,
-    height: 52,
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.foreground,
-    height: '100%',
-  },
-  loginBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.primary,
-    borderRadius: Colors.radius,
-    height: 52,
-    gap: 8,
-  },
-  loginBtnDisabled: {
-    opacity: 0.6,
-  },
-  loginBtnText: {
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-    color: Colors.primaryForeground,
-  },
-  disclaimer: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.mutedForeground,
-    textAlign: 'center',
-    marginTop: 16,
-    lineHeight: 18,
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  footerText: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.mutedForeground,
-  },
-});
+function makeStyles(C: AppColors) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: C.background },
+    scroll: { flexGrow: 1, paddingHorizontal: 28, justifyContent: 'center', minHeight: '100%' },
+
+    brand: { alignItems: 'center', marginBottom: 52 },
+    logoBox: {
+      width: 64, height: 64, borderRadius: 18,
+      backgroundColor: C.primary,
+      alignItems: 'center', justifyContent: 'center', marginBottom: 16,
+    },
+    logoLetter: { fontSize: 30, fontFamily: 'Inter_700Bold', color: '#ffffff' },
+    appName: { fontSize: 26, fontFamily: 'Inter_700Bold', color: C.foreground, letterSpacing: -0.5 },
+    tagline: { fontSize: 14, fontFamily: 'Inter_400Regular', color: C.mutedForeground, marginTop: 4 },
+
+    form: { gap: 12 },
+    formLabel: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: C.mutedForeground, marginBottom: 2 },
+    inputRow: {
+      flexDirection: 'row', alignItems: 'center',
+      borderWidth: 1.5, borderColor: C.border,
+      borderRadius: C.radius, paddingHorizontal: 14,
+      height: 54, backgroundColor: C.card,
+    },
+    input: {
+      flex: 1, fontSize: 16, fontFamily: 'Inter_400Regular',
+      color: C.foreground, height: '100%',
+    },
+    btn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      backgroundColor: C.primary, borderRadius: C.radius,
+      height: 54, gap: 8, marginTop: 4,
+    },
+    btnText: { fontSize: 16, fontFamily: 'Inter_700Bold', color: C.primaryForeground },
+    note: {
+      fontSize: 12, fontFamily: 'Inter_400Regular',
+      color: C.mutedForeground, textAlign: 'center', marginTop: 8,
+    },
+  });
+}

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { getApiBase } from '@/lib/query-client';
@@ -52,6 +53,7 @@ export default function CourseScreen() {
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [readChapters, setReadChapters] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     async function load() {
@@ -63,6 +65,14 @@ export default function CourseScreen() {
         const found = all.find(c => c.id === courseId);
         if (!found) throw new Error('Course not found');
         setCourse(found);
+        // Load read state for all chapters in this course
+        const keys = found.chapters.map(ch => `jupeb_chapter_read_${ch.id}`);
+        const vals = await AsyncStorage.multiGet(keys);
+        const readSet = new Set<string>();
+        vals.forEach(([key, val]) => {
+          if (val) readSet.add(key.replace('jupeb_chapter_read_', ''));
+        });
+        setReadChapters(readSet);
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -142,35 +152,65 @@ export default function CourseScreen() {
           </View>
         )}
 
+        {/* Reading progress */}
+        {readChapters.size > 0 && (
+          <View style={styles.progressCard}>
+            <View style={styles.progressRow}>
+              <Text style={styles.progressLabel}>Reading progress</Text>
+              <Text style={[styles.progressPct, { color: accent }]}>
+                {Math.round((readChapters.size / course.chapters.length) * 100)}%
+              </Text>
+            </View>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, {
+                width: `${(readChapters.size / course.chapters.length) * 100}%`,
+                backgroundColor: accent,
+              }]} />
+            </View>
+            <Text style={styles.progressSub}>
+              {readChapters.size} of {course.chapters.length} chapters read
+            </Text>
+          </View>
+        )}
+
         {/* Chapters */}
         <Text style={styles.chaptersLabel}>Chapters ({course.chapters.length})</Text>
-        {course.chapters.map((ch, i) => (
-          <TouchableOpacity
-            key={ch.id}
-            style={styles.chapterCard}
-            onPress={() => router.push(`/notes/chapter/${ch.id}?courseId=${course.id}` as any)}
-            activeOpacity={0.75}
-          >
-            <View style={[styles.chapterNumBox, { backgroundColor: `${accent}18` }]}>
-              <Text style={[styles.chapterNum, { color: accent }]}>{ch.number}</Text>
-            </View>
-            <View style={styles.chapterBody}>
-              <Text style={styles.chapterTitle}>{ch.title}</Text>
-              <Text style={styles.chapterSummary} numberOfLines={2}>{ch.summary}</Text>
-              <View style={styles.chapterStats}>
-                <View style={styles.chapterStat}>
-                  <Ionicons name="document-text-outline" size={11} color={C.mutedForeground} />
-                  <Text style={styles.chapterStatText}>{ch.sectionCount} sections</Text>
-                </View>
-                <View style={styles.chapterStat}>
-                  <Ionicons name="key-outline" size={11} color={C.mutedForeground} />
-                  <Text style={styles.chapterStatText}>{ch.keyTermCount} key terms</Text>
+        {course.chapters.map((ch) => {
+          const isRead = readChapters.has(ch.id);
+          return (
+            <TouchableOpacity
+              key={ch.id}
+              style={[styles.chapterCard, isRead && { opacity: 0.8 }]}
+              onPress={() => router.push(`/notes/chapter/${ch.id}?courseId=${course.id}` as any)}
+              activeOpacity={0.75}
+            >
+              <View style={[styles.chapterNumBox, { backgroundColor: isRead ? `${accent}22` : `${accent}12` }]}>
+                {isRead
+                  ? <Ionicons name="checkmark" size={16} color={accent} />
+                  : <Text style={[styles.chapterNum, { color: accent }]}>{ch.number}</Text>
+                }
+              </View>
+              <View style={styles.chapterBody}>
+                <Text style={styles.chapterTitle}>{ch.title}</Text>
+                <Text style={styles.chapterSummary} numberOfLines={2}>{ch.summary}</Text>
+                <View style={styles.chapterStats}>
+                  <View style={styles.chapterStat}>
+                    <Ionicons name="document-text-outline" size={11} color={C.mutedForeground} />
+                    <Text style={styles.chapterStatText}>{ch.sectionCount} sections</Text>
+                  </View>
+                  <View style={styles.chapterStat}>
+                    <Ionicons name="key-outline" size={11} color={C.mutedForeground} />
+                    <Text style={styles.chapterStatText}>{ch.keyTermCount} key terms</Text>
+                  </View>
+                  {isRead && (
+                    <Text style={[styles.chapterStatText, { color: accent, marginLeft: 'auto' }]}>✓ Read</Text>
+                  )}
                 </View>
               </View>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={C.mutedForeground} />
-          </TouchableOpacity>
-        ))}
+              <Ionicons name="chevron-forward" size={16} color={C.mutedForeground} />
+            </TouchableOpacity>
+          );
+        })}
         <View style={{ height: 100 }} />
       </ScrollView>
     </View>
@@ -227,6 +267,17 @@ function makeStyles(C: AppColors) {
     objectiveRow: { flexDirection: 'row', marginBottom: 10 },
     objectiveDot: { width: 6, height: 6, borderRadius: 3, marginTop: 6, marginRight: 10, flexShrink: 0 },
     objectiveText: { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular', color: C.foreground, lineHeight: 19 },
+
+    progressCard: {
+      backgroundColor: C.card, borderRadius: C.radius,
+      borderWidth: 1, borderColor: C.border, padding: 14, marginBottom: 14,
+    },
+    progressRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+    progressLabel: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: C.foreground },
+    progressPct: { fontSize: 13, fontFamily: 'Inter_700Bold' },
+    progressTrack: { height: 6, borderRadius: 4, backgroundColor: C.border, overflow: 'hidden', marginBottom: 6 },
+    progressFill: { height: '100%', borderRadius: 4 },
+    progressSub: { fontSize: 11, fontFamily: 'Inter_400Regular', color: C.mutedForeground },
 
     chaptersLabel: {
       fontSize: 11, fontFamily: 'Inter_700Bold', color: C.mutedForeground,

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { getApiBase } from '@/lib/query-client';
@@ -132,6 +133,10 @@ export default function ChapterScreen() {
         if (!res.ok) throw new Error(`Server error ${res.status}`);
         const data = await res.json();
         setChapter(data);
+        // Mark chapter as read
+        if (chapterId) {
+          await AsyncStorage.setItem(`jupeb_chapter_read_${chapterId}`, Date.now().toString());
+        }
       } catch (e: any) {
         setError(e.message);
       } finally {
