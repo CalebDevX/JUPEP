@@ -34,24 +34,53 @@ interface ShellProps {
   children: React.ReactNode;
 }
 
-const navItems = [
-  { href: "/",           label: "Dashboard",    icon: LayoutDashboard, color: "text-violet-500"  },
-  { href: "/class",      label: "Class",        icon: GraduationCap,   color: "text-emerald-500" },
-  { href: "/subjects",   label: "Subjects",     icon: Library,         color: "text-blue-500"    },
-  { href: "/syllabus",   label: "Syllabus",     icon: ScrollText,      color: "text-emerald-500" },
-  { href: "/questions",  label: "Question Bank",icon: BookOpen,        color: "text-teal-500"    },
-  { href: "/quiz",       label: "Quiz Mode",    icon: PenTool,         color: "text-orange-500"  },
-  { href: "/flashcards", label: "Flashcards",   icon: Layers,          color: "text-fuchsia-500" },
-  { href: "/community",  label: "Community",    icon: Users,           color: "text-sky-500"     },
-  { href: "/leaderboard",label: "Leaderboard",  icon: Trophy,          color: "text-amber-500"   },
-  { href: "/learn",      label: "AI Learn",     icon: Wand2,           color: "text-rose-500"    },
-  { href: "/voice",      label: "Voice AI",     icon: Mic,             color: "text-green-500"   },
-  { href: "/planner",    label: "Study Planner",icon: Calendar,        color: "text-violet-500"  },
-  { href: "/achievements",label: "Achievements", icon: Medal,           color: "text-amber-500"   },
-  { href: "/history",    label: "History",      icon: History,         color: "text-indigo-500"  },
-  { href: "/progress",   label: "Progress",     icon: TrendingUp,      color: "text-cyan-500"    },
-  { href: "/chat",       label: "AI Tutor",     icon: MessageCircle,   color: "text-amber-500"   },
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+};
+
+const navGroups: { label: string | null; items: NavItem[] }[] = [
+  {
+    label: null,
+    items: [
+      { href: "/",           label: "Dashboard",    icon: LayoutDashboard, color: "text-violet-500"  },
+      { href: "/class",      label: "Class",        icon: GraduationCap,   color: "text-emerald-500" },
+      { href: "/questions",  label: "Question Bank",icon: BookOpen,        color: "text-teal-500"    },
+      { href: "/quiz",       label: "Quiz Mode",    icon: PenTool,         color: "text-orange-500"  },
+    ],
+  },
+  {
+    label: "Study Tools",
+    items: [
+      { href: "/chat",       label: "AI Tutor",     icon: MessageCircle,   color: "text-amber-500"   },
+      { href: "/flashcards", label: "Flashcards",   icon: Layers,          color: "text-fuchsia-500" },
+      { href: "/planner",    label: "Study Planner",icon: Calendar,        color: "text-violet-500"  },
+      { href: "/learn",      label: "AI Learn",     icon: Wand2,           color: "text-rose-500"    },
+      { href: "/voice",      label: "Voice AI",     icon: Mic,             color: "text-green-500"   },
+    ],
+  },
+  {
+    label: "Track",
+    items: [
+      { href: "/progress",    label: "Progress",    icon: TrendingUp,      color: "text-cyan-500"    },
+      { href: "/achievements",label: "Achievements",icon: Medal,           color: "text-amber-500"   },
+      { href: "/leaderboard", label: "Leaderboard", icon: Trophy,          color: "text-amber-500"   },
+    ],
+  },
+  {
+    label: "Explore",
+    items: [
+      { href: "/subjects",   label: "Subjects",     icon: Library,         color: "text-blue-500"    },
+      { href: "/syllabus",   label: "Syllabus",     icon: ScrollText,      color: "text-emerald-500" },
+      { href: "/history",    label: "History",      icon: History,         color: "text-indigo-500"  },
+      { href: "/community",  label: "Community",    icon: Users,           color: "text-sky-500"     },
+    ],
+  },
 ];
+
+const allNavItems: NavItem[] = navGroups.flatMap(g => g.items);
 
 function useProfile() {
   const profile = (() => { try { return JSON.parse(localStorage.getItem("jupeb_profile") || "null"); } catch { return null; } })();
@@ -144,7 +173,7 @@ function NavLink({
   location,
   onClick,
 }: {
-  item: typeof navItems[0];
+  item: NavItem;
   location: string;
   onClick: () => void;
 }) {
@@ -193,7 +222,7 @@ export function Shell({ children }: ShellProps) {
   const { displayName, initial, profilePic, streak, xp, gradeLabel } = useProfile();
 
   const activeItem = useMemo(
-    () => navItems.find(item =>
+    () => allNavItems.find(item =>
       item.href === "/" ? location === "/" : location.startsWith(item.href)
     ),
     [location]
@@ -274,14 +303,27 @@ export function Shell({ children }: ShellProps) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
-        {navItems.map(item => (
-          <NavLink
-            key={item.href}
-            item={item}
-            location={location}
-            onClick={() => setMobileOpen(false)}
-          />
+      <nav className="flex-1 px-3 py-2 overflow-y-auto">
+        {navGroups.map((group, gi) => (
+          <div key={gi} className={gi > 0 ? "mt-1" : ""}>
+            {group.label && (
+              <div className="px-2 pt-3 pb-0.5">
+                <p className="text-[9px] font-bold text-white/20 tracking-[0.15em] uppercase">
+                  {group.label}
+                </p>
+              </div>
+            )}
+            <div className="space-y-0.5">
+              {group.items.map(item => (
+                <NavLink
+                  key={item.href}
+                  item={item}
+                  location={location}
+                  onClick={() => setMobileOpen(false)}
+                />
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
 

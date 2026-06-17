@@ -42,7 +42,7 @@ export default function ProgressPage() {
 
   return (
     <Shell>
-      <div className="p-3 md:p-6 max-w-5xl mx-auto w-full space-y-5 md:space-y-6">
+      <div className="p-3 md:p-6 max-w-5xl mx-auto w-full space-y-4 md:space-y-6 overflow-x-hidden">
 
         {/* Student profile card */}
         {profile && (
@@ -97,7 +97,7 @@ export default function ProgressPage() {
         ) : progress ? (
           <>
             {/* Stat cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+            <div className="grid grid-cols-3 gap-2 md:gap-4">
               {[
                 {
                   icon: Target,
@@ -109,7 +109,7 @@ export default function ProgressPage() {
                 },
                 {
                   icon: Trophy,
-                  label: "Average Score",
+                  label: "Avg Score",
                   value: `${(progress.averageScore ?? 0).toFixed(1)}%`,
                   unit: (progress.averageScore ?? 0) >= 70 ? "Great job!" : (progress.averageScore ?? 0) >= 50 ? "Keep pushing" : "Needs work",
                   color: (progress.averageScore ?? 0) >= 70 ? "bg-emerald-500/15 text-emerald-400" : (progress.averageScore ?? 0) >= 50 ? "bg-amber-500/15 text-amber-400" : "bg-red-500/15 text-red-400",
@@ -117,7 +117,7 @@ export default function ProgressPage() {
                 },
                 {
                   icon: Zap,
-                  label: "Study Streak",
+                  label: "Streak",
                   value: `${progress.streakDays || 0}`,
                   unit: "days",
                   color: "bg-orange-500/15 text-orange-400",
@@ -129,16 +129,16 @@ export default function ProgressPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 }}
-                  className={cn("glass-card p-5 border", stat.border)}
+                  className={cn("glass-card p-3 md:p-5 border", stat.border)}
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", stat.color)}>
-                      <stat.icon className="h-5 w-5" />
+                  <div className="flex items-start justify-between mb-2 md:mb-4">
+                    <div className={cn("w-7 h-7 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center", stat.color)}>
+                      <stat.icon className="h-3.5 w-3.5 md:h-5 md:w-5" />
                     </div>
                   </div>
-                  <p className="text-3xl font-bold text-white font-serif">{stat.value}</p>
-                  <p className="text-xs text-white/40 mt-1">{stat.label}</p>
-                  <p className="text-xs text-white/25 mt-0.5">{stat.unit}</p>
+                  <p className="text-xl md:text-3xl font-bold text-white font-serif leading-tight">{stat.value}</p>
+                  <p className="text-[10px] md:text-xs text-white/40 mt-1 leading-tight">{stat.label}</p>
+                  <p className="text-[9px] md:text-xs text-white/25 mt-0.5 leading-tight hidden sm:block">{stat.unit}</p>
                 </motion.div>
               ))}
             </div>
