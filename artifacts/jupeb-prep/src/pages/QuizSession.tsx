@@ -19,7 +19,7 @@ export default function QuizSession() {
   const { toast } = useToast();
 
   const { data: session, isLoading } = useGetQuizSession(id, {
-    query: { enabled: !!id },
+    query: { enabled: !!id } as any,
   });
 
   const submitQuiz = useSubmitQuiz();
@@ -127,12 +127,12 @@ export default function QuizSession() {
             </div>
             {timeLeft !== null && (
               <div className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-mono text-sm font-bold border",
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-mono text-sm font-bold border transition-all duration-300",
                 isLowTime
-                  ? "bg-red-500/15 text-red-400 border-red-500/25 animate-pulse"
+                  ? "bg-red-500/20 text-red-300 border-red-500/40 glow-rose animate-pulse"
                   : "bg-white/5 text-white border-white/10"
               )}>
-                <Clock className="h-3.5 w-3.5" />{formatTime(timeLeft)}
+                <Clock className={cn("h-3.5 w-3.5", isLowTime && "animate-spin")} style={{ animationDuration: isLowTime ? "3s" : "0s" }} />{formatTime(timeLeft)}
               </div>
             )}
             <button
@@ -148,11 +148,11 @@ export default function QuizSession() {
         </div>
 
         {/* Progress bar */}
-        <div className="h-0.5 bg-white/5 flex-shrink-0">
+        <div className="h-1 bg-white/5 flex-shrink-0 overflow-hidden relative">
           <motion.div
-            className="h-full bg-gradient-to-r from-violet-500 to-indigo-500"
+            className="h-full bg-gradient-to-r from-violet-500 via-indigo-500 to-violet-400 progress-glow animate-pulse-subtle"
             animate={{ width: `${((currentIndex + 1) / total) * 100}%` }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
           />
         </div>
 
@@ -163,17 +163,17 @@ export default function QuizSession() {
               <AnimatePresence mode="wait">
                 <motion.div
                   key={currentIndex}
-                  initial={{ opacity: 0, x: 16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -16 }}
-                  transition={{ duration: 0.18 }}
+                  initial={{ opacity: 0, x: 20, filter: "blur(6px)" }}
+                  animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, x: -20, filter: "blur(6px)" }}
+                  transition={{ duration: 0.22, ease: "easeInOut" }}
                   className="space-y-4"
                 >
                   {/* Question text */}
-                  <div className="glass-card p-6">
+                  <div className="glass-card-premium p-6">
                     <div className="flex items-center justify-between gap-3 mb-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-violet-400 bg-violet-500/15 px-2.5 py-1 rounded-lg border border-violet-500/20">
+                        <span className="text-xs font-bold text-violet-400 bg-violet-500/15 px-2.5 py-1 rounded-lg border border-violet-500/20 shadow-[0_0_8px_rgba(139,92,246,0.15)]">
                           Q{currentIndex + 1} / {total}
                         </span>
                         {question.marks && (
@@ -184,7 +184,7 @@ export default function QuizSession() {
                       </div>
                       {isCurrentAnswered && (
                         <span className="flex items-center gap-1 text-[10px] text-emerald-400">
-                          <CheckCircle2 className="h-3 w-3" /> Answered
+                          <CheckCircle2 className="h-3 w-3 animate-pulse" /> Answered
                         </span>
                       )}
                     </div>
@@ -203,24 +203,29 @@ export default function QuizSession() {
                         return (
                           <motion.button
                             key={i}
-                            whileTap={{ scale: 0.998 }}
+                            animate={isSelected ? { scale: [1, 1.015, 1], boxShadow: "0 0 15px rgba(139, 92, 246, 0.3)" } : { scale: 1, boxShadow: "none" }}
+                            whileTap={{ scale: 0.98 }}
                             onClick={() => handleSelect(question.id, label)}
                             className={cn(
-                              "w-full text-left p-4 rounded-2xl border transition-all duration-150 flex items-start gap-4 group",
+                              "w-full text-left p-4 rounded-2xl border transition-all duration-200 flex items-start gap-4 group relative overflow-hidden",
                               isSelected
-                                ? "bg-violet-500/18 border-violet-500/50 shadow-[0_0_0_1px_rgba(139,92,246,0.3)]"
+                                ? "bg-violet-500/18 border-violet-500/60 shadow-[0_0_12px_rgba(139,92,246,0.15)]"
                                 : "bg-white/3 border-white/8 hover:bg-white/6 hover:border-white/18"
                             )}
                           >
                             <div className={cn(
-                              "w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 transition-colors",
-                              isSelected ? "bg-violet-500 text-white" : "bg-white/8 text-white/50 group-hover:bg-white/12 group-hover:text-white/70"
+                              "w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 transition-all duration-300",
+                              isSelected 
+                                ? "bg-violet-500 text-white rotate-[360deg] scale-110 shadow-[0_0_8px_rgba(139,92,246,0.5)]" 
+                                : "bg-white/8 text-white/50 group-hover:bg-white/12 group-hover:text-white/70"
                             )}>
-                              {label}
+                              {isSelected ? (
+                                <CheckCircle2 className="w-4 h-4 text-white" />
+                              ) : label}
                             </div>
                             <p className={cn(
-                              "pt-1 text-sm leading-relaxed",
-                              isSelected ? "text-white" : "text-white/65"
+                              "pt-1 text-sm leading-relaxed transition-colors duration-200",
+                              isSelected ? "text-white font-medium" : "text-white/65"
                             )}>
                               {opt}
                             </p>
@@ -349,26 +354,29 @@ export default function QuizSession() {
           </Button>
 
           {/* Question dots */}
-          <div className="flex gap-1 overflow-x-auto max-w-[200px] md:max-w-sm">
+          <div className="flex gap-1 overflow-x-auto max-w-[200px] md:max-w-sm py-1">
             {session.questions.map((q, i) => {
               const isAns = q.questionType === "objective"
                 ? !!answers[q.id]?.selectedOption
                 : !!answers[q.id]?.theoryAnswer;
+              const isCurrent = i === currentIndex;
               return (
-                <button
+                <motion.button
                   key={q.id}
+                  animate={isCurrent ? { scale: [1, 1.15, 1.1] } : { scale: 1 }}
+                  transition={{ duration: 0.3 }}
                   onClick={() => setCurrentIndex(i)}
                   className={cn(
                     "w-6 h-6 md:w-7 md:h-7 rounded-md text-[9px] md:text-[10px] font-bold flex-shrink-0 transition-all",
-                    i === currentIndex
-                      ? "bg-violet-500 text-white scale-110"
+                    isCurrent
+                      ? "bg-violet-500 text-white shadow-[0_0_12px_rgba(139,92,246,0.6)]"
                       : isAns
-                      ? "bg-emerald-500/20 text-emerald-400"
-                      : "bg-white/5 text-white/35 hover:bg-white/10"
+                      ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+                      : "bg-white/5 text-white/35 hover:bg-white/10 border border-white/5"
                   )}
                 >
                   {i + 1}
-                </button>
+                </motion.button>
               );
             })}
           </div>
@@ -377,21 +385,22 @@ export default function QuizSession() {
             <Button
               size="sm"
               onClick={() => setCurrentIndex(p => Math.min(total - 1, p + 1))}
-              className="bg-violet-600 hover:bg-violet-500 text-white gap-1"
+              className="bg-violet-600 hover:bg-violet-500 text-white gap-1 transition-transform active:scale-95"
             >
               Next <ChevronRight className="h-4 w-4" />
             </Button>
           ) : (
-            <Button
-              size="sm"
+            <motion.button
+              whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(16, 185, 129, 0.4)" }}
+              whileTap={{ scale: 0.95 }}
               onClick={handleComplete}
               disabled={submitQuiz.isPending}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold min-w-[110px] gap-1.5"
+              className="h-9 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg shadow-lg flex items-center justify-center gap-1.5 btn-shimmer pulse-ring-emerald min-w-[110px]"
             >
               {submitQuiz.isPending
                 ? <><div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />Submitting…</>
                 : <><Send className="h-3.5 w-3.5" />Submit Quiz</>}
-            </Button>
+            </motion.button>
           )}
         </div>
       </div>

@@ -16,6 +16,7 @@ import leaderboardRouter from "./leaderboard";
 import ttsRouter from "./tts";
 import paymentRouter from "./payment";
 import whatsappRouter from "./whatsapp";
+import yarngptRouter from "./yarngpt";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(leaderboardRouter);
 router.use(ttsRouter);
 router.use(paymentRouter);
 router.use(whatsappRouter);
+router.use(yarngptRouter);
 
 export default router;

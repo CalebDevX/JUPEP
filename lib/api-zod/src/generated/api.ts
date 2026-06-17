@@ -256,7 +256,8 @@ export const StartQuizBody = zod.object({
   "questionType": zod.enum(['objective', 'theory', 'mixed']),
   "year": zod.number().nullish(),
   "questionCount": zod.number().nullish(),
-  "timedMinutes": zod.number().nullish()
+  "timedMinutes": zod.number().nullish(),
+  "shuffle": zod.boolean().nullish()
 })
 
 

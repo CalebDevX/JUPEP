@@ -590,6 +590,8 @@ components:
           type: ["integer", "null"]
         timedMinutes:
           type: ["integer", "null"]
+        shuffle:
+          type: ["boolean", "null"]
 
     QuizSession:
       type: object

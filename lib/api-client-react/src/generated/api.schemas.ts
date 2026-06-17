@@ -192,6 +192,8 @@ export interface QuizStartInput {
   questionCount?: number | null;
   /** @nullable */
   timedMinutes?: number | null;
+  /** @nullable */
+  shuffle?: boolean | null;
 }
 
 export type QuizSessionStatus = typeof QuizSessionStatus[keyof typeof QuizSessionStatus];

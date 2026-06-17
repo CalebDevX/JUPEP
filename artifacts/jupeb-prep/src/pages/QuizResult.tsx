@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle2, ChevronRight, BarChart3, AlertCircle,
-  RotateCcw, BookOpen, Trophy, Target, Zap, Star,
+  RotateCcw, BookOpen, Trophy, Target, Zap, Star, Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Confetti, StarBurst } from "@/components/Confetti";
@@ -37,7 +37,7 @@ export default function QuizResult() {
   const [showXPBanner, setShowXPBanner] = useState(false);
   const [confettiActive, setConfettiActive] = useState(false);
 
-  const { data: session, isLoading } = useGetQuizSession(id, { query: { enabled: !!id } });
+  const { data: session, isLoading } = useGetQuizSession(id, { query: { enabled: !!id } as any });
 
   useEffect(() => {
     if (!session || session.status !== "completed") return;
@@ -134,16 +134,26 @@ export default function QuizResult() {
               initial={{ opacity: 0, y: -16, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.97 }}
-              className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500/15 border border-amber-500/30"
+              className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-500/20 to-orange-500/10 border border-amber-500/40 relative overflow-hidden shadow-[0_0_20px_rgba(245,158,11,0.15)]"
             >
-              <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                <Zap className="h-4 w-4 text-amber-400" />
+              {/* Sparkles background effect */}
+              <div className="absolute inset-0 pointer-events-none opacity-40">
+                <StarBurst count={6} />
               </div>
-              <div>
+              <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0 relative z-10">
+                <Zap className="h-4 w-4 text-amber-400 animate-bounce" />
+              </div>
+              <div className="relative z-10">
                 <p className="text-sm font-bold text-amber-300">+{xpGained} XP earned!</p>
                 <p className="text-xs text-amber-400/60">Keep studying to level up</p>
               </div>
-              <Star className="h-5 w-5 text-amber-400 ml-auto" style={{ animation: "spin 3s linear infinite" }} />
+              <motion.div 
+                className="ml-auto relative z-10"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+              >
+                <Star className="h-5 w-5 text-amber-400" />
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -152,21 +162,25 @@ export default function QuizResult() {
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass-card overflow-hidden"
+          className={cn(
+            "glass-card-premium overflow-hidden transition-all duration-500",
+            pct >= 70 ? "border-emerald-500/25" : pct >= 60 ? "border-sky-500/25" : pct >= 50 ? "border-amber-500/25" : "border-rose-500/25"
+          )}
         >
           <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Grade */}
             <div className={cn(
-              "flex flex-col items-center justify-center text-center p-6 rounded-2xl border relative overflow-hidden",
-              gradeBg
+              "flex flex-col items-center justify-center text-center p-6 rounded-2xl border relative overflow-hidden transition-all duration-500",
+              gradeBg,
+              pct >= 70 ? "glow-emerald" : pct >= 60 ? "glow-blue" : pct >= 50 ? "glow-orange" : "glow-rose"
             )}>
-              {pct >= 70 && <StarBurst count={10} />}
-              <p className="text-xs font-bold text-white/40 uppercase tracking-widest mb-2 relative z-10">Final Grade</p>
+              {pct >= 70 && <StarBurst count={12} />}
+              <p className="text-xs font-bold text-white/45 uppercase tracking-widest mb-2 relative z-10">Final Grade</p>
               <motion.div
-                initial={{ scale: 0, rotate: -10 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.2 }}
-                className={cn("text-8xl font-black font-serif leading-none mb-2 relative z-10", gradeColor)}
+                initial={{ scale: 0.2, rotate: -35, filter: "blur(8px)", opacity: 0 }}
+                animate={{ scale: 1, rotate: 0, filter: "blur(0px)", opacity: 1 }}
+                transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.3 }}
+                className={cn("text-8.5xl font-black font-serif leading-none mb-2 relative z-10 filter drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]", gradeColor)}
               >
                 {grade}
               </motion.div>
@@ -188,13 +202,13 @@ export default function QuizResult() {
                 <div className="flex justify-between text-xs text-white/50">
                   <span>Performance</span><span className={gradeColor}>{pct}%</span>
                 </div>
-                <div className="h-2 rounded-full bg-white/8 overflow-hidden">
+                <div className="h-2.5 rounded-full bg-white/8 overflow-hidden relative">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${pct}%` }}
-                    transition={{ duration: 1, ease: "easeOut", delay: 0.3 }}
+                    transition={{ duration: 1.2, ease: "easeOut", delay: 0.4 }}
                     className={cn(
-                      "h-full rounded-full",
+                      "h-full rounded-full progress-glow",
                       pct >= 70 ? "bg-emerald-500" : pct >= 60 ? "bg-sky-500" : pct >= 50 ? "bg-amber-500" : "bg-red-500"
                     )}
                   />
@@ -246,7 +260,10 @@ export default function QuizResult() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="glass-card overflow-hidden"
+                className={cn(
+                  "glass-card overflow-hidden transition-all duration-300",
+                  i % 2 === 0 ? "bg-white/[0.03]" : "bg-white/[0.01]"
+                )}
               >
                 <div className="px-5 py-3 border-b border-white/6 flex items-center gap-2">
                   <span className="text-xs font-bold text-white/40">Q{i + 1}</span>
@@ -265,12 +282,14 @@ export default function QuizResult() {
                         const label = ["A", "B", "C", "D"][idx];
                         const isCorrect = q.correctOption === label;
                         return (
-                          <div
+                          <motion.div
                             key={idx}
+                            animate={isCorrect ? { scale: [1, 1.015, 1], boxShadow: "0 0 12px rgba(16, 185, 129, 0.2)" } : {}}
+                            transition={{ duration: 1.5, repeat: isCorrect ? Infinity : 0, repeatDelay: 3 }}
                             className={cn(
-                              "p-3 rounded-xl border text-xs flex items-start gap-2.5",
+                              "p-3 rounded-xl border text-xs flex items-start gap-2.5 transition-all duration-300",
                               isCorrect
-                                ? "bg-emerald-500/12 border-emerald-500/30 text-emerald-300"
+                                ? "bg-emerald-500/12 border-emerald-500/35 text-emerald-300 font-medium"
                                 : "bg-white/3 border-white/6 text-white/45 opacity-70"
                             )}
                           >
@@ -279,7 +298,7 @@ export default function QuizResult() {
                             </span>
                             <span>{opt}</span>
                             {isCorrect && <CheckCircle2 className="h-3.5 w-3.5 ml-auto flex-shrink-0 text-emerald-400" />}
-                          </div>
+                          </motion.div>
                         );
                       })}
                     </div>

@@ -12,13 +12,16 @@ export function useReadAloud() {
   const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   useEffect(() => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    if (typeof window === "undefined" || !window.speechSynthesis) return () => {};
     const load = () => setVoicesReady(true);
     if (speechSynthesis.getVoices().length > 0) {
       setVoicesReady(true);
+      return () => {};
     } else {
       speechSynthesis.addEventListener("voiceschanged", load);
-      return () => speechSynthesis.removeEventListener("voiceschanged", load);
+      return () => {
+        speechSynthesis.removeEventListener("voiceschanged", load);
+      };
     }
   }, []);
 

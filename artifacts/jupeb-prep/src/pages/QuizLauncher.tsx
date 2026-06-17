@@ -156,7 +156,7 @@ export default function QuizLauncher() {
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="text-center mb-6 md:mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-orange-500/15 flex items-center justify-center mx-auto mb-4 border border-orange-500/20">
+          <div className="relative w-16 h-16 rounded-2xl bg-orange-500/15 flex items-center justify-center mx-auto mb-4 border border-orange-500/20 pulse-ring-amber float">
             <Zap className="h-8 w-8 text-orange-400" />
           </div>
           <h1 className="text-2xl md:text-3xl font-bold font-serif text-white">Launch Quiz Session</h1>
@@ -208,25 +208,30 @@ export default function QuizLauncher() {
                 const active = paper === p.value;
                 const has = paperHasQuestions(p.value);
                 return (
-                  <button
+                  <motion.button
                     key={p.value}
+                    whileHover={{ scale: 1.03, boxShadow: active ? "0 0 15px rgba(139,92,246,0.3)" : "0 0 10px rgba(255,255,255,0.05)" }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={() => setPaper(p.value)}
                     className={cn(
-                      "relative flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-xl border text-left transition-all text-sm",
+                      "relative flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-xl border text-left transition-all text-sm overflow-hidden",
                       active
-                        ? "bg-violet-600/20 border-violet-500/50 text-white"
+                        ? "bg-violet-600/20 border-violet-500/80 text-white shadow-[0_0_15px_rgba(139,92,246,0.15)]"
                         : "bg-white/3 border-white/8 text-white/60 hover:bg-white/6 hover:text-white/80"
                     )}
                   >
+                    {active && (
+                      <div className="absolute inset-0 border border-violet-400/30 rounded-xl pointer-events-none animate-pulse" />
+                    )}
                     <span className={cn("font-bold text-[13px]", active ? "text-white" : "text-white/70")}>{p.label}</span>
                     <span className={cn("text-[10px] flex items-center gap-1",
                       has ? (active ? "text-emerald-400" : "text-emerald-500/60")
                           : (active ? "text-white/30" : "text-white/20"))}>
                       {has
-                        ? <><CheckCircle2 className="h-2.5 w-2.5" /> Questions available</>
+                        ? <><CheckCircle2 className="h-2.5 w-2.5 animate-bounce" /> Questions available</>
                         : <><XCircle className="h-2.5 w-2.5" /> No questions yet</>}
                     </span>
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>
@@ -415,9 +420,21 @@ export default function QuizLauncher() {
 
           {/* Session Summary */}
           {subjectId && hasQuestions && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-              className="p-4 rounded-xl bg-violet-500/10 border border-violet-500/20">
-              <p className="text-xs text-violet-300 font-semibold uppercase tracking-wider mb-2">Session Summary</p>
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className={cn(
+                "p-4 rounded-xl border transition-all duration-500 bg-gradient-to-r",
+                isMixed 
+                  ? "from-amber-600/15 to-orange-600/10 border-amber-500/30 text-amber-100" 
+                  : type === "theory"
+                  ? "from-emerald-600/15 to-teal-600/10 border-emerald-500/30 text-emerald-100"
+                  : "from-violet-600/15 to-indigo-600/10 border-violet-500/30 text-violet-100"
+              )}
+            >
+              <p className={cn("text-xs font-semibold uppercase tracking-wider mb-2",
+                isMixed ? "text-amber-300" : type === "theory" ? "text-emerald-300" : "text-violet-300"
+              )}>Session Summary</p>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
                   <p className="text-white font-bold text-sm truncate">{subjects?.find(s => s.id === Number(subjectId))?.name.split("-")[0]}</p>
@@ -436,16 +453,17 @@ export default function QuizLauncher() {
           )}
 
           {/* Begin Quiz Button */}
-          <Button
-            size="lg"
-            className={cn(
-              "w-full h-12 text-white font-bold rounded-xl shadow-lg transition-all",
-              hasQuestions && subjectId
-                ? "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500"
-                : "bg-white/8 border border-white/10"
-            )}
+          <motion.button
+            whileHover={hasQuestions && subjectId ? { scale: 1.02, boxShadow: "0 0 25px rgba(139,92,246,0.5)" } : {}}
+            whileTap={hasQuestions && subjectId ? { scale: 0.98 } : {}}
             disabled={!subjectId || !hasQuestions || startQuiz.isPending}
             onClick={handleStart}
+            className={cn(
+              "w-full h-12 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center relative overflow-hidden",
+              hasQuestions && subjectId
+                ? "bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-700 hover:from-violet-500 hover:to-indigo-500 btn-shimmer pulse-ring"
+                : "bg-white/8 border border-white/10 cursor-not-allowed opacity-50"
+            )}
           >
             {startQuiz.isPending ? (
               <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Starting Session…</>
@@ -454,20 +472,25 @@ export default function QuizLauncher() {
             ) : (
               <><PlayCircle className="h-5 w-5 mr-2" /> Begin Quiz Session</>
             )}
-          </Button>
+          </motion.button>
         </motion.div>
 
         {/* Feature tips */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
           className="mt-4 grid grid-cols-3 gap-3">
           {[
-            { icon: Target,   text: "Past questions from real JUPEB papers" },
-            { icon: Timer,    text: "Train at exam speed with Best Time mode" },
-            { icon: BookOpen, text: "Answers & explanations after quiz" },
+            { icon: Target,   text: "Past questions from real JUPEB papers", animation: { rotate: [0, 10, -10, 0] } },
+            { icon: Timer,    text: "Train at exam speed with Best Time mode", animation: { scale: [1, 1.12, 1] } },
+            { icon: BookOpen, text: "Answers & explanations after quiz", animation: { y: [0, -3, 0] } },
           ].map((tip, i) => (
-            <div key={i} className="flex flex-col items-center text-center p-3 rounded-xl bg-white/2 border border-white/5">
-              <tip.icon className="h-4 w-4 text-white/30 mb-1.5" />
-              <p className="text-[10px] text-white/30 leading-relaxed">{tip.text}</p>
+            <div key={i} className="flex flex-col items-center text-center p-3 rounded-xl bg-white/2 border border-white/5 group hover:bg-white/4 transition-colors">
+              <motion.div
+                animate={tip.animation}
+                transition={{ repeat: Infinity, duration: 4, delay: i * 0.5, ease: "easeInOut" }}
+              >
+                <tip.icon className="h-4 w-4 text-violet-400/55 group-hover:text-violet-400 mb-1.5 transition-colors" />
+              </motion.div>
+              <p className="text-[10px] text-white/30 leading-relaxed group-hover:text-white/50 transition-colors">{tip.text}</p>
             </div>
           ))}
         </motion.div>
