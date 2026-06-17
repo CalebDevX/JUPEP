@@ -3,14 +3,23 @@ import { Platform } from 'react-native';
 
 function resolveApiUrl(): string {
   if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
-  if (Platform.OS === 'android') return 'http://10.0.2.2:3000';
-  return 'http://localhost:3000';
+  // Web (browser): proxy /api on the same origin
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined') {
+      return window.location.origin + '/api';
+    }
+    return '/api';
+  }
+  // Android emulator
+  if (Platform.OS === 'android') return 'http://10.0.2.2:3000/api';
+  return 'http://localhost:3000/api';
 }
 
-export const API_BASE_URL = resolveApiUrl();
-
-export function getApiUrl() {
-  return API_BASE_URL;
+export function getApiUrl(): string {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    return window.location.origin + '/api';
+  }
+  return resolveApiUrl();
 }
 
 export const queryClient = new QueryClient({

@@ -11,8 +11,11 @@ import {
 const SYNC_STALE_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 async function fetchJSON<T>(path: string): Promise<T> {
-  const url = new URL(path, getApiUrl());
-  const res = await fetch(url.toString());
+  // Concatenate rather than using `new URL()` so that a base ending in /api
+  // plus a path like /subjects yields /api/subjects (not just /subjects).
+  const base = getApiUrl().replace(/\/$/, '');
+  const full = base + (path.startsWith('/') ? path : '/' + path);
+  const res = await fetch(full);
   if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
   return res.json() as Promise<T>;
 }
@@ -69,7 +72,6 @@ export async function syncQuizData(
       const pageSize = 100;
       const allQuestions: ApiQuestion[] = [];
 
-      // Paginate to get all questions
       while (true) {
         const page = await fetchJSON<ApiQuestion[]>(
           `/questions?subjectId=${subject.id}&limit=${pageSize}&offset=${offset}`
@@ -81,7 +83,6 @@ export async function syncQuizData(
 
       if (allQuestions.length === 0) continue;
 
-      // Group by paper + questionType + year
       const groups = new Map<string, ApiQuestion[]>();
       for (const q of allQuestions) {
         const key = `${subject.id}-${q.paper}-${q.questionType}-${q.year}`;
