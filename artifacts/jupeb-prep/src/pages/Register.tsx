@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  User, Phone, Mail, KeyRound, Building2,
-  ArrowLeft, Loader2, CheckCircle2, Eye, EyeOff,
+  User, Phone, KeyRound,
+  ArrowLeft, Loader2, CheckCircle2,
   BookOpen, ChevronRight, ArrowRight, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -30,20 +30,6 @@ const GRADE_OPTIONS = [
   { value: "ccc1", label: "CCC+1", points: "9 pts", desc: "Arts · Humanities", color: "border-sky-500/50 bg-sky-500/10 text-sky-300 ring-sky-500/30" },
 ];
 
-const POPULAR_UNIS = [
-  "University of Lagos (UNILAG)",
-  "University of Ibadan (UI)",
-  "Obafemi Awolowo University (OAU)",
-  "University of Nigeria, Nsukka (UNN)",
-  "Ahmadu Bello University (ABU Zaria)",
-  "University of Benin (UNIBEN)",
-  "Lagos State University (LASU)",
-  "Covenant University",
-  "Pan-Atlantic University",
-  "Babcock University",
-  "Federal University of Technology, Akure (FUTA)",
-  "University of Port Harcourt (UNIPORT)",
-];
 
 function Field({
   label, placeholder, value, onChange, type = "text", icon: Icon, required, hint, maxLength,
@@ -52,8 +38,6 @@ function Field({
   onChange: (v: string) => void; type?: string;
   icon?: any; required?: boolean; hint?: string; maxLength?: number;
 }) {
-  const [show, setShow] = useState(false);
-  const isPassword = type === "password";
   return (
     <div className="space-y-1.5">
       <label className="text-[11px] font-bold text-white/45 tracking-[0.12em] uppercase">
@@ -64,88 +48,19 @@ function Field({
         <div className="relative flex items-center bg-white/[0.05] border border-white/[0.09] rounded-xl group-focus-within:border-violet-500/40 transition-colors duration-200">
           {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 pointer-events-none" />}
           <input
-            type={isPassword && show ? "text" : type}
+            type={type}
             placeholder={placeholder}
             value={value}
             onChange={e => onChange(e.target.value)}
             maxLength={maxLength}
             className={cn(
               "w-full bg-transparent px-4 py-3 text-sm text-white placeholder:text-white/18 focus:outline-none",
-              Icon ? "pl-10" : "",
-              isPassword ? "pr-11" : ""
+              Icon ? "pl-10" : ""
             )}
           />
-          {isPassword && (
-            <button type="button" onClick={() => setShow(v => !v)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/50 transition-colors">
-              {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-          )}
         </div>
       </div>
       {hint && <p className="text-[11px] text-white/25 pl-0.5">{hint}</p>}
-    </div>
-  );
-}
-
-function UniInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const filtered = value
-    ? POPULAR_UNIS.filter(u => u.toLowerCase().includes(value.toLowerCase()))
-    : POPULAR_UNIS;
-
-  useEffect(() => {
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-
-  return (
-    <div className="relative" ref={ref}>
-      <div className="space-y-1.5">
-        <label className="text-[11px] font-bold text-white/45 tracking-[0.12em] uppercase">
-          Target University <span className="text-rose-400">*</span>
-        </label>
-        <div className="relative group">
-          <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-violet-600/20 to-indigo-600/20 opacity-0 group-focus-within:opacity-100 blur-sm transition-opacity duration-300 pointer-events-none" />
-          <div className="relative flex items-center bg-white/[0.05] border border-white/[0.09] rounded-xl group-focus-within:border-violet-500/40 transition-colors duration-200">
-            <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="e.g. University of Lagos (UNILAG)"
-              value={value}
-              onChange={e => { onChange(e.target.value); setOpen(true); }}
-              onFocus={() => setOpen(true)}
-              className="w-full bg-transparent pl-10 pr-4 py-3 text-sm text-white placeholder:text-white/18 focus:outline-none"
-            />
-          </div>
-        </div>
-      </div>
-      <AnimatePresence>
-        {open && filtered.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.98 }}
-            transition={{ duration: 0.15 }}
-            className="absolute top-full left-0 right-0 mt-1.5 bg-[#1a1a28] border border-white/10 rounded-xl shadow-2xl shadow-black/50 z-50 overflow-hidden"
-          >
-            <div className="max-h-44 overflow-y-auto divide-y divide-white/[0.04]">
-              {filtered.slice(0, 8).map(u => (
-                <button
-                  key={u} type="button"
-                  onClick={() => { onChange(u); setOpen(false); }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/[0.05] transition-colors flex items-center gap-2.5"
-                >
-                  <Building2 className="h-3.5 w-3.5 text-white/20 shrink-0" />
-                  {u}
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
@@ -155,8 +70,6 @@ export default function Register() {
   const [step, setStep] = useState<1 | 2>(1);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [targetUniversity, setTargetUniversity] = useState("");
   const [targetGrade, setTargetGrade] = useState("aaa1");
   const [subjects, setSubjects] = useState<string[]>([]);
   const [accessCode, setAccessCode] = useState("");
@@ -173,7 +86,6 @@ export default function Register() {
   const handleStep1 = () => {
     if (!fullName.trim()) return setError("Please enter your full name.");
     if (!phone.trim() || phone.replace(/\D/g, "").length < 10) return setError("Please enter a valid phone number (at least 10 digits).");
-    if (!targetUniversity.trim()) return setError("Please enter your target university.");
     setError("");
     setStep(2);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -191,9 +103,7 @@ export default function Register() {
         body: JSON.stringify({
           fullName: fullName.trim(),
           phone: phone.trim(),
-          email: email.trim() || null,
           subjects,
-          targetUniversity: targetUniversity.trim(),
           targetGrade,
           accessCode: hasCode ? accessCode.trim().toUpperCase() : "",
         }),
@@ -324,13 +234,6 @@ export default function Register() {
                       <p className="text-[11px] text-white/25 pl-0.5">Used to log in — keep it safe</p>
                     </div>
                   </div>
-
-                  <Field
-                    label="Email Address (optional)" placeholder="you@example.com"
-                    value={email} onChange={setEmail} icon={Mail} type="email"
-                  />
-
-                  <UniInput value={targetUniversity} onChange={setTargetUniversity} />
 
                   {/* Target grade */}
                   <div className="space-y-2">

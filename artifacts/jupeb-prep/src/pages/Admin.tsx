@@ -1592,6 +1592,52 @@ function SettingsTab() {
           </div>
         )}
       </Section>
+
+      <Section title="Paystack Integration">
+        <p className="text-xs text-white/40 -mt-2 leading-relaxed">
+          Paystack is already configured via environment secrets. Copy the webhook URL below and paste it into your{" "}
+          <a href="https://dashboard.paystack.com/#/settings/developer" target="_blank" rel="noopener noreferrer"
+            className="text-green-400 hover:underline">Paystack Dashboard → Settings → API Keys & Webhooks</a>.
+        </p>
+        <div className="p-4 rounded-xl bg-white/3 border border-white/8 space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
+              <DollarSign className="h-4 w-4 text-green-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white">Webhook URL</p>
+              <p className="text-xs text-white/40 mt-0.5">Paste this in Paystack → Settings → API Keys & Webhooks → Webhook URL</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-black/30 border border-white/10 font-mono text-xs text-emerald-300 truncate select-all">
+              {typeof window !== "undefined" ? window.location.origin : ""}/api/payment/webhook
+            </div>
+            <Button
+              size="sm"
+              className="bg-green-700 hover:bg-green-600 text-white h-9 px-4 flex-shrink-0"
+              onClick={() => {
+                navigator.clipboard.writeText(`${window.location.origin}/api/payment/webhook`);
+              }}
+            >
+              Copy
+            </Button>
+          </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/8 border border-emerald-500/15 rounded-xl text-xs text-emerald-400">
+              <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" />
+              PAYSTACK_SECRET_KEY is set in environment secrets ✓
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/8 border border-emerald-500/15 rounded-xl text-xs text-emerald-400">
+              <CheckCircle className="h-3.5 w-3.5 flex-shrink-0" />
+              PAYSTACK_PUBLIC_KEY is set in environment secrets ✓
+            </div>
+          </div>
+          <p className="text-[11px] text-white/25 leading-relaxed">
+            After setting the webhook URL, Paystack will automatically notify this server when a student completes payment, activating their account instantly — even if they close the browser.
+          </p>
+        </div>
+      </Section>
     </div>
   );
 }
