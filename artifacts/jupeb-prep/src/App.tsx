@@ -50,26 +50,31 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   const profile = getProfile();
   const isAuth = !!profile;
 
+  function checkSession() {
+    const currentProfile = getProfile();
+    const token = localStorage.getItem("jupeb_session_token");
+    if (!token || !currentProfile?.phone) return;
+    fetch(`/api/auth/verify-session?phone=${encodeURIComponent(currentProfile.phone)}`, {
+      headers: { "x-session-token": token },
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.valid === false) {
+          const pic = localStorage.getItem("jupeb_profile_picture");
+          localStorage.clear();
+          if (pic) localStorage.setItem("jupeb_profile_picture", pic);
+          navigate("/auth");
+        }
+      })
+      .catch(() => {});
+  }
+
   useEffect(() => {
     if (!isAuth) { navigate("/auth"); return; }
-    // Session check: if someone else logged in with the same phone, this token is stale
-    const token = localStorage.getItem("jupeb_session_token");
-    if (token && profile?.phone) {
-      fetch(`/api/auth/verify-session?phone=${encodeURIComponent(profile.phone)}`, {
-        headers: { "x-session-token": token },
-      })
-        .then(r => r.json())
-        .then(data => {
-          if (data.valid === false) {
-            // Another login invalidated this session — force sign out
-            const pic = localStorage.getItem("jupeb_profile_picture");
-            localStorage.clear();
-            if (pic) localStorage.setItem("jupeb_profile_picture", pic);
-            navigate("/auth");
-          }
-        })
-        .catch(() => {}); // network errors → stay logged in
-    }
+    checkSession();
+    // Re-check every 5 minutes — kicks device off if account logs in elsewhere
+    const interval = setInterval(checkSession, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, [isAuth]);
 
   if (!isAuth) return null;

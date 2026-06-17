@@ -7,6 +7,7 @@ import {
   EyeOff, Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -265,39 +266,33 @@ export default function Flashcards() {
             className="glass-card p-6 space-y-5">
             <div className="space-y-2">
               <label className="text-xs text-white/50 font-semibold uppercase tracking-wider">Select Subject</label>
-              <div className="grid grid-cols-1 gap-2.5">
-                {subjects.map(s => (
-                  <button key={s.id} onClick={() => setSelectedSubject(s.id)}
-                    className={cn("text-left p-4 rounded-2xl border transition-all flex items-center gap-3",
-                      selectedSubject === s.id
-                        ? "bg-violet-500/15 border-violet-500/40 ring-1 ring-violet-500/20"
-                        : "bg-white/3 border-white/8 hover:bg-white/6"
-                    )}>
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: (s.color || "#6366f1") + "20", color: s.color || "#a78bfa" }}>
-                      <BookOpen className="h-4 w-4" />
-                    </div>
-                    <span className={cn("font-semibold text-sm", selectedSubject === s.id ? "text-violet-300" : "text-white/70")}>{s.name}</span>
-                    {selectedSubject === s.id && <Check className="h-4 w-4 text-violet-400 ml-auto" />}
-                  </button>
-                ))}
-              </div>
+              <Select
+                value={selectedSubject ? String(selectedSubject) : ""}
+                onValueChange={v => setSelectedSubject(Number(v))}
+              >
+                <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white">
+                  <SelectValue placeholder="Choose a subject…" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1e1e28] border-white/10">
+                  {subjects.map(s => (
+                    <SelectItem key={s.id} value={String(s.id)} className="text-white">{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs text-white/50 font-semibold uppercase tracking-wider">Paper</label>
-              <div className="flex flex-wrap gap-2">
-                {PAPER_OPTS.map(p => (
-                  <button key={p.value} onClick={() => setSelectedPaper(p.value)}
-                    className={cn("px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all",
-                      selectedPaper === p.value
-                        ? "bg-violet-500/20 border-violet-500/40 text-violet-300"
-                        : "bg-white/4 border-white/8 text-white/50 hover:bg-white/8"
-                    )}>
-                    {p.label}
-                  </button>
-                ))}
-              </div>
+              <label className="text-xs text-white/50 font-semibold uppercase tracking-wider">Exam Paper</label>
+              <Select value={selectedPaper} onValueChange={setSelectedPaper}>
+                <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1e1e28] border-white/10">
+                  {PAPER_OPTS.map(p => (
+                    <SelectItem key={p.value} value={p.value} className="text-white">{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <Button

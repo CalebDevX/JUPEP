@@ -200,41 +200,29 @@ export default function QuizLauncher() {
             </Select>
           </div>
 
-          {/* Exam / Paper — show availability badges */}
-          <div className="space-y-2">
+          {/* Exam / Paper */}
+          <div className="space-y-1.5">
             <Label className="text-xs text-white/50 uppercase tracking-wider">Exam Paper</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {PAPER_OPTIONS.map(p => {
-                const active = paper === p.value;
-                const has = paperHasQuestions(p.value);
-                return (
-                  <motion.button
-                    key={p.value}
-                    whileHover={{ scale: 1.03, boxShadow: active ? "0 0 15px rgba(139,92,246,0.3)" : "0 0 10px rgba(255,255,255,0.05)" }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => setPaper(p.value)}
-                    className={cn(
-                      "relative flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-xl border text-left transition-all text-sm overflow-hidden",
-                      active
-                        ? "bg-violet-600/20 border-violet-500/80 text-white shadow-[0_0_15px_rgba(139,92,246,0.15)]"
-                        : "bg-white/3 border-white/8 text-white/60 hover:bg-white/6 hover:text-white/80"
-                    )}
-                  >
-                    {active && (
-                      <div className="absolute inset-0 border border-violet-400/30 rounded-xl pointer-events-none animate-pulse" />
-                    )}
-                    <span className={cn("font-bold text-[13px]", active ? "text-white" : "text-white/70")}>{p.label}</span>
-                    <span className={cn("text-[10px] flex items-center gap-1",
-                      has ? (active ? "text-emerald-400" : "text-emerald-500/60")
-                          : (active ? "text-white/30" : "text-white/20"))}>
-                      {has
-                        ? <><CheckCircle2 className="h-2.5 w-2.5 animate-bounce" /> Questions available</>
-                        : <><XCircle className="h-2.5 w-2.5" /> No questions yet</>}
-                    </span>
-                  </motion.button>
-                );
-              })}
-            </div>
+            <Select value={paper} onValueChange={setPaper}>
+              <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-[#1e1e28] border-white/10">
+                {PAPER_OPTIONS.map(p => {
+                  const has = paperHasQuestions(p.value);
+                  return (
+                    <SelectItem key={p.value} value={p.value} className="text-white">
+                      <span className="flex items-center gap-2">
+                        {p.label}
+                        {has
+                          ? <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                          : <XCircle className="h-3 w-3 text-white/25" />}
+                      </span>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* No-questions warning */}
