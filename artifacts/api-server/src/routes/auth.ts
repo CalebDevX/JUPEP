@@ -10,6 +10,11 @@ import crypto from "crypto";
 // Ensure required columns exist (non-blocking)
 pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS session_token TEXT`).catch(() => {});
 pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS profile_picture TEXT`).catch(() => {});
+pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS pin_hash TEXT`).catch(() => {});
+
+function hashPin(phone: string, pin: string): string {
+  return crypto.createHash("sha256").update(`${phone.trim()}:${pin}`).digest("hex");
+}
 
 const router = Router();
 
@@ -25,7 +30,7 @@ function getSetting(key: string): string | null {
 }
 
 router.post("/auth/register", async (req, res) => {
-  const { fullName, phone, email, subjects, targetUniversity, targetGrade, accessCode } = req.body;
+  const { fullName, phone, email, subjects, targetUniversity, targetGrade, accessCode, pin } = req.body;
 
   if (!fullName?.trim() || !phone?.trim() || !subjects?.length) {
     return res.status(400).json({ error: "Please fill in all required fields." });
@@ -47,6 +52,8 @@ router.post("/auth/register", async (req, res) => {
         .where(eq(accessCodesTable.code, code));
     }
 
+    const pinHash = (pin && /^\d{6}$/.test(pin)) ? hashPin(phone.trim(), pin) : null;
+
     await pool.query(
       `INSERT INTO students(full_name, phone, email, subjects, target_university, target_grade, access_code_used)
        VALUES($1,$2,$3,$4,$5,$6,$7)
@@ -58,6 +65,10 @@ router.post("/auth/register", async (req, res) => {
         targetGrade || "aaa1", code,
       ]
     );
+
+    if (pinHash) {
+      await pool.query("UPDATE students SET pin_hash=$1 WHERE phone=$2", [pinHash, phone.trim()]).catch(() => {});
+    }
 
     const sessionToken = crypto.randomUUID();
     await pool.query("UPDATE students SET session_token=$1 WHERE phone=$2", [sessionToken, phone.trim()]).catch(() => {});
@@ -124,7 +135,7 @@ router.post("/auth/activate", async (req, res) => {
 });
 
 router.post("/auth/login", async (req, res) => {
-  const { phone } = req.body;
+  const { phone, pin } = req.body;
   if (!phone?.trim()) return res.status(400).json({ error: "Phone number is required." });
 
   try {
@@ -135,6 +146,19 @@ router.post("/auth/login", async (req, res) => {
     }
 
     const s = result.rows[0];
+
+    // PIN verification
+    if (s.pin_hash) {
+      if (!pin) {
+        // Account has a PIN but none was provided — tell client to prompt
+        return res.json({ requiresPin: true });
+      }
+      const attempted = hashPin(phone.trim(), pin);
+      if (attempted !== s.pin_hash) {
+        return res.status(401).json({ error: "Incorrect PIN. Please try again." });
+      }
+    }
+
     const rawCode = s.access_code_used;
     const expiresAt = s.expires_at ? new Date(s.expires_at) : null;
     const sessionActive = expiresAt ? expiresAt > new Date() : false;
@@ -155,11 +179,55 @@ router.post("/auth/login", async (req, res) => {
       sessionActive,
       paymentStatus: s.payment_status || "unpaid",
       sessionToken,
+      hasPin: !!s.pin_hash,
     };
 
     res.json({ success: true, profile });
   } catch (err: any) {
     res.status(500).json({ error: "Login failed. Please try again.", detail: err?.message });
+  }
+});
+
+// ── Set / change PIN ─────────────────────────────────────────────────────────
+router.post("/auth/set-pin", async (req, res) => {
+  const { phone, token, pin, currentPin } = req.body;
+  if (!phone?.trim() || !token?.trim()) return res.status(400).json({ error: "Phone and session token required." });
+  if (!pin || !/^\d{6}$/.test(pin)) return res.status(400).json({ error: "PIN must be exactly 6 digits." });
+
+  try {
+    const r = await pool.query("SELECT session_token, pin_hash FROM students WHERE phone=$1", [phone.trim()]);
+    if (!r.rows.length) return res.status(404).json({ error: "Account not found." });
+    if (r.rows[0].session_token !== token) return res.status(401).json({ error: "Invalid session." });
+
+    // If account already has a PIN, require current PIN to change it
+    if (r.rows[0].pin_hash) {
+      if (!currentPin) return res.status(400).json({ error: "Current PIN is required to change your PIN.", requiresCurrentPin: true });
+      if (hashPin(phone.trim(), currentPin) !== r.rows[0].pin_hash) {
+        return res.status(401).json({ error: "Current PIN is incorrect." });
+      }
+    }
+
+    const newHash = hashPin(phone.trim(), pin);
+    await pool.query("UPDATE students SET pin_hash=$1 WHERE phone=$2", [newHash, phone.trim()]);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to set PIN.", detail: err?.message });
+  }
+});
+
+// ── Remove PIN ───────────────────────────────────────────────────────────────
+router.post("/auth/remove-pin", async (req, res) => {
+  const { phone, token, currentPin } = req.body;
+  if (!phone?.trim() || !token?.trim() || !currentPin) return res.status(400).json({ error: "Phone, token, and current PIN required." });
+  try {
+    const r = await pool.query("SELECT session_token, pin_hash FROM students WHERE phone=$1", [phone.trim()]);
+    if (!r.rows.length) return res.status(404).json({ error: "Account not found." });
+    if (r.rows[0].session_token !== token) return res.status(401).json({ error: "Invalid session." });
+    if (hashPin(phone.trim(), currentPin) !== r.rows[0].pin_hash) return res.status(401).json({ error: "Incorrect PIN." });
+    await pool.query("UPDATE students SET pin_hash=NULL WHERE phone=$1", [phone.trim()]);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to remove PIN.", detail: err?.message });
   }
 });
 

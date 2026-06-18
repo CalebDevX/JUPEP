@@ -5,7 +5,7 @@ import {
   User, Phone, Mail, GraduationCap, BookOpen,
   ChevronRight, ArrowLeft, Loader2, CheckCircle2,
   MessageCircle, ChevronDown, Search, Check, Zap, Trophy, Brain,
-  Building2, Users, Star,
+  Building2, Users, Star, Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -232,13 +232,40 @@ function StepBar({ step }: { step: RegStep }) {
 
 // ── Login form ─────────────────────────────────────────────────────────────────
 
-function LoginForm({ onGoogleClick, googleLoading }: { onGoogleClick: () => void; googleLoading: boolean }) {
-  const [, navigate] = useLocation();
-  const [phone, setPhone]     = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState("");
+type LoginStep = "phone" | "pin";
 
-  const handleLogin = async () => {
+function PinDots({ value }: { value: string }) {
+  return (
+    <div className="flex justify-center gap-3 py-4">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <motion.div
+          key={i}
+          animate={i < value.length
+            ? { scale: [1, 1.25, 1], backgroundColor: "#f97316" }
+            : { scale: 1, backgroundColor: "transparent" }}
+          transition={{ duration: 0.15 }}
+          className="w-4 h-4 rounded-full border-2 border-gray-300"
+          style={{ borderColor: i < value.length ? "#f97316" : undefined }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function LoginForm({ onGoogleClick, googleLoading }: { onGoogleClick: () => void; googleLoading: boolean }) {
+  const [, navigate]            = useLocation();
+  const [loginStep, setLoginStep] = useState<LoginStep>("phone");
+  const [phone, setPhone]       = useState("");
+  const [pin, setPin]           = useState("");
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState("");
+  const pinRef                  = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (loginStep === "pin") setTimeout(() => pinRef.current?.focus(), 80);
+  }, [loginStep]);
+
+  const handlePhoneSubmit = async () => {
     if (!phone.trim() || phone.replace(/\D/g, "").length < 10) {
       return setError("Please enter a valid phone number.");
     }
@@ -249,6 +276,7 @@ function LoginForm({ onGoogleClick, googleLoading }: { onGoogleClick: () => void
         body: JSON.stringify({ phone: phone.trim() }),
       });
       const data = await res.json();
+      if (data.requiresPin) { setLoginStep("pin"); return; }
       if (!res.ok) throw new Error(data.error || "Login failed.");
       localStorage.setItem("jupeb_profile", JSON.stringify(data.profile));
       localStorage.setItem("jupeb_display_name", data.profile.fullName);
@@ -258,29 +286,104 @@ function LoginForm({ onGoogleClick, googleLoading }: { onGoogleClick: () => void
     finally { setLoading(false); }
   };
 
+  const handlePinChange = async (val: string) => {
+    const digits = val.replace(/\D/g, "").slice(0, 6);
+    setPin(digits);
+    if (digits.length === 6) await submitPin(digits);
+  };
+
+  const submitPin = async (digits: string) => {
+    setError(""); setLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/auth/login`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: phone.trim(), pin: digits }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setPin(""); throw new Error(data.error || "Incorrect PIN."); }
+      localStorage.setItem("jupeb_profile", JSON.stringify(data.profile));
+      localStorage.setItem("jupeb_display_name", data.profile.fullName);
+      if (data.profile.sessionToken) localStorage.setItem("jupeb_session_token", data.profile.sessionToken);
+      navigate("/");
+    } catch (err: any) { setError(err.message); }
+    finally { setLoading(false); }
+  };
+
   return (
-    <div className="space-y-4">
-      <GoogleButton onClick={onGoogleClick} loading={googleLoading} />
-      <Divider label="or sign in with phone" />
+    <AnimatePresence mode="wait">
+      {loginStep === "phone" ? (
+        <motion.div key="phone" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+          <GoogleButton onClick={onGoogleClick} loading={googleLoading} />
+          <Divider label="or sign in with phone" />
 
-      <div>
-        <Label>Phone Number <span className="text-red-400">*</span></Label>
-        <div className="relative">
-          <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
-          <input type="tel" placeholder="e.g. 08012345678" value={phone}
-            onChange={e => setPhone(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleLogin()} autoFocus
-            className={cn(inputCls, "pl-10")} />
-        </div>
-      </div>
+          <div>
+            <Label>Phone Number <span className="text-red-400">*</span></Label>
+            <div className="relative">
+              <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+              <input type="tel" placeholder="e.g. 08012345678" value={phone}
+                onChange={e => setPhone(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handlePhoneSubmit()} autoFocus
+                className={cn(inputCls, "pl-10")} />
+            </div>
+          </div>
 
-      <AnimatePresence>{error && <ErrorBox msg={error} />}</AnimatePresence>
+          <AnimatePresence>{error && <ErrorBox msg={error} />}</AnimatePresence>
 
-      <button onClick={handleLogin} disabled={loading}
-        className="w-full flex items-center justify-center gap-2 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition-all duration-200 disabled:opacity-50 rounded-lg shadow-sm shadow-orange-500/20">
-        {loading ? <><Loader2 className="h-4 w-4 animate-spin" />Signing in…</> : <>Sign In<ChevronRight className="h-4 w-4" /></>}
-      </button>
-    </div>
+          <button onClick={handlePhoneSubmit} disabled={loading}
+            className="w-full flex items-center justify-center gap-2 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition-all duration-200 disabled:opacity-50 rounded-lg shadow-sm shadow-orange-500/20">
+            {loading ? <><Loader2 className="h-4 w-4 animate-spin" />Checking…</> : <>Continue<ChevronRight className="h-4 w-4" /></>}
+          </button>
+        </motion.div>
+      ) : (
+        <motion.div key="pin" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+          <button onClick={() => { setLoginStep("phone"); setPin(""); setError(""); }}
+            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            <ArrowLeft className="h-3.5 w-3.5" /> Change number
+          </button>
+
+          <div className="text-center">
+            <div className="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-200 flex items-center justify-center mx-auto mb-3">
+              <Lock className="h-5 w-5 text-orange-500" />
+            </div>
+            <p className="text-sm font-bold text-gray-900">Enter your 6-digit PIN</p>
+            <p className="text-xs text-gray-400 mt-0.5">{phone}</p>
+          </div>
+
+          <PinDots value={pin} />
+
+          <div className="relative">
+            <input
+              ref={pinRef}
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              value={pin}
+              onChange={e => handlePinChange(e.target.value)}
+              placeholder="••••••"
+              className={cn(inputCls, "text-center text-xl tracking-[0.5em] font-bold")}
+              disabled={loading}
+            />
+            {loading && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                <Loader2 className="h-4 w-4 animate-spin text-orange-500" />
+              </div>
+            )}
+          </div>
+
+          <AnimatePresence>{error && <ErrorBox msg={error} />}</AnimatePresence>
+
+          <button onClick={() => pin.length === 6 && submitPin(pin)} disabled={loading || pin.length < 6}
+            className="w-full flex items-center justify-center gap-2 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition-all duration-200 disabled:opacity-40 rounded-lg shadow-sm shadow-orange-500/20">
+            {loading ? <><Loader2 className="h-4 w-4 animate-spin" />Verifying…</> : <>Sign In<ChevronRight className="h-4 w-4" /></>}
+          </button>
+
+          <p className="text-center text-[11px] text-gray-400">
+            Forgot your PIN? Contact support to reset it.
+          </p>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

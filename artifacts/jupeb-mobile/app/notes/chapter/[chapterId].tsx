@@ -125,20 +125,40 @@ export default function ChapterScreen() {
 
   const accent = getAccentFromChapterId(chapterId ?? '');
 
+  const [fromCache, setFromCache] = useState(false);
+
   useEffect(() => {
     async function load() {
+      const CACHE_KEY = `jupeb_chapter_cache_${chapterId}`;
       try {
         const base = getApiBase();
         const res = await fetch(`${base}/textbook/courses/${courseId}/chapters/${chapterId}`);
         if (!res.ok) throw new Error(`Server error ${res.status}`);
         const data = await res.json();
         setChapter(data);
+        setFromCache(false);
+        // Persist to cache for offline use
+        AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(() => {});
         // Mark chapter as read
         if (chapterId) {
           await AsyncStorage.setItem(`jupeb_chapter_read_${chapterId}`, Date.now().toString());
         }
       } catch (e: any) {
-        setError(e.message);
+        // Network failed — try offline cache
+        try {
+          const cached = await AsyncStorage.getItem(CACHE_KEY);
+          if (cached) {
+            setChapter(JSON.parse(cached));
+            setFromCache(true);
+            if (chapterId) {
+              await AsyncStorage.setItem(`jupeb_chapter_read_${chapterId}`, Date.now().toString());
+            }
+          } else {
+            setError(e.message);
+          }
+        } catch {
+          setError(e.message);
+        }
       } finally {
         setLoading(false);
       }
@@ -192,6 +212,12 @@ export default function ChapterScreen() {
           <Text style={styles.chapterMetaDot}>·</Text>
           <Text style={styles.chapterMetaText}>{chapter.keyTerms.length} key terms</Text>
         </View>
+        {fromCache && (
+          <View style={styles.offlineBanner}>
+            <Ionicons name="cloud-offline-outline" size={12} color="#f97316" />
+            <Text style={styles.offlineBannerText}>Offline — showing cached version</Text>
+          </View>
+        )}
       </View>
 
       <ScrollView
@@ -281,6 +307,13 @@ function makeStyles(C: AppColors) {
     errorText: { fontSize: 15, color: C.destructive, fontFamily: 'Inter_500Medium', marginTop: 14, marginBottom: 16 },
     retryBtn: { padding: 12 },
     retryText: { fontSize: 14, color: C.primary, fontFamily: 'Inter_600SemiBold' },
+    offlineBanner: {
+      flexDirection: 'row', alignItems: 'center', gap: 5,
+      marginTop: 8, paddingHorizontal: 10, paddingVertical: 5,
+      backgroundColor: 'rgba(249,115,22,0.15)', borderRadius: 8,
+      alignSelf: 'flex-start',
+    },
+    offlineBannerText: { fontSize: 11, color: '#f97316', fontFamily: 'Inter_600SemiBold' },
 
     header: {
       backgroundColor: C.heroBg, paddingHorizontal: 20, paddingBottom: 18, overflow: 'hidden',
