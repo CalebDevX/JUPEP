@@ -271,24 +271,6 @@ body {
 
 /* ── Premium utility classes ── */
 
-/* Shimmer text — animated gradient sweep */
-.shimmer-text {
-  background: linear-gradient(
-    110deg,
-    rgba(139, 92, 246, 0.8) 0%,
-    rgba(167, 139, 250, 1) 25%,
-    rgba(196, 181, 253, 1) 45%,
-    rgba(251, 191, 36, 0.9) 55%,
-    rgba(167, 139, 250, 1) 75%,
-    rgba(139, 92, 246, 0.8) 100%
-  );
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: shimmer 4s linear infinite;
-}
-
 /* Floating element */
 .float { animation: float 3s ease-in-out infinite; }
 .float-slow { animation: float 5s ease-in-out infinite; }
@@ -315,19 +297,10 @@ body {
 
 /* Animated mesh background */
 .mesh-bg {
-  background: radial-gradient(ellipse at 20% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
-              radial-gradient(ellipse at 80% 20%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
-              radial-gradient(ellipse at 40% 80%, rgba(251, 191, 36, 0.04) 0%, transparent 50%);
+  background: radial-gradient(ellipse at 20% 50%, rgba(249, 115, 22, 0.05) 0%, transparent 50%),
+              radial-gradient(ellipse at 80% 20%, rgba(59, 130, 246, 0.04) 0%, transparent 50%);
   background-size: 200% 200%;
   animation: meshGradient 15s ease infinite;
-}
-
-.mesh-bg-auth {
-  background: radial-gradient(ellipse at 30% 30%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
-              radial-gradient(ellipse at 70% 70%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
-              radial-gradient(ellipse at 50% 50%, rgba(167, 139, 250, 0.05) 0%, transparent 60%);
-  background-size: 200% 200%;
-  animation: meshGradient 20s ease infinite;
 }
 
 /* Enhanced glass card with gradient border feel */

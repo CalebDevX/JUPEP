@@ -2,17 +2,16 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  User, Phone, Mail, GraduationCap, Building2, BookOpen,
+  User, Phone, Mail, GraduationCap, BookOpen,
   ChevronRight, ArrowLeft, Loader2, CheckCircle2,
   MessageCircle, ChevronDown, Search, Check, Zap, Trophy, Brain,
+  Building2, Users, Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 declare global { interface Window { google: any; } }
-
-// ── Data ──────────────────────────────────────────────────────────────────────
 
 const NIGERIAN_UNIVERSITIES = [
   "University of Lagos (UNILAG)", "University of Ibadan (UI)", "Obafemi Awolowo University (OAU)",
@@ -27,23 +26,23 @@ const NIGERIAN_UNIVERSITIES = [
 ];
 
 const ALL_SUBJECTS = [
-  { code: "LIT", name: "Literature in English",    emoji: "📖", color: "violet" },
-  { code: "GOV", name: "Government",                emoji: "🏛️", color: "blue"   },
-  { code: "ECO", name: "Economics",                 emoji: "📊", color: "amber"  },
-  { code: "ENG", name: "English Language",          emoji: "✍️", color: "pink"   },
-  { code: "HIS", name: "History",                   emoji: "📜", color: "orange" },
-  { code: "GEO", name: "Geography",                 emoji: "🌍", color: "cyan"   },
-  { code: "ACC", name: "Accounting",                emoji: "🧾", color: "lime"   },
-  { code: "COM", name: "Commerce",                  emoji: "🏪", color: "emerald"},
-  { code: "MTH", name: "Mathematics",               emoji: "📐", color: "sky"    },
-  { code: "BIO", name: "Biology",                   emoji: "🔬", color: "green"  },
-  { code: "CHE", name: "Chemistry",                 emoji: "⚗️", color: "red"    },
-  { code: "PHY", name: "Physics",                   emoji: "⚡", color: "rose"   },
-  { code: "CRS", name: "Christian Religious Studies", emoji: "✝️", color: "teal" },
-  { code: "IRS", name: "Islamic Religious Studies", emoji: "☪️", color: "indigo" },
-  { code: "FMT", name: "Further Mathematics",       emoji: "∑",  color: "purple" },
-  { code: "AGR", name: "Agricultural Science",      emoji: "🌾", color: "lime"   },
-  { code: "CMP", name: "Computer Science",          emoji: "💻", color: "blue"   },
+  { code: "LIT", name: "Literature in English",    emoji: "📖" },
+  { code: "GOV", name: "Government",                emoji: "🏛️" },
+  { code: "ECO", name: "Economics",                 emoji: "📊" },
+  { code: "ENG", name: "English Language",          emoji: "✍️" },
+  { code: "HIS", name: "History",                   emoji: "📜" },
+  { code: "GEO", name: "Geography",                 emoji: "🌍" },
+  { code: "ACC", name: "Accounting",                emoji: "🧾" },
+  { code: "COM", name: "Commerce",                  emoji: "🏪" },
+  { code: "MTH", name: "Mathematics",               emoji: "📐" },
+  { code: "BIO", name: "Biology",                   emoji: "🔬" },
+  { code: "CHE", name: "Chemistry",                 emoji: "⚗️" },
+  { code: "PHY", name: "Physics",                   emoji: "⚡" },
+  { code: "CRS", name: "Christian Religious Studies", emoji: "✝️" },
+  { code: "IRS", name: "Islamic Religious Studies", emoji: "☪️" },
+  { code: "FMT", name: "Further Mathematics",       emoji: "∑"  },
+  { code: "AGR", name: "Agricultural Science",      emoji: "🌾" },
+  { code: "CMP", name: "Computer Science",          emoji: "💻" },
 ];
 
 const GRADE_OPTIONS = [
@@ -57,55 +56,35 @@ type Tab      = "login" | "register";
 type RegStep  = 1 | 2 | 3;
 type GoogleData = { name: string; email: string; picture?: string | null } | null;
 
-// ── Shared primitives ─────────────────────────────────────────────────────────
+// ── Shared primitives ──────────────────────────────────────────────────────────
 
-const inputCls = "w-full bg-transparent border border-white/12 px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-violet-500/60 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.12)] transition-all duration-200 rounded-lg";
+const inputCls = "w-full bg-white border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-400/10 transition-all duration-200 rounded-lg";
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-bold tracking-widest uppercase text-white/30 mb-1.5">{children}</p>
+    <p className="text-[11px] font-bold tracking-widest uppercase text-gray-400 mb-1.5">{children}</p>
   );
 }
 
 function ErrorBox({ msg }: { msg: string }) {
   return (
     <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-      className="px-4 py-3 border border-rose-500/30 bg-rose-500/8 text-sm text-rose-300 rounded-lg">
+      className="px-4 py-3 border border-red-200 bg-red-50 text-sm text-red-600 rounded-lg">
       {msg}
     </motion.div>
   );
 }
 
-// Thin art-deco rule with optional center text
-function Rule({ label }: { label?: string }) {
-  if (!label) return <div className="h-px bg-white/8 my-1" />;
+function Divider({ label }: { label?: string }) {
+  if (!label) return <div className="h-px bg-gray-200 my-1" />;
   return (
     <div className="flex items-center gap-3 my-1">
-      <div className="flex-1 h-px bg-white/8" />
-      <span className="text-[10px] tracking-widest uppercase text-white/20">{label}</span>
-      <div className="flex-1 h-px bg-white/8" />
+      <div className="flex-1 h-px bg-gray-200" />
+      <span className="text-xs text-gray-400">{label}</span>
+      <div className="flex-1 h-px bg-gray-200" />
     </div>
   );
 }
-
-// Art-deco corner brackets — now with animated glow
-function CornerMark({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
-  const borderCls = {
-    tl: "top-0 left-0 border-t border-l",
-    tr: "top-0 right-0 border-t border-r",
-    bl: "bottom-0 left-0 border-b border-l",
-    br: "bottom-0 right-0 border-b border-r",
-  }[pos];
-  return (
-    <motion.span
-      className={cn("absolute w-3.5 h-3.5 border-violet-500/50", borderCls)}
-      animate={{ borderColor: ["rgba(139,92,246,0.3)", "rgba(139,92,246,0.6)", "rgba(139,92,246,0.3)"] }}
-      transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-    />
-  );
-}
-
-// ── Animated counter ──────────────────────────────────────────────────────────
 
 function AnimatedCounter({ to, duration = 1.5 }: { to: number; duration?: number }) {
   const [count, setCount] = useState(0);
@@ -123,14 +102,12 @@ function AnimatedCounter({ to, duration = 1.5 }: { to: number; duration?: number
   return <>{count}</>;
 }
 
-// ── Google button ─────────────────────────────────────────────────────────────
-
 function GoogleButton({ onClick, loading }: { onClick: () => void; loading?: boolean }) {
   return (
     <button type="button" onClick={onClick} disabled={loading}
-      className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-white/10 bg-white/3 hover:bg-white/6 hover:border-white/20 transition-all duration-200 disabled:opacity-40 text-sm font-medium text-white/60 hover:text-white rounded-lg group">
+      className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:opacity-40 text-sm font-medium text-gray-700 rounded-lg shadow-sm">
       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-        <svg viewBox="0 0 24 24" className="h-4 w-4 flex-shrink-0 transition-transform group-hover:scale-110">
+        <svg viewBox="0 0 24 24" className="h-4 w-4 flex-shrink-0">
           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
           <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
           <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
@@ -141,8 +118,6 @@ function GoogleButton({ onClick, loading }: { onClick: () => void; loading?: boo
     </button>
   );
 }
-
-// ── University selector ───────────────────────────────────────────────────────
 
 function UniversitySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen]               = useState(false);
@@ -166,7 +141,7 @@ function UniversitySelect({ value, onChange }: { value: string; onChange: (v: st
         <input type="text" placeholder="Type your university name…" value={value}
           onChange={e => onChange(e.target.value)} autoFocus className={inputCls} />
         <button type="button" onClick={() => { setManualMode(false); onChange(""); }}
-          className="text-[11px] text-white/30 hover:text-violet-400 transition-colors">
+          className="text-[11px] text-gray-400 hover:text-orange-500 transition-colors">
           ← Back to list
         </button>
       </div>
@@ -176,23 +151,23 @@ function UniversitySelect({ value, onChange }: { value: string; onChange: (v: st
   return (
     <div className="relative" ref={ref}>
       <button type="button" onClick={() => setOpen(v => !v)}
-        className={cn("w-full flex items-center gap-3 border px-4 py-3 text-sm text-left transition-all duration-200 rounded-lg",
-          open ? "border-violet-500/50 bg-white/5 shadow-[0_0_0_3px_rgba(139,92,246,0.12)]" : "border-white/12 bg-transparent hover:border-white/20")}>
-        <Building2 className="h-4 w-4 text-white/20 flex-shrink-0" />
-        <span className={cn("flex-1", value ? "text-white" : "text-white/20")}>{value || "Select your university"}</span>
-        <ChevronDown className={cn("h-4 w-4 text-white/20 flex-shrink-0 transition-transform", open && "rotate-180")} />
+        className={cn("w-full flex items-center gap-3 border px-4 py-3 text-sm text-left transition-all duration-200 rounded-lg bg-white shadow-sm",
+          open ? "border-orange-400 ring-2 ring-orange-400/10" : "border-gray-200 hover:border-gray-300")}>
+        <Building2 className="h-4 w-4 text-gray-400 flex-shrink-0" />
+        <span className={cn("flex-1", value ? "text-gray-900" : "text-gray-400")}>{value || "Select your university"}</span>
+        <ChevronDown className={cn("h-4 w-4 text-gray-400 flex-shrink-0 transition-transform", open && "rotate-180")} />
       </button>
       <AnimatePresence>
         {open && (
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.12 }}
-            className="absolute top-full left-0 right-0 mt-px bg-[#131318] border border-white/12 shadow-2xl overflow-hidden z-50 rounded-lg">
-            <div className="p-2 border-b border-white/8">
+            className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 shadow-xl overflow-hidden z-50 rounded-lg">
+            <div className="p-2 border-b border-gray-100">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/20" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                 <input type="text" placeholder="Search…" value={search}
                   onChange={e => setSearch(e.target.value)} autoFocus
-                  className="w-full bg-white/5 pl-9 pr-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none rounded-md" />
+                  className="w-full bg-gray-50 pl-9 pr-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none rounded-md" />
               </div>
             </div>
             <div className="overflow-y-auto max-h-52">
@@ -206,18 +181,18 @@ function UniversitySelect({ value, onChange }: { value: string; onChange: (v: st
                       else { onChange(uni); setOpen(false); setSearch(""); }
                     }}
                     className={cn("w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 transition-colors",
-                      isSelected  ? "bg-violet-500/12 text-violet-300" :
-                      isOthers    ? "text-violet-400 hover:bg-violet-500/8 border-t border-white/6 font-medium" :
-                                    "text-white/55 hover:bg-white/5 hover:text-white")}>
+                      isSelected  ? "bg-orange-50 text-orange-600 font-medium" :
+                      isOthers    ? "text-orange-500 hover:bg-orange-50 border-t border-gray-100 font-medium" :
+                                    "text-gray-600 hover:bg-gray-50 hover:text-gray-900")}>
                     <span className="flex-1">{uni}</span>
                     {isSelected && <Check className="h-3.5 w-3.5 flex-shrink-0" />}
                   </button>
                 );
               })}
               {filtered.length === 0 && (
-                <div className="px-4 py-4 text-sm text-white/30 text-center">
+                <div className="px-4 py-4 text-sm text-gray-400 text-center">
                   No match —{" "}
-                  <button className="text-violet-400 font-medium"
+                  <button className="text-orange-500 font-medium"
                     onClick={() => { setManualMode(true); setOpen(false); }}>
                     type manually
                   </button>
@@ -231,18 +206,16 @@ function UniversitySelect({ value, onChange }: { value: string; onChange: (v: st
   );
 }
 
-// ── Step progress bar ─────────────────────────────────────────────────────────
-
 function StepBar({ step }: { step: RegStep }) {
   const labels = ["Personal Info", "Your Goals", "Subjects"];
   return (
     <div className="space-y-2">
       <div className="flex gap-1">
         {[1, 2, 3].map(n => (
-          <div key={n} className="relative flex-1 h-1 rounded-full overflow-hidden bg-white/10">
+          <div key={n} className="relative flex-1 h-1 rounded-full overflow-hidden bg-gray-200">
             <motion.div
               className={cn("absolute inset-y-0 left-0 rounded-full",
-                step > n ? "bg-emerald-500" : step === n ? "bg-gradient-to-r from-violet-500 to-indigo-500" : "bg-transparent")}
+                step > n ? "bg-green-500" : step === n ? "bg-orange-500" : "bg-transparent")}
               initial={{ width: "0%" }}
               animate={{ width: step >= n ? "100%" : "0%" }}
               transition={{ duration: 0.5, ease: "easeOut" }}
@@ -250,24 +223,24 @@ function StepBar({ step }: { step: RegStep }) {
           </div>
         ))}
       </div>
-      <p className="text-[10px] text-white/25 tracking-wider uppercase">
-        Step {step} of 3 — <span className="text-white/40">{labels[step - 1]}</span>
+      <p className="text-[10px] text-gray-400 tracking-wider uppercase">
+        Step {step} of 3 — <span className="text-gray-600 font-medium">{labels[step - 1]}</span>
       </p>
     </div>
   );
 }
 
-// ── Login form ────────────────────────────────────────────────────────────────
+// ── Login form ─────────────────────────────────────────────────────────────────
 
 function LoginForm({ onGoogleClick, googleLoading }: { onGoogleClick: () => void; googleLoading: boolean }) {
   const [, navigate] = useLocation();
-  const [phone, setPhone]   = useState("");
+  const [phone, setPhone]     = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError]   = useState("");
+  const [error, setError]     = useState("");
 
   const handleLogin = async () => {
     if (!phone.trim() || phone.replace(/\D/g, "").length < 10) {
-      return setError("Please enter a valid WhatsApp number.");
+      return setError("Please enter a valid phone number.");
     }
     setError(""); setLoading(true);
     try {
@@ -286,14 +259,14 @@ function LoginForm({ onGoogleClick, googleLoading }: { onGoogleClick: () => void
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <GoogleButton onClick={onGoogleClick} loading={googleLoading} />
-      <Rule label="or" />
+      <Divider label="or sign in with phone" />
 
       <div>
-        <Label>WhatsApp Number <span className="text-rose-400">*</span></Label>
+        <Label>Phone Number <span className="text-red-400">*</span></Label>
         <div className="relative">
-          <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/20 pointer-events-none" />
+          <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
           <input type="tel" placeholder="e.g. 08012345678" value={phone}
             onChange={e => setPhone(e.target.value)}
             onKeyDown={e => e.key === "Enter" && handleLogin()} autoFocus
@@ -304,14 +277,14 @@ function LoginForm({ onGoogleClick, googleLoading }: { onGoogleClick: () => void
       <AnimatePresence>{error && <ErrorBox msg={error} />}</AnimatePresence>
 
       <button onClick={handleLogin} disabled={loading}
-        className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-sm transition-all duration-200 disabled:opacity-50 rounded-lg btn-shimmer">
+        className="w-full flex items-center justify-center gap-2 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition-all duration-200 disabled:opacity-50 rounded-lg shadow-sm shadow-orange-500/20">
         {loading ? <><Loader2 className="h-4 w-4 animate-spin" />Signing in…</> : <>Sign In<ChevronRight className="h-4 w-4" /></>}
       </button>
     </div>
   );
 }
 
-// ── Register form ─────────────────────────────────────────────────────────────
+// ── Register form ──────────────────────────────────────────────────────────────
 
 function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
   onGoogleClick: () => void; googleLoading: boolean; googlePreFill: GoogleData;
@@ -341,7 +314,7 @@ function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
 
   const goStep2 = () => {
     if (!fullName.trim()) return setError("Please enter your full name.");
-    if (!phone.trim() || phone.replace(/\D/g, "").length < 10) return setError("Please enter a valid WhatsApp number.");
+    if (!phone.trim() || phone.replace(/\D/g, "").length < 10) return setError("Please enter a valid phone number.");
     setError(""); setStep(2);
   };
   const goStep3 = () => {
@@ -373,19 +346,19 @@ function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[10px] tracking-widest uppercase text-white/30">
+          <p className="text-[10px] tracking-widest uppercase text-gray-400">
             {step === 1 ? "Personal Info" : step === 2 ? "Your Goals" : "JUPEB Subjects"}
           </p>
-          <h2 className="text-lg font-bold font-serif text-white mt-0.5">
+          <h2 className="text-lg font-bold text-gray-900 mt-0.5">
             {step === 1 ? "Create your account" : step === 2 ? "Target & course" : "Pick your subjects"}
           </h2>
         </div>
         {step > 1 && (
           <button onClick={() => { setStep((step - 1) as RegStep); setError(""); }}
-            className="w-8 h-8 border border-white/12 flex items-center justify-center text-white/30 hover:text-white hover:border-white/25 transition-all duration-200 flex-shrink-0 mt-1 rounded-lg hover:bg-white/5">
+            className="w-8 h-8 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:border-gray-300 transition-all duration-200 flex-shrink-0 mt-1 rounded-lg hover:bg-gray-50">
             <ArrowLeft className="h-3.5 w-3.5" />
           </button>
         )}
@@ -397,16 +370,13 @@ function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
         <>
           <GoogleButton onClick={onGoogleClick} loading={googleLoading} />
           {googlePreFill && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center gap-2 px-3 py-2 border border-emerald-500/25 bg-emerald-500/8 text-xs text-emerald-400 rounded-lg"
-            >
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center gap-2 px-3 py-2 border border-green-200 bg-green-50 text-xs text-green-700 rounded-lg">
               <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" />
               Connected as {googlePreFill.email} — add your phone to finish
             </motion.div>
           )}
-          <Rule label="or" />
+          <Divider label="or fill in manually" />
         </>
       )}
 
@@ -418,32 +388,31 @@ function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
           transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
           className="space-y-4"
         >
-
           {step === 1 && (
             <>
               <div>
-                <Label>Full Name <span className="text-rose-400">*</span></Label>
+                <Label>Full Name <span className="text-red-400">*</span></Label>
                 <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/20 pointer-events-none" />
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
                   <input type="text" placeholder="e.g. Chinaza Okafor" value={fullName}
                     onChange={e => setFullName(e.target.value)} className={cn(inputCls, "pl-10")} />
                 </div>
               </div>
               <div>
-                <Label>WhatsApp Number <span className="text-rose-400">*</span></Label>
+                <Label>Phone Number <span className="text-red-400">*</span></Label>
                 <div className="relative">
-                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/20 pointer-events-none" />
+                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
                   <input type="tel" placeholder="e.g. 08012345678" value={phone}
                     onChange={e => setPhone(e.target.value)} className={cn(inputCls, "pl-10")} />
                 </div>
-                <p className="text-[10px] text-white/20 flex items-center gap-1.5 mt-1.5">
+                <p className="text-[10px] text-gray-400 flex items-center gap-1.5 mt-1.5">
                   <MessageCircle className="h-3 w-3" />Used for community updates &amp; payment confirmation
                 </p>
               </div>
               <div>
-                <Label>Email Address</Label>
+                <Label>Email Address <span className="text-gray-300">(optional)</span></Label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/20 pointer-events-none" />
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
                   <input type="email" placeholder="you@example.com" value={email}
                     onChange={e => setEmail(e.target.value)} className={cn(inputCls, "pl-10")} />
                 </div>
@@ -454,34 +423,33 @@ function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
           {step === 2 && (
             <>
               <div>
-                <Label>Target University <span className="text-rose-400">*</span></Label>
+                <Label>Target University <span className="text-red-400">*</span></Label>
                 <UniversitySelect value={targetUniversity} onChange={setTargetUniversity} />
               </div>
               <div>
-                <Label>Intended Course <span className="text-rose-400">*</span></Label>
+                <Label>Intended Course <span className="text-red-400">*</span></Label>
                 <div className="relative">
-                  <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/20 pointer-events-none" />
+                  <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
                   <input type="text" placeholder="e.g. Law, Medicine, Engineering" value={course}
                     onChange={e => setCourse(e.target.value)} className={cn(inputCls, "pl-10")} />
                 </div>
               </div>
               <div>
-                <Label>Target Grade <span className="text-rose-400">*</span></Label>
+                <Label>Target Grade <span className="text-red-400">*</span></Label>
                 <div className="grid grid-cols-2 gap-1.5">
                   {GRADE_OPTIONS.map(g => (
                     <motion.button key={g.value} type="button" onClick={() => setTargetGrade(g.value)}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                       className={cn("flex flex-col items-start px-3 py-2.5 border text-left transition-all duration-200 rounded-lg",
                         targetGrade === g.value
-                          ? "border-violet-500/50 bg-violet-500/8 shadow-[0_0_0_1px_rgba(139,92,246,0.2)]"
-                          : "border-white/8 hover:border-white/15 bg-transparent")}>
+                          ? "border-orange-400 bg-orange-50 ring-1 ring-orange-400/20"
+                          : "border-gray-200 hover:border-gray-300 bg-white")}>
                       <div className="flex items-center gap-1.5">
-                        <span className={cn("text-sm font-bold", targetGrade === g.value ? "text-violet-300" : "text-white/60")}>{g.label}</span>
+                        <span className={cn("text-sm font-bold", targetGrade === g.value ? "text-orange-600" : "text-gray-600")}>{g.label}</span>
                         <span className={cn("text-[9px] px-1.5 py-0.5 font-bold tracking-wider rounded-md",
-                          targetGrade === g.value ? "bg-violet-500/15 text-violet-400" : "bg-white/5 text-white/25")}>{g.points}</span>
+                          targetGrade === g.value ? "bg-orange-100 text-orange-500" : "bg-gray-100 text-gray-400")}>{g.points}</span>
                       </div>
-                      <span className="text-[10px] text-white/25 mt-0.5 leading-tight">{g.desc}</span>
+                      <span className="text-[10px] text-gray-400 mt-0.5 leading-tight">{g.desc}</span>
                     </motion.button>
                   ))}
                 </div>
@@ -492,9 +460,9 @@ function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
           {step === 3 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label>Select up to 3 subjects <span className="text-rose-400">*</span></Label>
+                <Label>Select up to 3 subjects <span className="text-red-400">*</span></Label>
                 <span className={cn("text-[10px] font-bold px-2 py-0.5 border tracking-wider rounded-md",
-                  subjects.length === 3 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-transparent text-white/25 border-white/8")}>
+                  subjects.length === 3 ? "bg-green-50 text-green-600 border-green-200" : "bg-gray-50 text-gray-400 border-gray-200")}>
                   {subjects.length}/3
                 </span>
               </div>
@@ -504,26 +472,22 @@ function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
                   const maxed    = !selected && subjects.length >= 3;
                   return (
                     <motion.button key={s.code} type="button" onClick={() => !maxed && toggleSubject(s.name)}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
+                      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: idx * 0.02 }}
                       whileHover={!maxed ? { scale: 1.02 } : undefined}
                       whileTap={!maxed ? { scale: 0.98 } : undefined}
                       className={cn("flex items-center gap-2.5 px-3 py-2.5 border text-left transition-all duration-200 rounded-lg",
-                        selected  ? "border-violet-500/40 bg-violet-500/8 shadow-[0_0_0_1px_rgba(139,92,246,0.15)]" :
-                        maxed     ? "border-white/5 opacity-30 cursor-not-allowed" :
-                                    "border-white/8 hover:border-white/18 hover:bg-white/3")}>
+                        selected  ? "border-orange-400 bg-orange-50 ring-1 ring-orange-400/20" :
+                        maxed     ? "border-gray-100 opacity-40 cursor-not-allowed bg-white" :
+                                    "border-gray-200 hover:border-gray-300 hover:bg-gray-50 bg-white")}>
                       <span className="text-base leading-none flex-shrink-0">{s.emoji}</span>
                       <div className="min-w-0 flex-1">
-                        <p className={cn("text-xs font-semibold leading-tight", selected ? "text-violet-300" : "text-white/55")}>{s.name}</p>
-                        <p className="text-[9px] text-white/20 mt-0.5 tracking-wider">{s.code}</p>
+                        <p className={cn("text-xs font-semibold leading-tight", selected ? "text-orange-600" : "text-gray-600")}>{s.name}</p>
+                        <p className="text-[9px] text-gray-400 mt-0.5 tracking-wider">{s.code}</p>
                       </div>
                       {selected && (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="w-3.5 h-3.5 bg-violet-500 flex items-center justify-center flex-shrink-0 rounded-sm"
-                        >
+                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
+                          className="w-3.5 h-3.5 bg-orange-500 flex items-center justify-center flex-shrink-0 rounded-sm">
                           <Check className="h-2 w-2 text-white" />
                         </motion.div>
                       )}
@@ -533,7 +497,7 @@ function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
               </div>
               {subjects.length === 3 && (
                 <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                  className="text-[10px] text-emerald-400 flex items-center gap-1.5">
+                  className="text-[10px] text-green-600 flex items-center gap-1.5">
                   <CheckCircle2 className="h-3 w-3" />All 3 subjects selected — you're ready
                 </motion.p>
               )}
@@ -549,7 +513,7 @@ function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
         disabled={loading}
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.99 }}
-        className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-sm transition-all duration-200 disabled:opacity-50 rounded-lg btn-shimmer"
+        className="w-full flex items-center justify-center gap-2 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition-all duration-200 disabled:opacity-50 rounded-lg shadow-sm shadow-orange-500/20"
       >
         {loading ? (
           <><Loader2 className="h-4 w-4 animate-spin" />Creating account…</>
@@ -563,7 +527,21 @@ function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
   );
 }
 
-// ── Main export ───────────────────────────────────────────────────────────────
+// ── Main export ────────────────────────────────────────────────────────────────
+
+const STATS = [
+  { icon: Users, value: "2,400+", label: "Active Students" },
+  { icon: Trophy, value: "89%", label: "Pass Rate" },
+  { icon: Star, value: "4.9", label: "Student Rating" },
+  { icon: BookOpen, value: "39+", label: "Chapters" },
+];
+
+const FEATURES = [
+  { icon: Brain,  label: "AI Tutor & Voice Teacher" },
+  { icon: Zap,    label: "Past Questions Database"  },
+  { icon: Trophy, label: "Leaderboard & XP Tracking"},
+  { icon: BookOpen, label: "Full Textbook Notes"    },
+];
 
 export default function Auth() {
   const [, navigate]          = useLocation();
@@ -614,156 +592,145 @@ export default function Auth() {
 
   const handleGoogleClick = () => { if (googleClientId) window.google?.accounts.id.prompt(); };
 
-  const FEATURES = [
-    { icon: Brain,  label: "AI Tutor",        col: "text-violet-400" },
-    { icon: Zap,    label: "Past Questions",   col: "text-amber-400"  },
-    { icon: Trophy, label: "Leaderboard",      col: "text-emerald-400"},
-  ];
-
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-5 relative overflow-hidden">
+    <div className="min-h-screen flex bg-white">
 
-      {/* Animated mesh background */}
-      <div className="pointer-events-none fixed inset-0 mesh-bg-auth" />
+      {/* ── LEFT HERO PANEL (hidden on mobile) ───────────────────────────── */}
+      <div className="hidden lg:flex lg:w-[52%] xl:w-[55%] bg-[#0f172a] flex-col justify-between p-12 xl:p-16 relative overflow-hidden">
+        {/* Subtle texture */}
+        <div className="absolute inset-0 opacity-[0.03]"
+          style={{ backgroundImage: "radial-gradient(circle, #ffffff 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
+        {/* Orange accent glow at top */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-orange-500" />
 
-      {/* Subtle grid overlay */}
-      <div className="pointer-events-none fixed inset-0 opacity-40"
-        style={{ backgroundImage: "linear-gradient(rgba(139,92,246,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,0.02) 1px,transparent 1px)", backgroundSize: "48px 48px" }} />
+        {/* Logo */}
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 relative z-10">
+          <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
+            <GraduationCap className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <p className="text-white font-bold text-lg leading-none">JUPEB Prep</p>
+            <p className="text-white/40 text-[10px] tracking-widest uppercase mt-0.5">Foundation Studies</p>
+          </div>
+        </motion.div>
 
-      {/* Floating decorative orbs */}
-      <div className="pointer-events-none fixed top-1/4 left-1/4 w-64 h-64 rounded-full bg-violet-500/5 blur-3xl float-slow" />
-      <div className="pointer-events-none fixed bottom-1/4 right-1/4 w-48 h-48 rounded-full bg-indigo-500/5 blur-3xl float-delayed" />
+        {/* Hero text */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-auto relative z-10">
+          <p className="text-orange-400 text-sm font-semibold tracking-widest uppercase mb-4">Your University Journey Starts Here</p>
+          <h2 className="text-5xl xl:text-6xl font-black text-white leading-[1.05] tracking-tight">
+            Study Smarter.<br />
+            <span className="text-orange-400">Score Higher.</span>
+          </h2>
+          <p className="mt-5 text-white/50 text-base leading-relaxed max-w-md">
+            The #1 JUPEB prep platform trusted by thousands of Nigerian students aiming for top universities.
+          </p>
 
-      <div className="w-full max-w-[420px] relative z-10">
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}>
+          <ul className="mt-7 space-y-3">
+            {FEATURES.map((f, i) => (
+              <motion.li key={f.label}
+                initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 + i * 0.07 }}
+                className="flex items-center gap-3 text-sm text-white/60">
+                <f.icon className="h-4 w-4 text-orange-400 shrink-0" />
+                {f.label}
+              </motion.li>
+            ))}
+          </ul>
+        </motion.div>
 
-          {/* ── Tagline ── */}
-          <motion.p
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-center mb-5"
-          >
-            <span className="shimmer-text text-lg md:text-xl font-serif font-light tracking-tight">
-              Your path to 16 points starts here
-            </span>
-          </motion.p>
-
-          {/* ── Brand block ── */}
-          <div className="border border-white/8 bg-[#0f0f16] px-6 pt-7 pb-6 relative overflow-hidden rounded-t-2xl">
-            <CornerMark pos="tl" /><CornerMark pos="tr" />
-
-            {/* Premium gradient border glow at top */}
-            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
-
-            {/* Art-deco top rule */}
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex-1 h-px bg-gradient-to-r from-transparent to-violet-500/30" />
-              <motion.div
-                className="w-1.5 h-1.5 bg-violet-500/60 rotate-45"
-                animate={{ scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              />
-              <div className="flex-1 h-px bg-gradient-to-l from-transparent to-violet-500/30" />
+        {/* Stats */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
+          className="mt-12 grid grid-cols-4 gap-3 relative z-10">
+          {STATS.map(({ icon: Icon, value, label }) => (
+            <div key={label} className="bg-white/5 border border-white/8 rounded-2xl p-3.5">
+              <Icon className="h-4 w-4 text-orange-400 mb-2" />
+              <p className="text-white font-bold text-lg leading-none">{value}</p>
+              <p className="text-white/35 text-[10px] mt-1 leading-tight">{label}</p>
             </div>
+          ))}
+        </motion.div>
+      </div>
 
-            <div className="flex items-center gap-4">
-              <motion.div
-                className="w-10 h-10 border border-violet-500/30 flex items-center justify-center flex-shrink-0 bg-violet-500/8 rounded-xl"
-                whileHover={{ scale: 1.05, borderColor: "rgba(139,92,246,0.5)" }}
-              >
-                <GraduationCap className="h-5 w-5 text-violet-400" />
-              </motion.div>
-              <div>
-                <h1 className="text-base font-bold font-serif text-white tracking-wide">JUPEB Prep</h1>
-                <p className="text-[9px] tracking-[0.2em] uppercase text-white/25 mt-0.5">Foundation Studies Platform</p>
+      {/* ── RIGHT FORM PANEL ──────────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-gray-50 relative">
+
+        {/* Mobile header */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center mb-8 lg:hidden">
+          <div className="w-14 h-14 rounded-2xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/20 mb-3">
+            <GraduationCap className="h-7 w-7 text-white" />
+          </div>
+          <h1 className="text-2xl font-black text-gray-900">JUPEB Prep</h1>
+          <p className="text-gray-400 text-xs tracking-widest uppercase mt-1">Foundation Studies Platform</p>
+        </motion.div>
+
+        <div className="w-full max-w-sm">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+
+            {/* Card */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+
+              {/* Tab bar */}
+              <div className="flex border-b border-gray-200">
+                {(["register", "login"] as Tab[]).map(t => (
+                  <button key={t} onClick={() => setTab(t)}
+                    className={cn(
+                      "flex-1 py-3.5 text-xs font-bold tracking-widest uppercase transition-all duration-200 relative",
+                      tab === t ? "text-gray-900 bg-white" : "text-gray-400 hover:text-gray-600 bg-gray-50"
+                    )}>
+                    {t === "register" ? "Register" : "Sign In"}
+                    {tab === t && (
+                      <motion.div
+                        layoutId="authTab"
+                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500"
+                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Form body */}
+              <div className="px-6 py-6">
+                <AnimatePresence mode="wait">
+                  <motion.div key={tab} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                    {tab === "login"
+                      ? <LoginForm    onGoogleClick={handleGoogleClick} googleLoading={googleLoading} />
+                      : <RegisterForm onGoogleClick={handleGoogleClick} googleLoading={googleLoading} googlePreFill={googlePreFill} />
+                    }
+                  </motion.div>
+                </AnimatePresence>
               </div>
             </div>
 
-            {/* Feature tags — stagger animated */}
-            <div className="flex flex-wrap gap-2 mt-5">
-              {FEATURES.map((f, i) => (
-                <motion.div
-                  key={f.label}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + i * 0.1 }}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 border border-white/6 bg-white/2 rounded-lg hover:bg-white/4 hover:border-white/12 transition-all duration-200 group cursor-default"
-                >
-                  <f.icon className={cn("h-2.5 w-2.5 transition-transform group-hover:scale-110", f.col)} />
-                  <span className="text-[9px] tracking-wider uppercase text-white/30 group-hover:text-white/50 transition-colors">{f.label}</span>
-                </motion.div>
-              ))}
-            </div>
-
-            <CornerMark pos="bl" /><CornerMark pos="br" />
-          </div>
-
-          {/* ── Tab bar ── */}
-          <div className="flex border-x border-white/8 bg-[#0c0c12] relative">
-            {(["register", "login"] as Tab[]).map(t => (
-              <button key={t} onClick={() => setTab(t)}
-                className={cn(
-                  "flex-1 py-3 text-xs font-bold tracking-widest uppercase transition-all duration-200 relative",
-                  tab === t ? "text-white bg-[#0f0f16]" : "text-white/25 hover:text-white/50 bg-transparent"
-                )}>
-                {t === "register" ? "Register" : "Sign In"}
-                {tab === t && (
-                  <motion.div
-                    layoutId="authTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-500 to-indigo-500"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* ── Form panel ── */}
-          <div className="border border-t-0 border-white/8 bg-[#0f0f16] px-6 py-6 rounded-b-2xl">
-            <AnimatePresence mode="wait">
-              <motion.div key={tab} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-                {tab === "login"
-                  ? <LoginForm    onGoogleClick={handleGoogleClick} googleLoading={googleLoading} />
-                  : <RegisterForm onGoogleClick={handleGoogleClick} googleLoading={googleLoading} googlePreFill={googlePreFill} />
-                }
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          {/* ── Footer switch + social proof ── */}
-          <div className="text-center mt-4 space-y-3">
-            <p className="text-[11px] text-white/20 tracking-wide">
+            {/* Footer switch */}
+            <p className="text-center text-xs text-gray-400 mt-4">
               {tab === "register" ? (
                 <>Already have an account?{" "}
-                  <button onClick={() => setTab("login")} className="text-violet-400 hover:text-violet-300 transition-colors">Sign in</button>
+                  <button onClick={() => setTab("login")} className="text-orange-500 hover:text-orange-600 font-semibold transition-colors">Sign in</button>
                 </>
               ) : (
                 <>New student?{" "}
-                  <button onClick={() => setTab("register")} className="text-violet-400 hover:text-violet-300 transition-colors">Register</button>
+                  <button onClick={() => setTab("register")} className="text-orange-500 hover:text-orange-600 font-semibold transition-colors">Register</button>
                 </>
               )}
             </p>
 
             {/* Social proof */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="flex items-center justify-center gap-2 text-[10px] text-white/20"
-            >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
+              className="flex items-center justify-center gap-2 text-[11px] text-gray-400 mt-3">
               <div className="flex -space-x-1.5">
-                {["🟣", "🔵", "🟢"].map((c, i) => (
-                  <div key={i} className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-[7px] border border-[#0a0a0f]">
+                {["🟠", "🟡", "🟢"].map((c, i) => (
+                  <div key={i} className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[8px] border border-gray-50 shadow-sm">
                     {c}
                   </div>
                 ))}
               </div>
-              <span>Join <span className="text-violet-400/80 font-semibold"><AnimatedCounter to={500} duration={2} />+</span> JUPEB students</span>
+              <span>Join <span className="text-orange-500 font-semibold"><AnimatedCounter to={500} duration={2} />+</span> JUPEB students</span>
             </motion.div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
     </div>
   );
