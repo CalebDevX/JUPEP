@@ -100,7 +100,7 @@ function UserAvatar({ pic, initial, size = "md" }: { pic?: string | null; initia
     return <img src={pic} alt="Profile" className={`${sz} rounded-lg object-cover flex-shrink-0`} />;
   }
   return (
-    <div className={`${sz} rounded-lg bg-gradient-to-br from-violet-500/70 to-indigo-600/70 flex items-center justify-center flex-shrink-0`}>
+    <div className={`${sz} rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center flex-shrink-0`}>
       <span className={`${textSz} font-bold text-white`}>{initial}</span>
     </div>
   );
@@ -410,7 +410,7 @@ export function Shell({ children }: ShellProps) {
           </button>
 
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+            <div className="w-6 h-6 rounded-lg bg-orange-500 flex items-center justify-center">
               <GraduationCap className="h-3.5 w-3.5 text-white" />
             </div>
             <span className="font-bold text-sm text-white">{activeItem?.label || "JUPEB Prep"}</span>
