@@ -1,12 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, Platform, RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { COURSES_CACHE_KEY } from '@/hooks/useOfflineCache';
 import { getApiBase } from '@/lib/query-client';
 import type { AppColors } from '@/constants/colors';
 
@@ -27,14 +30,10 @@ const SUBJECT_GROUPS = [
 ];
 
 const SEMESTER_LABELS: Record<string, string> = {
-  'First Semester': 'Sem 1',
-  'First Semester Exam': 'Sem 1',
-  'Second Semester': 'Sem 2',
-  'Second Semester Exam': 'Sem 2',
-  'Third Semester': 'Sem 3',
-  'Third Semester Exam': 'Sem 3',
-  'Fourth Semester': 'Sem 4',
-  'Fourth Semester Exam': 'Sem 4',
+  'First Semester': 'Sem 1', 'First Semester Exam': 'Sem 1',
+  'Second Semester': 'Sem 2', 'Second Semester Exam': 'Sem 2',
+  'Third Semester': 'Sem 3', 'Third Semester Exam': 'Sem 3',
+  'Fourth Semester': 'Sem 4', 'Fourth Semester Exam': 'Sem 4',
 };
 
 function semesterLabel(s: string): string {
@@ -46,28 +45,58 @@ export default function NotesScreen() {
   const topPad = Platform.OS === 'web' ? 0 : top;
   const C = useTheme();
   const styles = useMemo(() => makeStyles(C), [C]);
+  const { isOnline } = useNetworkStatus();
 
-  const [courses, setCourses] = useState<CourseItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [courses, setCourses]     = useState<CourseItem[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError]         = useState<string | null>(null);
+  const [fromCache, setFromCache] = useState(false);
 
-  async function load() {
-    setLoading(true);
+  const load = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
     setError(null);
+
     try {
-      const base = getApiBase();
-      const res = await fetch(`${base}/textbook/courses`);
-      if (!res.ok) throw new Error(`Server error ${res.status}`);
-      const data = await res.json();
-      setCourses(data);
-    } catch (e: any) {
-      setError(e.message ?? 'Failed to load notes');
+      if (isOnline) {
+        const base = getApiBase();
+        const res  = await fetch(`${base}/textbook/courses`);
+        if (!res.ok) throw new Error(`Server error ${res.status}`);
+        const data: CourseItem[] = await res.json();
+        setCourses(data);
+        setFromCache(false);
+        // Persist to cache
+        await AsyncStorage.setItem(COURSES_CACHE_KEY, JSON.stringify({ data, cachedAt: Date.now() }));
+      } else {
+        throw new Error('offline');
+      }
+    } catch {
+      // Try cache
+      try {
+        const raw = await AsyncStorage.getItem(COURSES_CACHE_KEY);
+        if (raw) {
+          const { data } = JSON.parse(raw);
+          setCourses(data);
+          setFromCache(true);
+        } else {
+          setError('No internet and no cached data yet. Connect once to download notes.');
+        }
+      } catch {
+        setError('Failed to load notes.');
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }
+  }, [isOnline]);
 
   useEffect(() => { load(); }, []);
+
+  // Re-fetch when coming back online
+  useEffect(() => {
+    if (isOnline && fromCache) load();
+  }, [isOnline]);
 
   const grouped = useMemo(() => {
     return SUBJECT_GROUPS.map(g => ({
@@ -82,8 +111,24 @@ export default function NotesScreen() {
       <View style={[styles.header, { paddingTop: topPad + 16 }]}>
         <View style={styles.headerDecor} />
         <Text style={styles.headerTitle}>Study Notes</Text>
-        <Text style={styles.headerSub}>Textbook content for CRS, GOV & LIT</Text>
+        <Text style={styles.headerSub}>Textbook content for CRS, GOV &amp; LIT</Text>
       </View>
+
+      {/* Offline / cache banner */}
+      {(!isOnline || fromCache) && (
+        <View style={[styles.offlineBanner, { backgroundColor: isOnline ? '#92400e20' : '#dc262620' }]}>
+          <Ionicons
+            name={isOnline ? 'cloud-done-outline' : 'cloud-offline-outline'}
+            size={14}
+            color={isOnline ? '#d97706' : '#ef4444'}
+          />
+          <Text style={[styles.offlineBannerText, { color: isOnline ? '#d97706' : '#ef4444' }]}>
+            {isOnline
+              ? 'Showing cached data — refreshing…'
+              : 'You\'re offline — showing cached notes. Quiz works fully offline.'}
+          </Text>
+        </View>
+      )}
 
       {loading ? (
         <View style={styles.centered}>
@@ -95,7 +140,7 @@ export default function NotesScreen() {
           <Ionicons name="cloud-offline-outline" size={44} color={C.mutedForeground} />
           <Text style={styles.errorTitle}>Could not load notes</Text>
           <Text style={styles.errorSub}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={load} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => load()} activeOpacity={0.8}>
             <Text style={styles.retryText}>Try again</Text>
           </TouchableOpacity>
         </View>
@@ -103,11 +148,20 @@ export default function NotesScreen() {
         <ScrollView
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={C.primary} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={C.primary} />}
         >
+          {/* Offline tip card */}
+          {!isOnline && (
+            <View style={styles.tipCard}>
+              <Ionicons name="download-outline" size={18} color={C.primary} />
+              <Text style={styles.tipText}>
+                Open any course while online to download its chapters for offline reading.
+              </Text>
+            </View>
+          )}
+
           {grouped.map(group => (
             <View key={group.key} style={styles.group}>
-              {/* Group header */}
               <View style={styles.groupHeader}>
                 <View style={[styles.groupIconBox, { backgroundColor: `${group.accent}18` }]}>
                   <Ionicons name={group.icon} size={18} color={group.accent} />
@@ -121,7 +175,6 @@ export default function NotesScreen() {
                 </Text>
               </View>
 
-              {/* Course cards */}
               {group.items.length === 0 ? (
                 <View style={styles.emptyGroup}>
                   <Text style={styles.emptyGroupText}>No papers available yet</Text>
@@ -189,14 +242,25 @@ function makeStyles(C: AppColors) {
     headerTitle: { fontSize: 26, fontFamily: 'Inter_700Bold', color: '#fff', letterSpacing: -0.4 },
     headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.6)', fontFamily: 'Inter_400Regular', marginTop: 4 },
 
+    offlineBanner: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      paddingHorizontal: 16, paddingVertical: 10,
+    },
+    offlineBannerText: { fontSize: 12, fontFamily: 'Inter_500Medium', flex: 1, lineHeight: 17 },
+
+    tipCard: {
+      flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+      backgroundColor: `${C.primary}12`,
+      borderRadius: C.radius, borderWidth: 1, borderColor: `${C.primary}25`,
+      padding: 14, marginBottom: 16,
+    },
+    tipText: { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular', color: C.foreground, lineHeight: 19 },
+
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
     loadingText: { marginTop: 14, fontSize: 14, color: C.mutedForeground, fontFamily: 'Inter_400Regular' },
     errorTitle: { fontSize: 17, fontFamily: 'Inter_700Bold', color: C.foreground, marginTop: 14, marginBottom: 6 },
     errorSub: { fontSize: 13, color: C.mutedForeground, fontFamily: 'Inter_400Regular', textAlign: 'center', marginBottom: 20 },
-    retryBtn: {
-      backgroundColor: C.primary, borderRadius: C.radius,
-      paddingHorizontal: 24, paddingVertical: 11,
-    },
+    retryBtn: { backgroundColor: C.primary, borderRadius: C.radius, paddingHorizontal: 24, paddingVertical: 11 },
     retryText: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: '#fff' },
 
     scroll: { paddingHorizontal: 16, paddingTop: 16 },
