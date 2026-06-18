@@ -11,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/useTheme';
+import { lookupWord, type VocabEntry } from '@/lib/vocabulary';
 import type { AppColors } from '@/constants/colors';
 
 const RECENT_KEY  = 'jupeb_dict_recent';
@@ -69,12 +70,13 @@ export default function DictionaryScreen() {
   const C = useTheme();
   const S = useMemo(() => makeStyles(C), [C]);
 
-  const [query, setQuery]         = useState(params.q ?? '');
-  const [loading, setLoading]     = useState(false);
-  const [entries, setEntries]     = useState<DictEntry[] | null>(null);
-  const [wiki, setWiki]           = useState<WikiSummary | null>(null);
-  const [error, setError]         = useState<string | null>(null);
-  const [recent, setRecent]       = useState<string[]>([]);
+  const [query, setQuery]           = useState(params.q ?? '');
+  const [loading, setLoading]       = useState(false);
+  const [entries, setEntries]       = useState<DictEntry[] | null>(null);
+  const [wiki, setWiki]             = useState<WikiSummary | null>(null);
+  const [error, setError]           = useState<string | null>(null);
+  const [recent, setRecent]         = useState<string[]>([]);
+  const [localEntry, setLocalEntry] = useState<VocabEntry | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef    = useRef<TextInput>(null);
 
@@ -93,8 +95,13 @@ export default function DictionaryScreen() {
   }, [recent]);
 
   const lookup = useCallback(async (word: string) => {
-    if (!word.trim()) { setEntries(null); setWiki(null); setError(null); return; }
+    if (!word.trim()) { setEntries(null); setWiki(null); setError(null); setLocalEntry(null); return; }
     setLoading(true); setError(null); setEntries(null); setWiki(null);
+
+    // ① Check offline JUPEB vocabulary first — works without internet
+    const offlineHit = lookupWord(word);
+    setLocalEntry(offlineHit ?? null);
+
     try {
       const [dictResult, wikiResult] = await Promise.allSettled([
         fetchDictionary(word),
@@ -103,12 +110,15 @@ export default function DictionaryScreen() {
       if (dictResult.status === 'fulfilled') {
         setEntries(dictResult.value);
         saveRecent(word.trim());
-      } else {
+      } else if (!offlineHit) {
         setError('not_found');
+      } else {
+        // offline vocab is enough — just save recent
+        saveRecent(word.trim());
       }
       if (wikiResult.status === 'fulfilled') setWiki(wikiResult.value);
     } catch {
-      setError('failed');
+      if (!offlineHit) setError('failed');
     } finally {
       setLoading(false);
     }
@@ -200,6 +210,30 @@ export default function DictionaryScreen() {
                 ? 'Try checking the spelling, or search for a simpler form of the word.'
                 : 'The dictionary requires an internet connection.'}
             </Text>
+          </View>
+        )}
+
+        {/* ── JUPEB Offline Vocab Card ──────────────────────────────────── */}
+        {!loading && localEntry && (
+          <View style={S.jupebCard}>
+            <View style={S.jupebCardHeader}>
+              <View style={S.jupebIconBox}>
+                <Ionicons name="school" size={16} color="#16a34a" />
+              </View>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={S.jupebCardLabel}>JUPEB Dictionary</Text>
+                <Text style={S.jupebCardSub}>Saved on device · available offline</Text>
+              </View>
+              <View style={[S.posBadge, { backgroundColor: `${posColor(localEntry.pos)}15` }]}>
+                <Text style={[S.posText, { color: posColor(localEntry.pos) }]}>{localEntry.pos}</Text>
+              </View>
+            </View>
+            <Text style={S.jupebDefinition}>{localEntry.definition}</Text>
+            {localEntry.example && (
+              <View style={[S.exampleBox, { borderLeftColor: '#16a34a' }]}>
+                <Text style={S.exampleText}>"{localEntry.example}"</Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -385,6 +419,21 @@ function makeStyles(C: AppColors) {
     },
     notFoundTitle: { fontSize: 16, fontFamily: 'Inter_700Bold', color: C.foreground, textAlign: 'center', marginBottom: 8 },
     notFoundSub:   { fontSize: 13, fontFamily: 'Inter_400Regular', color: C.mutedForeground, textAlign: 'center', lineHeight: 19 },
+
+    // ── JUPEB offline vocab card
+    jupebCard: {
+      backgroundColor: '#f0fdf4', borderRadius: C.radiusLg,
+      borderWidth: 1.5, borderColor: '#bbf7d0',
+      padding: 16, marginBottom: 12,
+    },
+    jupebCardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+    jupebIconBox: {
+      width: 34, height: 34, borderRadius: 10,
+      backgroundColor: '#dcfce7', alignItems: 'center', justifyContent: 'center',
+    },
+    jupebCardLabel: { fontSize: 13, fontFamily: 'Inter_700Bold', color: '#15803d' },
+    jupebCardSub:   { fontSize: 11, fontFamily: 'Inter_400Regular', color: '#16a34a', marginTop: 1 },
+    jupebDefinition: { fontSize: 14, fontFamily: 'Inter_400Regular', color: '#14532d', lineHeight: 22 },
 
     // ── Word result
     wordHeader: {

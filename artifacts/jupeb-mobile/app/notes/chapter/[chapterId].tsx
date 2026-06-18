@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Platform,
+  ActivityIndicator, Platform, Modal, Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/useTheme';
 import { getApiBase } from '@/lib/query-client';
+import { lookupWord, type VocabEntry } from '@/lib/vocabulary';
 import type { AppColors } from '@/constants/colors';
 
 type Section = { heading: string; content: string };
@@ -24,43 +26,82 @@ type ChapterDetail = {
 };
 
 const ACCENT_MAP: Record<string, string> = {
-  crs: '#d97706',
-  gov: '#0284c7',
-  lit: '#16a34a',
+  crs: '#d97706', gov: '#0284c7', lit: '#16a34a',
 };
-
 function getAccentFromChapterId(id: string): string {
-  const prefix = id.slice(0, 3).toLowerCase();
-  return ACCENT_MAP[prefix] ?? '#1e40af';
+  return ACCENT_MAP[id.slice(0, 3).toLowerCase()] ?? '#1e40af';
 }
 
-// ─── Simple inline markdown renderer ─────────────────────────────────────────
-function InlineText({ text, baseStyle }: { text: string; baseStyle: any }) {
-  const parts = text.split(/(\*\*[^*]+?\*\*|\*[^*]+?\*)/g);
-  return (
-    <Text style={baseStyle}>
-      {parts.map((part, i) => {
-        if (part.startsWith('**') && part.endsWith('**')) {
-          return (
-            <Text key={i} style={{ fontFamily: 'Inter_700Bold' }}>
-              {part.slice(2, -2)}
-            </Text>
-          );
-        }
-        if (part.startsWith('*') && part.endsWith('*')) {
-          return (
-            <Text key={i} style={{ fontStyle: 'italic' }}>
-              {part.slice(1, -1)}
-            </Text>
-          );
-        }
-        return <Text key={i}>{part}</Text>;
-      })}
-    </Text>
-  );
+// ── Vocab-aware text renderer ─────────────────────────────────────────────────
+// Renders plain text with JUPEB vocab words highlighted and tappable.
+function VocabText({
+  text,
+  baseStyle,
+  highlightColor,
+  onWordPress,
+}: {
+  text: string;
+  baseStyle: any;
+  highlightColor: string;
+  onWordPress: (entry: VocabEntry) => void;
+}) {
+  // Split by markdown bold/italic first
+  const mdParts = text.split(/(\*\*[^*]+?\*\*|\*[^*]+?\*)/g);
+
+  const children: React.ReactNode[] = [];
+  mdParts.forEach((part, pi) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      children.push(
+        <Text key={`md-b-${pi}`} style={{ fontFamily: 'Inter_700Bold' }}>
+          {part.slice(2, -2)}
+        </Text>
+      );
+      return;
+    }
+    if (part.startsWith('*') && part.endsWith('*')) {
+      children.push(
+        <Text key={`md-i-${pi}`} style={{ fontStyle: 'italic' }}>
+          {part.slice(1, -1)}
+        </Text>
+      );
+      return;
+    }
+    // Plain text — check word-by-word for vocab hits
+    const tokens = part.split(/(\s+)/);
+    tokens.forEach((token, ti) => {
+      const entry = lookupWord(token);
+      if (entry) {
+        children.push(
+          <Text
+            key={`v-${pi}-${ti}`}
+            style={{
+              color: highlightColor,
+              fontFamily: 'Inter_600SemiBold',
+              textDecorationLine: 'underline',
+              textDecorationStyle: 'dotted',
+            } as any}
+            onPress={() => onWordPress(entry)}
+          >
+            {token}
+          </Text>
+        );
+      } else {
+        children.push(<Text key={`p-${pi}-${ti}`}>{token}</Text>);
+      }
+    });
+  });
+
+  return <Text style={baseStyle}>{children}</Text>;
 }
 
-function renderContent(text: string, styles: ReturnType<typeof makeStyles>, C: AppColors) {
+// ── Content renderer ──────────────────────────────────────────────────────────
+function renderContent(
+  text: string,
+  styles: ReturnType<typeof makeStyles>,
+  C: AppColors,
+  accent: string,
+  onWordPress: (entry: VocabEntry) => void
+) {
   const paragraphs = text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
   return paragraphs.map((p, i) => {
     const lines = p.split('\n').map(l => l.trim()).filter(Boolean);
@@ -75,11 +116,11 @@ function renderContent(text: string, styles: ReturnType<typeof makeStyles>, C: A
               return (
                 <View key={j} style={{ flexDirection: 'row', marginBottom: 5 }}>
                   <Text style={[styles.contentText, { color: C.primary, width: 22, flexShrink: 0 }]}>{m[1]}.</Text>
-                  <InlineText text={m[2]} baseStyle={[styles.contentText, { flex: 1 }]} />
+                  <VocabText text={m[2]} baseStyle={[styles.contentText, { flex: 1 }]} highlightColor={accent} onWordPress={onWordPress} />
                 </View>
               );
             }
-            return <InlineText key={j} text={line} baseStyle={[styles.contentText, { marginBottom: 4 }]} />;
+            return <VocabText key={j} text={line} baseStyle={[styles.contentText, { marginBottom: 4 }]} highlightColor={accent} onWordPress={onWordPress} />;
           })}
         </View>
       );
@@ -95,21 +136,102 @@ function renderContent(text: string, styles: ReturnType<typeof makeStyles>, C: A
               return (
                 <View key={j} style={{ flexDirection: 'row', marginBottom: 5 }}>
                   <Text style={[styles.contentText, { color: C.primary, width: 16, flexShrink: 0 }]}>•</Text>
-                  <InlineText text={m[1]} baseStyle={[styles.contentText, { flex: 1 }]} />
+                  <VocabText text={m[1]} baseStyle={[styles.contentText, { flex: 1 }]} highlightColor={accent} onWordPress={onWordPress} />
                 </View>
               );
             }
-            return <InlineText key={j} text={line} baseStyle={[styles.contentText, { marginBottom: 4 }]} />;
+            return <VocabText key={j} text={line} baseStyle={[styles.contentText, { marginBottom: 4 }]} highlightColor={accent} onWordPress={onWordPress} />;
           })}
         </View>
       );
     }
 
     // Regular paragraph
-    return <InlineText key={i} text={p} baseStyle={[styles.contentText, { marginBottom: 14 }]} />;
+    return <VocabText key={i} text={p} baseStyle={[styles.contentText, { marginBottom: 14 }]} highlightColor={accent} onWordPress={onWordPress} />;
   });
 }
 
+// ── Vocab Definition Modal ────────────────────────────────────────────────────
+function VocabModal({
+  entry,
+  accent,
+  onClose,
+  onFullDictionary,
+}: {
+  entry: VocabEntry | null;
+  accent: string;
+  onClose: () => void;
+  onFullDictionary: (term: string) => void;
+}) {
+  const C = useTheme();
+  const S = useMemo(() => makeStyles(C), [C]);
+  if (!entry) return null;
+
+  const subjectLabel: Record<string, string> = {
+    GOV: 'Government', CRS: 'CRS', LIT: 'Literature', GENERAL: 'Academic',
+  };
+
+  return (
+    <Modal transparent animationType="fade" visible onRequestClose={onClose}>
+      <Pressable style={S.modalOverlay} onPress={onClose}>
+        <Pressable style={S.modalSheet} onPress={e => e.stopPropagation()}>
+          {/* Handle */}
+          <View style={S.modalHandle} />
+
+          {/* Header */}
+          <View style={S.modalHeader}>
+            <View style={{ flex: 1 }}>
+              <View style={S.modalWordRow}>
+                <Text style={[S.modalWord, { color: accent }]}>{entry.term}</Text>
+                {entry.subject && (
+                  <View style={[S.subjectTag, { backgroundColor: `${accent}18` }]}>
+                    <Text style={[S.subjectTagText, { color: accent }]}>
+                      {subjectLabel[entry.subject] ?? entry.subject}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Text style={S.modalPos}>{entry.pos}</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={S.modalCloseBtn} activeOpacity={0.7}>
+              <Ionicons name="close" size={18} color={C.mutedForeground} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Offline badge */}
+          <View style={S.offlineBadge}>
+            <Ionicons name="checkmark-circle" size={12} color="#16a34a" />
+            <Text style={S.offlineBadgeText}>Saved on device · works offline</Text>
+          </View>
+
+          {/* Definition */}
+          <Text style={S.modalDefinition}>{entry.definition}</Text>
+
+          {/* Example */}
+          {entry.example && (
+            <View style={[S.modalExample, { borderLeftColor: accent }]}>
+              <Text style={S.modalExampleLabel}>Example</Text>
+              <Text style={S.modalExampleText}>"{entry.example}"</Text>
+            </View>
+          )}
+
+          {/* Full dictionary link */}
+          <TouchableOpacity
+            style={[S.modalDictBtn, { borderColor: `${accent}35`, backgroundColor: `${accent}08` }]}
+            onPress={() => { onClose(); onFullDictionary(entry.term); }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="library-outline" size={15} color={accent} />
+            <Text style={[S.modalDictBtnText, { color: accent }]}>Open full definition in Dictionary</Text>
+            <Ionicons name="chevron-forward" size={13} color={accent} />
+          </TouchableOpacity>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+// ── Main screen ───────────────────────────────────────────────────────────────
 export default function ChapterScreen() {
   const { chapterId, courseId } = useLocalSearchParams<{ chapterId: string; courseId: string }>();
   const { top, bottom } = useSafeAreaInsets();
@@ -117,15 +239,15 @@ export default function ChapterScreen() {
   const C = useTheme();
   const styles = useMemo(() => makeStyles(C), [C]);
 
-  const [chapter, setChapter] = useState<ChapterDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [chapter, setChapter]           = useState<ChapterDetail | null>(null);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState<string | null>(null);
   const [expandedTerms, setExpandedTerms] = useState<Set<number>>(new Set());
   const [showQuestions, setShowQuestions] = useState(false);
+  const [fromCache, setFromCache]       = useState(false);
+  const [vocabEntry, setVocabEntry]     = useState<VocabEntry | null>(null);
 
   const accent = getAccentFromChapterId(chapterId ?? '');
-
-  const [fromCache, setFromCache] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -137,14 +259,11 @@ export default function ChapterScreen() {
         const data = await res.json();
         setChapter(data);
         setFromCache(false);
-        // Persist to cache for offline use
         AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(() => {});
-        // Mark chapter as read
         if (chapterId) {
           await AsyncStorage.setItem(`jupeb_chapter_read_${chapterId}`, Date.now().toString());
         }
-      } catch (e: any) {
-        // Network failed — try offline cache
+      } catch {
         try {
           const cached = await AsyncStorage.getItem(CACHE_KEY);
           if (cached) {
@@ -154,9 +273,9 @@ export default function ChapterScreen() {
               await AsyncStorage.setItem(`jupeb_chapter_read_${chapterId}`, Date.now().toString());
             }
           } else {
-            setError(e.message);
+            setError('No internet and no cached version. Connect to load this chapter.');
           }
-        } catch {
+        } catch (e: any) {
           setError(e.message);
         }
       } finally {
@@ -165,6 +284,15 @@ export default function ChapterScreen() {
     }
     load();
   }, [courseId, chapterId]);
+
+  const handleWordPress = useCallback(async (entry: VocabEntry) => {
+    await Haptics.selectionAsync();
+    setVocabEntry(entry);
+  }, []);
+
+  const handleFullDictionary = useCallback((term: string) => {
+    router.push({ pathname: '/dictionary', params: { q: term } } as any);
+  }, []);
 
   function toggleTerm(i: number) {
     setExpandedTerms(prev => {
@@ -197,8 +325,17 @@ export default function ChapterScreen() {
 
   return (
     <View style={styles.root}>
+      {/* Vocab popup modal */}
+      <VocabModal
+        entry={vocabEntry}
+        accent={accent}
+        onClose={() => setVocabEntry(null)}
+        onFullDictionary={handleFullDictionary}
+      />
+
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 10 }]}>
+        <View style={styles.headerDecor} />
         <TouchableOpacity style={styles.backRow} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="arrow-back" size={20} color="#fff" />
           <Text style={styles.backLabel}>Back</Text>
@@ -211,11 +348,15 @@ export default function ChapterScreen() {
           <Text style={styles.chapterMetaText}>{chapter.sections.length} sections</Text>
           <Text style={styles.chapterMetaDot}>·</Text>
           <Text style={styles.chapterMetaText}>{chapter.keyTerms.length} key terms</Text>
+          <Text style={styles.chapterMetaDot}>·</Text>
+          <View style={styles.vocabHint}>
+            <Text style={[styles.vocabHintText, { color: accent }]}>tap coloured words for meaning</Text>
+          </View>
         </View>
         {fromCache && (
           <View style={styles.offlineBanner}>
             <Ionicons name="cloud-offline-outline" size={12} color="#f97316" />
-            <Text style={styles.offlineBannerText}>Offline — showing cached version</Text>
+            <Text style={styles.offlineBannerText}>Offline — showing saved version</Text>
           </View>
         )}
       </View>
@@ -230,7 +371,7 @@ export default function ChapterScreen() {
             <View style={[styles.sectionAccentBar, { backgroundColor: accent }]} />
             <View style={styles.sectionContent}>
               <Text style={styles.sectionHeading}>{sec.heading}</Text>
-              {renderContent(sec.content, styles, C)}
+              {renderContent(sec.content, styles, C, accent, handleWordPress)}
             </View>
           </View>
         ))}
@@ -241,7 +382,12 @@ export default function ChapterScreen() {
             <Text style={{ fontSize: 18 }}>📋</Text>
             <Text style={styles.summaryTitle}>Chapter Summary</Text>
           </View>
-          <Text style={styles.summaryText}>{chapter.summary}</Text>
+          <VocabText
+            text={chapter.summary}
+            baseStyle={styles.summaryText}
+            highlightColor={accent}
+            onWordPress={handleWordPress}
+          />
         </View>
 
         {/* ── KEY TERMS ────────────────────────────────────────────────────── */}
@@ -301,12 +447,13 @@ export default function ChapterScreen() {
 
 function makeStyles(C: AppColors) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: C.background },
-    centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+    root:        { flex: 1, backgroundColor: C.background },
+    centered:    { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
     loadingText: { marginTop: 14, fontSize: 14, color: C.mutedForeground, fontFamily: 'Inter_400Regular' },
-    errorText: { fontSize: 15, color: C.destructive, fontFamily: 'Inter_500Medium', marginTop: 14, marginBottom: 16 },
-    retryBtn: { padding: 12 },
-    retryText: { fontSize: 14, color: C.primary, fontFamily: 'Inter_600SemiBold' },
+    errorText:   { fontSize: 15, color: C.destructive, fontFamily: 'Inter_500Medium', marginTop: 14, marginBottom: 16 },
+    retryBtn:    { padding: 12 },
+    retryText:   { fontSize: 14, color: C.primary, fontFamily: 'Inter_600SemiBold' },
+
     offlineBanner: {
       flexDirection: 'row', alignItems: 'center', gap: 5,
       marginTop: 8, paddingHorizontal: 10, paddingVertical: 5,
@@ -318,18 +465,23 @@ function makeStyles(C: AppColors) {
     header: {
       backgroundColor: C.heroBg, paddingHorizontal: 20, paddingBottom: 18, overflow: 'hidden',
     },
+    headerDecor: {
+      position: 'absolute', width: 200, height: 200, borderRadius: 100,
+      backgroundColor: 'rgba(255,255,255,0.04)', top: -80, right: -50,
+    },
     backRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 },
     backLabel: { fontSize: 14, fontFamily: 'Inter_500Medium', color: 'rgba(255,255,255,0.7)' },
     chapterNumBadge: { marginBottom: 6 },
     chapterNumText: { fontSize: 12, fontFamily: 'Inter_700Bold', letterSpacing: 0.5 },
     chapterTitle: { fontSize: 20, fontFamily: 'Inter_700Bold', color: '#fff', letterSpacing: -0.3, lineHeight: 26, marginBottom: 10 },
-    chapterMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    chapterMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
     chapterMetaText: { fontSize: 12, color: 'rgba(255,255,255,0.55)', fontFamily: 'Inter_500Medium' },
     chapterMetaDot: { fontSize: 12, color: 'rgba(255,255,255,0.3)' },
+    vocabHint: {},
+    vocabHintText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
 
     scroll: { padding: 16 },
 
-    // Sections
     section: {
       flexDirection: 'row', marginBottom: 16,
       backgroundColor: C.card, borderRadius: C.radius,
@@ -341,12 +493,8 @@ function makeStyles(C: AppColors) {
       fontSize: 15, fontFamily: 'Inter_700Bold', color: C.foreground,
       marginBottom: 12, lineHeight: 21,
     },
-    contentText: {
-      fontSize: 13, fontFamily: 'Inter_400Regular', color: C.foreground,
-      lineHeight: 21,
-    },
+    contentText: { fontSize: 13, fontFamily: 'Inter_400Regular', color: C.foreground, lineHeight: 21 },
 
-    // Summary
     summaryCard: {
       backgroundColor: C.muted, borderRadius: C.radius,
       borderWidth: 1, padding: 14, marginBottom: 12,
@@ -355,7 +503,6 @@ function makeStyles(C: AppColors) {
     summaryTitle: { fontSize: 15, fontFamily: 'Inter_700Bold', color: C.foreground },
     summaryText: { fontSize: 13, fontFamily: 'Inter_400Regular', color: C.foreground, lineHeight: 21 },
 
-    // Key terms
     keyTermsCard: {
       backgroundColor: C.card, borderRadius: C.radius,
       borderWidth: 1, borderColor: C.border, padding: 14, marginBottom: 12,
@@ -367,7 +514,6 @@ function makeStyles(C: AppColors) {
     termName: { fontSize: 13, fontFamily: 'Inter_700Bold', flex: 1, paddingRight: 8 },
     termDef: { fontSize: 12, fontFamily: 'Inter_400Regular', color: C.mutedForeground, marginTop: 6, lineHeight: 18 },
 
-    // Practice questions
     questionsCard: {
       backgroundColor: C.card, borderRadius: C.radius,
       borderWidth: 1, borderColor: C.border, overflow: 'hidden', marginBottom: 12,
@@ -380,5 +526,59 @@ function makeStyles(C: AppColors) {
     questionRow: { flexDirection: 'row', paddingTop: 12 },
     questionNum: { fontSize: 13, fontFamily: 'Inter_700Bold', width: 22, flexShrink: 0 },
     questionText: { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular', color: C.foreground, lineHeight: 19 },
+
+    // ── Vocab modal ──────────────────────────────────────────────────────────
+    modalOverlay: {
+      flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'flex-end',
+    },
+    modalSheet: {
+      backgroundColor: C.card,
+      borderTopLeftRadius: 24, borderTopRightRadius: 24,
+      padding: 20, paddingBottom: 32,
+      shadowColor: '#000', shadowOffset: { width: 0, height: -4 },
+      shadowOpacity: 0.15, shadowRadius: 12, elevation: 20,
+    },
+    modalHandle: {
+      width: 36, height: 4, borderRadius: 2,
+      backgroundColor: C.border, alignSelf: 'center', marginBottom: 18,
+    },
+    modalHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
+    modalWordRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 },
+    modalWord: { fontSize: 26, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
+    subjectTag: {
+      borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
+    },
+    subjectTagText: { fontSize: 11, fontFamily: 'Inter_700Bold', letterSpacing: 0.3 },
+    modalPos: { fontSize: 12, fontFamily: 'Inter_400Regular', color: C.mutedForeground, fontStyle: 'italic' },
+    modalCloseBtn: {
+      width: 32, height: 32, borderRadius: 16,
+      backgroundColor: C.muted, alignItems: 'center', justifyContent: 'center',
+    },
+    offlineBadge: {
+      flexDirection: 'row', alignItems: 'center', gap: 5,
+      backgroundColor: '#f0fdf4', borderRadius: 8,
+      paddingHorizontal: 10, paddingVertical: 5,
+      alignSelf: 'flex-start', marginBottom: 14,
+      borderWidth: 1, borderColor: '#bbf7d0',
+    },
+    offlineBadgeText: { fontSize: 11, fontFamily: 'Inter_600SemiBold', color: '#16a34a' },
+    modalDefinition: {
+      fontSize: 15, fontFamily: 'Inter_400Regular', color: C.foreground,
+      lineHeight: 24, marginBottom: 14,
+    },
+    modalExample: {
+      backgroundColor: C.muted, borderRadius: 10,
+      padding: 12, marginBottom: 16,
+      borderLeftWidth: 3,
+    },
+    modalExampleLabel: { fontSize: 10, fontFamily: 'Inter_700Bold', color: C.mutedForeground, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+    modalExampleText: { fontSize: 13, fontFamily: 'Inter_400Regular', color: C.foreground, fontStyle: 'italic', lineHeight: 19 },
+    modalDictBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      borderRadius: 12, borderWidth: 1,
+      paddingHorizontal: 14, paddingVertical: 12,
+    },
+    modalDictBtnText: { flex: 1, fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   });
 }
