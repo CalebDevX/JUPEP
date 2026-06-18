@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { router } from 'expo-router';
 import type { AppColors } from '@/constants/colors';
 
@@ -92,6 +93,7 @@ export default function HomeScreen() {
     ]).start();
   }, []);
 
+  const { isOnline } = useNetworkStatus();
   const goalPct = Math.min(dailyDone / DAILY_GOAL, 1);
   const goalDone = dailyDone >= DAILY_GOAL;
 
@@ -108,6 +110,16 @@ export default function HomeScreen() {
           <Ionicons name="notifications-outline" size={22} color={C.foreground} />
         </TouchableOpacity>
       </View>
+
+      {/* ── Offline banner ───────────────────────────────────────────────── */}
+      {!isOnline && (
+        <View style={S.offlineBanner}>
+          <Ionicons name="cloud-offline-outline" size={14} color="#ef4444" />
+          <Text style={S.offlineBannerText}>
+            You're offline — Quiz & downloaded notes still work.
+          </Text>
+        </View>
+      )}
 
       <Animated.View style={{ opacity: fadeA, transform: [{ translateY: slideA }] }}>
 
@@ -306,6 +318,14 @@ function makeStyles(C: AppColors) {
       borderWidth: 1.5, borderColor: C.border,
       alignItems: 'center', justifyContent: 'center',
     },
+
+    offlineBanner: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      backgroundColor: '#dc262612',
+      borderRadius: 10, borderWidth: 1, borderColor: '#dc262622',
+      paddingHorizontal: 14, paddingVertical: 10, marginBottom: 16,
+    },
+    offlineBannerText: { flex: 1, fontSize: 12, fontFamily: 'Inter_500Medium', color: '#ef4444', lineHeight: 17 },
 
     // Streak (inverted card)
     streakCard: {

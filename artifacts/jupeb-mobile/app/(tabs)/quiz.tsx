@@ -11,6 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Colors } from '@/constants/colors';
 import { getQuizGroups, getBestAttempt, type DBQuizGroup } from '@/lib/database';
 import { syncQuizData, forceSync } from '@/lib/sync';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 
 // ─── Exam type config ─────────────────────────────────────────────────────────
 const EXAM_TYPES = [
@@ -53,6 +54,7 @@ export default function PracticeScreen() {
 
   const subjectList = getSubjectList(profile?.subjects);
 
+  const { isOnline } = useNetworkStatus();
   const [examType, setExamType] = useState<ExamCode>('ALL');
   const [subjectFilter, setSubjectFilter] = useState('ALL');
   const [groups, setGroups] = useState<DBQuizGroup[]>([]);
@@ -131,28 +133,33 @@ export default function PracticeScreen() {
           <Text style={styles.pageSubtitle}>Past exam questions by type & year</Text>
         </View>
         <TouchableOpacity
-          style={[styles.syncBtn, syncing && styles.syncBtnActive]}
-          onPress={() => doSync(true)}
-          disabled={syncing}
+          style={[styles.syncBtn, (syncing || !isOnline) && styles.syncBtnActive]}
+          onPress={() => isOnline && doSync(true)}
+          disabled={syncing || !isOnline}
           activeOpacity={0.7}
         >
           {syncing
             ? <ActivityIndicator size="small" color={Colors.primary} />
-            : <Ionicons name="sync-outline" size={20} color={Colors.primary} />}
+            : <Ionicons name={isOnline ? 'sync-outline' : 'cloud-offline-outline'} size={20} color={isOnline ? Colors.primary : Colors.warning} />}
         </TouchableOpacity>
       </View>
 
-      {syncing && syncMsg ? (
+      {!isOnline ? (
+        <View style={styles.offlineBanner}>
+          <Ionicons name="checkmark-circle-outline" size={14} color="#16a34a" />
+          <Text style={styles.offlineBannerText}>
+            Offline mode — all quiz questions are saved on your device ✓
+          </Text>
+        </View>
+      ) : syncing && syncMsg ? (
         <View style={styles.syncBanner}>
           <ActivityIndicator size="small" color={Colors.info} />
           <Text style={styles.syncBannerText}>{syncMsg}</Text>
         </View>
-      ) : null}
-
-      {syncError ? (
+      ) : syncError ? (
         <View style={styles.errorBanner}>
           <Ionicons name="wifi-outline" size={14} color={Colors.warning} />
-          <Text style={styles.errorBannerText}>Offline — showing cached questions</Text>
+          <Text style={styles.errorBannerText}>Could not sync — showing cached questions</Text>
         </View>
       ) : null}
 
@@ -363,6 +370,12 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: `${Colors.primary}40`, alignItems: 'center', justifyContent: 'center',
   },
   syncBtnActive: { opacity: 0.7 },
+  offlineBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#dcfce7', paddingHorizontal: 16, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: '#bbf7d0',
+  },
+  offlineBannerText: { fontSize: 12, fontFamily: 'Inter_500Medium', color: '#15803d', flex: 1 },
   syncBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: Colors.infoDim, paddingHorizontal: 16, paddingVertical: 8,
