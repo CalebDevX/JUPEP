@@ -36,7 +36,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, focused, size }) => (
+          tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'home' : 'home-outline' as IoniconName} size={22} color={color} />
           ),
         }}
