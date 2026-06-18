@@ -11,6 +11,8 @@ import { useTheme } from '@/hooks/useTheme';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { COURSES_CACHE_KEY } from '@/hooks/useOfflineCache';
 import { getApiBase } from '@/lib/query-client';
+import { useActivation } from '@/hooks/useActivation';
+import ActivationGate from '@/components/ActivationGate';
 import type { AppColors } from '@/constants/colors';
 
 type CourseItem = {
@@ -46,6 +48,7 @@ export default function NotesScreen() {
   const C = useTheme();
   const styles = useMemo(() => makeStyles(C), [C]);
   const { isOnline } = useNetworkStatus();
+  const { isActivated, gateVisible, showGate, hideGate } = useActivation();
 
   const [courses, setCourses]     = useState<CourseItem[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -185,18 +188,29 @@ export default function NotesScreen() {
                     <TouchableOpacity
                       key={course.id}
                       style={[styles.courseCard, { borderLeftColor: group.accent, borderLeftWidth: 3 }]}
-                      onPress={() => router.push(`/notes/${course.id}` as any)}
+                      onPress={() => {
+                        if (isActivated) {
+                          router.push(`/notes/${course.id}` as any);
+                        } else {
+                          showGate();
+                        }
+                      }}
                       activeOpacity={0.75}
                     >
                       <View style={styles.courseCardTop}>
-                        <View>
+                        <View style={{ flex: 1 }}>
                           <Text style={[styles.courseCode, { color: group.accent }]}>{course.code}</Text>
                           <Text style={styles.courseTitle} numberOfLines={2}>{course.title}</Text>
                         </View>
-                        <View style={[styles.semBadge, { backgroundColor: `${group.accent}15` }]}>
-                          <Text style={[styles.semText, { color: group.accent }]}>
-                            {semesterLabel(course.semester)}
-                          </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          {!isActivated && (
+                            <Ionicons name="lock-closed" size={13} color={C.mutedForeground} />
+                          )}
+                          <View style={[styles.semBadge, { backgroundColor: `${group.accent}15` }]}>
+                            <Text style={[styles.semText, { color: group.accent }]}>
+                              {semesterLabel(course.semester)}
+                            </Text>
+                          </View>
                         </View>
                       </View>
                       <Text style={styles.courseDesc} numberOfLines={2}>{course.description}</Text>
@@ -210,7 +224,10 @@ export default function NotesScreen() {
                           <Text style={styles.courseStatText}>{course.units ?? 3} units</Text>
                         </View>
                         <View style={styles.courseArrow}>
-                          <Text style={[styles.courseArrowText, { color: group.accent }]}>Read →</Text>
+                          {isActivated
+                            ? <Text style={[styles.courseArrowText, { color: group.accent }]}>Read →</Text>
+                            : <Text style={styles.courseArrowText}>🔒 Locked</Text>
+                          }
                         </View>
                       </View>
                     </TouchableOpacity>
@@ -222,6 +239,12 @@ export default function NotesScreen() {
           <View style={{ height: 100 }} />
         </ScrollView>
       )}
+
+      <ActivationGate
+        visible={gateVisible}
+        onClose={hideGate}
+        featureName="Study Notes"
+      />
     </View>
   );
 }

@@ -12,6 +12,8 @@ import * as Haptics from 'expo-haptics';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { useActivation } from '@/hooks/useActivation';
+import ActivationGate from '@/components/ActivationGate';
 import { router } from 'expo-router';
 import type { AppColors } from '@/constants/colors';
 
@@ -102,6 +104,7 @@ export default function HomeScreen() {
   const C = useTheme();
   const S = useMemo(() => makeStyles(C), [C]);
   const { isOnline } = useNetworkStatus();
+  const { isActivated, gateVisible, showGate, hideGate } = useActivation();
 
   // State
   const [dailyDone, setDailyDone]     = useState(0);
@@ -188,6 +191,7 @@ export default function HomeScreen() {
   const goalDone = dailyDone >= DAILY_GOAL;
 
   return (
+    <>
     <ScrollView style={S.root} contentContainerStyle={S.scroll} showsVerticalScrollIndicator={false}>
 
       {/* ── HERO ────────────────────────────────────────────────────────── */}
@@ -357,22 +361,31 @@ export default function HomeScreen() {
           <Text style={S.sectionTitle}>Quick Access</Text>
           <View style={S.actionGrid}>
             {[
-              { icon: 'help-circle' as const, label: 'Practice Quiz',  sub: 'Past questions',  color: '#f97316', route: '/(tabs)/quiz' },
-              { icon: 'book' as const,         label: 'Study Notes',   sub: 'CRS · GOV · LIT', color: '#10b981', route: '/(tabs)/notes' },
-              { icon: 'chatbubble-ellipses' as const, label: 'AI Tutor', sub: 'Ask anything',  color: '#8b5cf6', route: '/ai-chat' },
-              { icon: 'library' as const,      label: 'Dictionary',    sub: 'Word meanings',   color: '#0ea5e9', route: '/dictionary' },
+              { icon: 'help-circle' as const, label: 'Practice Quiz',  sub: 'Past questions',  color: '#f97316', route: '/(tabs)/quiz',   locked: false },
+              { icon: 'book' as const,         label: 'Study Notes',   sub: 'CRS · GOV · LIT', color: '#10b981', route: '/(tabs)/notes',  locked: false },
+              { icon: 'chatbubble-ellipses' as const, label: 'AI Tutor', sub: 'Ask anything',  color: '#8b5cf6', route: '/ai-chat',        locked: true  },
+              { icon: 'library' as const,      label: 'Dictionary',    sub: 'Word meanings',   color: '#0ea5e9', route: '/dictionary',     locked: false },
             ].map(a => (
               <TouchableOpacity
                 key={a.label}
                 style={[S.actionCard, { borderColor: `${a.color}25` }]}
                 onPress={async () => {
                   await Haptics.selectionAsync();
-                  router.push(a.route as any);
+                  if (a.locked && !isActivated) {
+                    showGate();
+                  } else {
+                    router.push(a.route as any);
+                  }
                 }}
                 activeOpacity={0.78}
               >
                 <View style={[S.actionIconBox, { backgroundColor: `${a.color}15` }]}>
                   <Ionicons name={a.icon} size={24} color={a.color} />
+                  {a.locked && !isActivated && (
+                    <View style={S.lockBadge}>
+                      <Ionicons name="lock-closed" size={9} color="#fff" />
+                    </View>
+                  )}
                 </View>
                 <Text style={S.actionLabel}>{a.label}</Text>
                 <Text style={S.actionSub}>{a.sub}</Text>
@@ -450,6 +463,13 @@ export default function HomeScreen() {
         <View style={{ height: 110 }} />
       </Animated.View>
     </ScrollView>
+
+    <ActivationGate
+      visible={gateVisible}
+      onClose={hideGate}
+      featureName="AI Tutor"
+    />
+    </>
   );
 }
 
@@ -602,6 +622,13 @@ function makeStyles(C: AppColors) {
     actionIconBox: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
     actionLabel: { fontSize: 14, fontFamily: 'Inter_700Bold', color: C.foreground, marginBottom: 3 },
     actionSub:   { fontSize: 11, fontFamily: 'Inter_400Regular', color: C.mutedForeground },
+    lockBadge: {
+      position: 'absolute', top: -4, right: -4,
+      width: 18, height: 18, borderRadius: 9,
+      backgroundColor: '#64748b',
+      alignItems: 'center', justifyContent: 'center',
+      borderWidth: 1.5, borderColor: C.background,
+    },
 
     // ── Subjects
     subjectRow: { gap: 10 },

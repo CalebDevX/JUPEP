@@ -11,9 +11,38 @@ import crypto from "crypto";
 pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS session_token TEXT`).catch(() => {});
 pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS profile_picture TEXT`).catch(() => {});
 pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS pin_hash TEXT`).catch(() => {});
+pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS password_hash TEXT`).catch(() => {});
 
 function hashPin(phone: string, pin: string): string {
   return crypto.createHash("sha256").update(`${phone.trim()}:${pin}`).digest("hex");
+}
+
+function hashPassword(phone: string, password: string): string {
+  return crypto.createHash("sha256").update(`pw2:${phone.trim()}:${password}`).digest("hex");
+}
+
+function buildProfile(s: any, sessionToken: string) {
+  const rawCode = s.access_code_used;
+  const expiresAt = s.expires_at ? new Date(s.expires_at) : null;
+  const sessionActive = expiresAt ? expiresAt > new Date() : false;
+  const isActivated = (rawCode && rawCode !== "FREE_TRIAL") || (s.payment_status === "paid" && sessionActive);
+  return {
+    fullName: s.full_name,
+    firstName: s.full_name.split(" ")[0],
+    phone: s.phone,
+    email: s.email,
+    subjects: s.subjects,
+    targetUniversity: s.target_university,
+    targetGrade: s.target_grade,
+    accessCode: rawCode === "FREE_TRIAL" ? null : rawCode,
+    expiresAt: s.expires_at || null,
+    sessionActive,
+    paymentStatus: s.payment_status || "unpaid",
+    sessionToken,
+    hasPin: !!s.pin_hash,
+    hasPassword: !!s.password_hash,
+    isActivated: !!isActivated,
+  };
 }
 
 const router = Router();
@@ -30,10 +59,16 @@ function getSetting(key: string): string | null {
 }
 
 router.post("/auth/register", async (req, res) => {
-  const { fullName, phone, email, subjects, targetUniversity, targetGrade, accessCode, pin } = req.body;
+  const { fullName, phone, email, subjects, targetUniversity, targetGrade, accessCode, password, pin } = req.body;
 
   if (!fullName?.trim() || !phone?.trim() || !subjects?.length) {
     return res.status(400).json({ error: "Please fill in all required fields." });
+  }
+  if (!password?.trim()) {
+    return res.status(400).json({ error: "Password is required." });
+  }
+  if (password.trim().length < 6) {
+    return res.status(400).json({ error: "Password must be at least 6 characters." });
   }
 
   const isFreeTrialRegistration = !accessCode?.trim();
@@ -52,17 +87,18 @@ router.post("/auth/register", async (req, res) => {
         .where(eq(accessCodesTable.code, code));
     }
 
+    const pwHash = hashPassword(phone.trim(), password.trim());
     const pinHash = (pin && /^\d{6}$/.test(pin)) ? hashPin(phone.trim(), pin) : null;
 
     await pool.query(
-      `INSERT INTO students(full_name, phone, email, subjects, target_university, target_grade, access_code_used)
-       VALUES($1,$2,$3,$4,$5,$6,$7)
+      `INSERT INTO students(full_name, phone, email, subjects, target_university, target_grade, access_code_used, password_hash)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8)
        ON CONFLICT(phone) DO UPDATE SET
-         full_name=$1, subjects=$4, target_university=$5, target_grade=$6`,
+         full_name=$1, subjects=$4, target_university=$5, target_grade=$6, password_hash=$8`,
       [
         fullName.trim(), phone.trim(), email?.trim() || null,
         JSON.stringify(subjects), targetUniversity?.trim() || null,
-        targetGrade || "aaa1", code,
+        targetGrade || "aaa1", code, pwHash,
       ]
     );
 
@@ -73,17 +109,8 @@ router.post("/auth/register", async (req, res) => {
     const sessionToken = crypto.randomUUID();
     await pool.query("UPDATE students SET session_token=$1 WHERE phone=$2", [sessionToken, phone.trim()]).catch(() => {});
 
-    const profile = {
-      fullName: fullName.trim(),
-      firstName: fullName.trim().split(" ")[0],
-      phone: phone.trim(),
-      email: email?.trim() || null,
-      subjects,
-      targetUniversity: targetUniversity?.trim() || null,
-      targetGrade: targetGrade || "aaa1",
-      accessCode: isFreeTrialRegistration ? null : code,
-      sessionToken,
-    };
+    const r2 = await pool.query("SELECT * FROM students WHERE phone=$1", [phone.trim()]);
+    const profile = buildProfile(r2.rows[0], sessionToken);
 
     res.json({ success: true, profile, freeTrial: isFreeTrialRegistration });
   } catch (err: any) {
@@ -135,7 +162,7 @@ router.post("/auth/activate", async (req, res) => {
 });
 
 router.post("/auth/login", async (req, res) => {
-  const { phone, pin } = req.body;
+  const { phone, password, pin } = req.body;
   if (!phone?.trim()) return res.status(400).json({ error: "Phone number is required." });
 
   try {
@@ -147,10 +174,18 @@ router.post("/auth/login", async (req, res) => {
 
     const s = result.rows[0];
 
-    // PIN verification
-    if (s.pin_hash) {
+    // Password verification (new accounts)
+    if (s.password_hash) {
+      if (!password) {
+        return res.json({ requiresPassword: true });
+      }
+      const attempted = hashPassword(phone.trim(), password);
+      if (attempted !== s.password_hash) {
+        return res.status(401).json({ error: "Incorrect password. Please try again." });
+      }
+    } else if (s.pin_hash) {
+      // Legacy PIN accounts (no password set yet)
       if (!pin) {
-        // Account has a PIN but none was provided — tell client to prompt
         return res.json({ requiresPin: true });
       }
       const attempted = hashPin(phone.trim(), pin);
@@ -159,28 +194,12 @@ router.post("/auth/login", async (req, res) => {
       }
     }
 
-    const rawCode = s.access_code_used;
-    const expiresAt = s.expires_at ? new Date(s.expires_at) : null;
-    const sessionActive = expiresAt ? expiresAt > new Date() : false;
-
+    // Rotate session token → kicks out any other device
     const sessionToken = crypto.randomUUID();
     await pool.query("UPDATE students SET session_token=$1 WHERE phone=$2", [sessionToken, phone.trim()]).catch(() => {});
 
-    const profile = {
-      fullName: s.full_name,
-      firstName: s.full_name.split(" ")[0],
-      phone: s.phone,
-      email: s.email,
-      subjects: s.subjects,
-      targetUniversity: s.target_university,
-      targetGrade: s.target_grade,
-      accessCode: rawCode === "FREE_TRIAL" ? null : rawCode,
-      expiresAt: s.expires_at || null,
-      sessionActive,
-      paymentStatus: s.payment_status || "unpaid",
-      sessionToken,
-      hasPin: !!s.pin_hash,
-    };
+    const r2 = await pool.query("SELECT * FROM students WHERE phone=$1", [phone.trim()]);
+    const profile = buildProfile(r2.rows[0], sessionToken);
 
     res.json({ success: true, profile });
   } catch (err: any) {

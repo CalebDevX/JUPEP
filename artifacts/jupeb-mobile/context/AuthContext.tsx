@@ -1,6 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { loginStep1, loginWithPin, Profile, LoginResult } from '@/src/utils/api';
+import {
+  loginWithPassword, registerWithPassword, loginStep1, loginWithPin,
+  verifySession, activateWithCode,
+  type Profile, type LoginResult,
+} from '@/src/utils/api';
 
 const PROFILE_KEY = 'jupeb_profile_v1';
 const DEVICE_KEY  = 'jupeb_device_id_v1';
@@ -21,50 +25,125 @@ async function getOrCreateDeviceId(): Promise<string> {
 interface AuthContextType {
   profile: Profile | null;
   isLoading: boolean;
-  /** Step 1 — send phone. Returns true if PIN is required next. */
+  isActivated: boolean;
+  /** Password-based login (new accounts) */
+  loginWithPass: (phone: string, password: string) => Promise<void>;
+  /** Register with password (creates account + logs in) */
+  register: (
+    fullName: string,
+    phone: string,
+    password: string,
+    subjects: string[],
+    accessCode?: string,
+    email?: string,
+  ) => Promise<void>;
+  /** Legacy: Step 1 — send phone. Returns true if PIN is required next. */
   loginPhone: (phone: string) => Promise<boolean>;
-  /** Step 2 — send PIN after loginPhone returned true. */
+  /** Legacy: Step 2 — send PIN after loginPhone returned true. */
   loginPin: (phone: string, pin: string) => Promise<void>;
+  /** Activate account with access code */
+  activateCode: (code: string) => Promise<void>;
+  /** Update profile in memory + SecureStore (e.g. after payment) */
+  refreshProfile: (updated: Partial<Profile>) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [profile, setProfile]   = useState<Profile | null>(null);
+  const [profile, setProfile]     = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Derive isActivated from the profile
+  const isActivated = Boolean(
+    profile &&
+    (
+      (profile.accessCode !== null && profile.accessCode !== undefined) ||
+      (profile.paymentStatus === 'paid' && profile.sessionActive) ||
+      profile.isActivated
+    )
+  );
+
+  async function saveProfile(p: Profile) {
+    await SecureStore.setItemAsync(PROFILE_KEY, JSON.stringify(p));
+    setProfile(p);
+  }
+
+  // On startup: load stored profile, then silently verify session with server
   useEffect(() => {
     (async () => {
       try {
         const stored = await SecureStore.getItemAsync(PROFILE_KEY);
-        if (stored) setProfile(JSON.parse(stored));
+        if (stored) {
+          const p: Profile = JSON.parse(stored);
+          setProfile(p);
+          // Background verify — only logout if server explicitly says token invalid
+          // (fail-open so offline users stay logged in)
+          verifySession(p.phone, p.sessionToken).then((valid) => {
+            if (!valid) {
+              // Another device logged in — clear session
+              SecureStore.deleteItemAsync(PROFILE_KEY).catch(() => {});
+              setProfile(null);
+            }
+          }).catch(() => { /* offline — keep session */ });
+        }
       } catch {
-        // ignore
+        // ignore parse errors
       } finally {
         setIsLoading(false);
       }
     })();
   }, []);
 
+  const loginWithPass = useCallback(async (phone: string, password: string) => {
+    const p = await loginWithPassword(phone, password);
+    await saveProfile(p);
+  }, []);
+
+  const register = useCallback(async (
+    fullName: string,
+    phone: string,
+    password: string,
+    subjects: string[],
+    accessCode?: string,
+    email?: string,
+  ) => {
+    const p = await registerWithPassword(fullName, phone, password, subjects, accessCode, email);
+    await saveProfile(p);
+  }, []);
+
   const loginPhone = useCallback(async (phone: string): Promise<boolean> => {
     const deviceId = await getOrCreateDeviceId();
     const result: LoginResult = await loginStep1(phone, deviceId);
     if (result.requiresPin) return true;
+    if (result.requiresPassword) {
+      // Server says password needed — inform caller
+      throw Object.assign(new Error('PASSWORD_REQUIRED'), { requiresPassword: true });
+    }
     if (result.profile) {
-      await SecureStore.setItemAsync(PROFILE_KEY, JSON.stringify(result.profile));
-      setProfile(result.profile);
+      await saveProfile(result.profile);
       return false;
     }
     throw new Error('Unexpected response from server');
   }, []);
 
-  const loginPin = useCallback(async (phone: string, pin: string): Promise<void> => {
+  const loginPin = useCallback(async (phone: string, pin: string) => {
     const deviceId = await getOrCreateDeviceId();
     const p = await loginWithPin(phone, pin, deviceId);
-    await SecureStore.setItemAsync(PROFILE_KEY, JSON.stringify(p));
-    setProfile(p);
+    await saveProfile(p);
   }, []);
+
+  const activateCode = useCallback(async (code: string) => {
+    if (!profile) throw new Error('Not logged in');
+    const updated = await activateWithCode(profile.phone, code);
+    await saveProfile({ ...profile, ...updated, sessionToken: profile.sessionToken });
+  }, [profile]);
+
+  const refreshProfile = useCallback(async (updated: Partial<Profile>) => {
+    if (!profile) return;
+    const merged = { ...profile, ...updated };
+    await saveProfile(merged);
+  }, [profile]);
 
   const logout = useCallback(async () => {
     await SecureStore.deleteItemAsync(PROFILE_KEY);
@@ -72,7 +151,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ profile, isLoading, loginPhone, loginPin, logout }}>
+    <AuthContext.Provider value={{
+      profile, isLoading, isActivated,
+      loginWithPass, register,
+      loginPhone, loginPin,
+      activateCode, refreshProfile, logout,
+    }}>
       {children}
     </AuthContext.Provider>
   );
