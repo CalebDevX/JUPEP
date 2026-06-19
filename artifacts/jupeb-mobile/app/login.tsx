@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
@@ -9,10 +9,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
+import { requestOTP, verifyOTP, resetPassword } from '@/src/utils/api';
 import type { AppColors } from '@/constants/colors';
 
-type Mode = 'login' | 'register';
+type Mode = 'login' | 'register' | 'forgot';
 type LoginStep = 'creds' | 'pin';
+type ForgotStep = 'phone' | 'otp' | 'newpass';
 
 const SUBJECTS = [
   { key: 'CRS001', label: 'Christian Religious Studies', short: 'CRS' },
@@ -42,6 +44,18 @@ export default function LoginScreen() {
   const [loading, setLoading]     = useState(false);
   const [shake]                   = useState(new Animated.Value(0));
   const pinInputRef               = useRef<TextInput>(null);
+
+  // Forgot password state
+  const [forgotStep, setForgotStep]     = useState<ForgotStep>('phone');
+  const [forgotPhone, setForgotPhone]   = useState('');
+  const [otp, setOtp]                   = useState('');
+  const [resetToken, setResetToken]     = useState('');
+  const [newPassword, setNewPassword]   = useState('');
+  const [showNew, setShowNew]           = useState(false);
+  const [confirmNew, setConfirmNew]     = useState('');
+  const [showConfirmNew, setShowConfirmNew] = useState(false);
+  const [otpSent, setOtpSent]           = useState(false);
+  const otpInputRef                     = useRef<TextInput>(null);
 
   const { loginWithPass, loginPhone, loginPin, register } = useAuth();
   const insets = useSafeAreaInsets();
@@ -78,7 +92,6 @@ export default function LoginScreen() {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       if (password.trim()) {
-        // Try password login first
         try {
           await loginWithPass(cleanPhone, password.trim());
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -90,11 +103,9 @@ export default function LoginScreen() {
             Alert.alert('Login failed', err.message);
             return;
           }
-          // Fall through to PIN path
         }
       }
 
-      // No password entered OR password login hit a non-credential error — try phone/PIN path
       const needsPin = await loginPhone(cleanPhone);
       if (needsPin) {
         setStep('pin');
@@ -163,11 +174,8 @@ export default function LoginScreen() {
       setLoading(true);
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       await register(
-        fullName.trim(),
-        cleanPhone,
-        password.trim(),
-        subjects,
-        accessCode.trim() || undefined,
+        fullName.trim(), cleanPhone, password.trim(),
+        subjects, accessCode.trim() || undefined,
       );
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
@@ -179,12 +187,95 @@ export default function LoginScreen() {
     }
   }
 
+  // ── Forgot password handlers ─────────────────────────────────────────────────
+
+  async function handleRequestOTP() {
+    const cleanPhone = forgotPhone.replace(/\s/g, '');
+    if (cleanPhone.length < 10) {
+      Alert.alert('Invalid number', 'Please enter a valid phone number.');
+      return;
+    }
+    try {
+      setLoading(true);
+      await requestOTP(cleanPhone);
+      setOtpSent(true);
+      setForgotStep('otp');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setTimeout(() => otpInputRef.current?.focus(), 150);
+    } catch (err: any) {
+      triggerShake();
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', err.message || 'Could not send OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleVerifyOTP() {
+    const code = otp.trim();
+    if (code.length !== 6) {
+      Alert.alert('Invalid code', 'Please enter the 6-digit code sent to your WhatsApp.');
+      return;
+    }
+    const cleanPhone = forgotPhone.replace(/\s/g, '');
+    try {
+      setLoading(true);
+      const token = await verifyOTP(cleanPhone, code);
+      setResetToken(token);
+      setForgotStep('newpass');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      triggerShake();
+      setOtp('');
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Wrong code', err.message || 'Incorrect or expired code.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleResetPassword() {
+    if (newPassword.trim().length < 6) {
+      Alert.alert('Weak password', 'Password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword.trim() !== confirmNew.trim()) {
+      triggerShake();
+      Alert.alert('Passwords don\'t match', 'Please make sure both fields match.');
+      return;
+    }
+    const cleanPhone = forgotPhone.replace(/\s/g, '');
+    try {
+      setLoading(true);
+      await resetPassword(cleanPhone, resetToken, newPassword.trim());
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert(
+        'Password reset!',
+        'Your password has been updated. You can now sign in.',
+        [{ text: 'Sign In', onPress: () => switchMode('login') }],
+      );
+    } catch (err: any) {
+      triggerShake();
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Reset failed', err.message || 'Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function switchMode(m: Mode) {
     setMode(m);
     setStep('creds');
     setPin('');
     setPassword('');
     setConfirmPass('');
+    setForgotStep('phone');
+    setForgotPhone('');
+    setOtp('');
+    setResetToken('');
+    setNewPassword('');
+    setConfirmNew('');
+    setOtpSent(false);
   }
 
   return (
@@ -199,15 +290,13 @@ export default function LoginScreen() {
       >
         {/* Brand */}
         <View style={styles.brand}>
-          <View style={styles.logoBox}>
-            <Text style={styles.logoLetter}>J</Text>
-          </View>
+          <AppLogo C={C} styles={styles} />
           <Text style={styles.appName}>JUPEB Prep</Text>
           <Text style={styles.tagline}>Study smarter. Pass better.</Text>
         </View>
 
-        {/* Mode tabs */}
-        {step === 'creds' && (
+        {/* Mode tabs — login / register only */}
+        {step === 'creds' && mode !== 'forgot' && (
           <View style={styles.tabs}>
             <TouchableOpacity
               style={[styles.tab, mode === 'login' && styles.tabActive]}
@@ -262,13 +351,19 @@ export default function LoginScreen() {
                 : <Text style={styles.tapHintText}>Tap here to open keyboard</Text>
               }
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.forgotLinkRow}
+              onPress={() => { setStep('creds'); setForgotPhone(phone); switchMode('forgot'); }}
+            >
+              <Text style={styles.forgotLink}>Forgot PIN? Reset account</Text>
+            </TouchableOpacity>
           </Animated.View>
         )}
 
         {/* ── LOGIN form ── */}
         {step === 'creds' && mode === 'login' && (
           <Animated.View style={[styles.form, { transform: [{ translateX: shake }] }]}>
-            <Field label="Phone number" icon="call-outline">
+            <Field label="Phone number" icon="call-outline" C={C} styles={styles}>
               <TextInput
                 style={styles.fieldInput}
                 placeholder="08012345678"
@@ -281,7 +376,7 @@ export default function LoginScreen() {
               />
             </Field>
 
-            <Field label="Password" icon="lock-closed-outline">
+            <Field label="Password" icon="lock-closed-outline" C={C} styles={styles}>
               <TextInput
                 style={styles.fieldInput}
                 placeholder="Your password"
@@ -310,6 +405,14 @@ export default function LoginScreen() {
               }
             </TouchableOpacity>
 
+            <TouchableOpacity
+              style={styles.forgotLinkRow}
+              onPress={() => { setForgotPhone(phone); switchMode('forgot'); }}
+            >
+              <Ionicons name="key-outline" size={14} color={C.primary} />
+              <Text style={styles.forgotLink}>Forgot password? Reset account</Text>
+            </TouchableOpacity>
+
             <Text style={styles.switchText}>
               Don't have an account?{' '}
               <Text style={styles.switchLink} onPress={() => switchMode('register')}>Register here</Text>
@@ -320,7 +423,7 @@ export default function LoginScreen() {
         {/* ── REGISTER form ── */}
         {step === 'creds' && mode === 'register' && (
           <Animated.View style={[styles.form, { transform: [{ translateX: shake }] }]}>
-            <Field label="Full name" icon="person-outline">
+            <Field label="Full name" icon="person-outline" C={C} styles={styles}>
               <TextInput
                 style={styles.fieldInput}
                 placeholder="e.g. Adaeze Okonkwo"
@@ -333,7 +436,7 @@ export default function LoginScreen() {
               />
             </Field>
 
-            <Field label="Phone number" icon="call-outline">
+            <Field label="Phone number" icon="call-outline" C={C} styles={styles}>
               <TextInput
                 style={styles.fieldInput}
                 placeholder="08012345678"
@@ -345,7 +448,7 @@ export default function LoginScreen() {
               />
             </Field>
 
-            <Field label="Password" icon="lock-closed-outline">
+            <Field label="Password" icon="lock-closed-outline" C={C} styles={styles}>
               <TextInput
                 style={styles.fieldInput}
                 placeholder="Min. 6 characters"
@@ -360,7 +463,7 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </Field>
 
-            <Field label="Confirm password" icon="checkmark-circle-outline">
+            <Field label="Confirm password" icon="checkmark-circle-outline" C={C} styles={styles}>
               <TextInput
                 style={styles.fieldInput}
                 placeholder="Repeat password"
@@ -375,7 +478,6 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </Field>
 
-            {/* Subjects */}
             <View style={styles.subjectSection}>
               <Text style={styles.subjectLabel}>Subjects <Text style={styles.subjectRequired}>*</Text></Text>
               <View style={styles.subjectGrid}>
@@ -395,23 +497,19 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            {/* Optional access code */}
             <TouchableOpacity
               style={styles.codeToggle}
               onPress={() => setShowCode(v => !v)}
               activeOpacity={0.8}
             >
-              <Ionicons
-                name={showCode ? 'chevron-up' : 'chevron-down'}
-                size={14} color={C.primary}
-              />
+              <Ionicons name={showCode ? 'chevron-up' : 'chevron-down'} size={14} color={C.primary} />
               <Text style={styles.codeToggleText}>
                 {showCode ? 'Hide access code' : 'I have an access code (optional)'}
               </Text>
             </TouchableOpacity>
 
             {showCode && (
-              <Field label="Access code" icon="key-outline">
+              <Field label="Access code" icon="key-outline" C={C} styles={styles}>
                 <TextInput
                   style={styles.fieldInput}
                   placeholder="e.g. JUPEB-ABC123"
@@ -446,20 +544,201 @@ export default function LoginScreen() {
             </Text>
           </Animated.View>
         )}
+
+        {/* ── FORGOT PASSWORD flow ── */}
+        {mode === 'forgot' && (
+          <Animated.View style={[styles.form, { transform: [{ translateX: shake }] }]}>
+
+            {/* Back link */}
+            <TouchableOpacity style={styles.backLink} onPress={() => switchMode('login')}>
+              <Ionicons name="arrow-back" size={16} color={C.mutedForeground} />
+              <Text style={styles.backLinkText}>Back to Sign In</Text>
+            </TouchableOpacity>
+
+            {/* Step indicator */}
+            <View style={styles.stepRow}>
+              {(['phone', 'otp', 'newpass'] as ForgotStep[]).map((s, i) => (
+                <View key={s} style={styles.stepItem}>
+                  <View style={[styles.stepDot, forgotStep === s && styles.stepDotActive,
+                    (['phone', 'otp', 'newpass'].indexOf(forgotStep) > i) && styles.stepDotDone]}>
+                    {(['phone', 'otp', 'newpass'].indexOf(forgotStep) > i)
+                      ? <Ionicons name="checkmark" size={12} color="#fff" />
+                      : <Text style={styles.stepNum}>{i + 1}</Text>
+                    }
+                  </View>
+                  {i < 2 && <View style={[styles.stepLine,
+                    (['phone', 'otp', 'newpass'].indexOf(forgotStep) > i) && styles.stepLineDone]} />}
+                </View>
+              ))}
+            </View>
+
+            {/* Step 1: Phone */}
+            {forgotStep === 'phone' && (
+              <>
+                <Text style={styles.sectionTitle}>Reset Account</Text>
+                <Text style={styles.sectionSub}>
+                  Enter your registered phone number. We'll send a verification code to your WhatsApp.
+                </Text>
+
+                <Field label="Phone number" icon="call-outline" C={C} styles={styles}>
+                  <TextInput
+                    style={styles.fieldInput}
+                    placeholder="08012345678"
+                    placeholderTextColor={C.mutedForeground}
+                    keyboardType="phone-pad"
+                    value={forgotPhone}
+                    onChangeText={setForgotPhone}
+                    editable={!loading}
+                    autoFocus
+                  />
+                </Field>
+
+                <TouchableOpacity
+                  style={[styles.btn, loading && { opacity: 0.65 }]}
+                  onPress={handleRequestOTP}
+                  disabled={loading}
+                  activeOpacity={0.85}
+                >
+                  {loading
+                    ? <ActivityIndicator color="#fff" />
+                    : <><Ionicons name="logo-whatsapp" size={18} color="#fff" /><Text style={styles.btnText}>Send OTP via WhatsApp</Text></>
+                  }
+                </TouchableOpacity>
+              </>
+            )}
+
+            {/* Step 2: OTP verification */}
+            {forgotStep === 'otp' && (
+              <>
+                <Text style={styles.sectionTitle}>Enter Code</Text>
+                <Text style={styles.sectionSub}>
+                  A 6-digit code was sent to your WhatsApp ({forgotPhone}). Enter it below.
+                </Text>
+
+                <View style={styles.otpInfoBox}>
+                  <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
+                  <Text style={styles.otpInfoText}>Check your WhatsApp for the code</Text>
+                </View>
+
+                <Field label="Verification code" icon="shield-checkmark-outline" C={C} styles={styles}>
+                  <TextInput
+                    ref={otpInputRef}
+                    style={[styles.fieldInput, styles.otpInput]}
+                    placeholder="000000"
+                    placeholderTextColor={C.mutedForeground}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    value={otp}
+                    onChangeText={setOtp}
+                    editable={!loading}
+                    autoFocus
+                  />
+                </Field>
+
+                <TouchableOpacity
+                  style={[styles.btn, loading && { opacity: 0.65 }]}
+                  onPress={handleVerifyOTP}
+                  disabled={loading}
+                  activeOpacity={0.85}
+                >
+                  {loading
+                    ? <ActivityIndicator color="#fff" />
+                    : <><Text style={styles.btnText}>Verify Code</Text><Ionicons name="arrow-forward" size={18} color="#fff" /></>
+                  }
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.forgotLinkRow}
+                  onPress={() => { setForgotStep('phone'); setOtp(''); setOtpSent(false); }}
+                >
+                  <Text style={styles.forgotLink}>Didn't get it? Resend code</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {/* Step 3: New password */}
+            {forgotStep === 'newpass' && (
+              <>
+                <Text style={styles.sectionTitle}>New Password</Text>
+                <Text style={styles.sectionSub}>
+                  Choose a strong password for your account.
+                </Text>
+
+                <Field label="New password" icon="lock-closed-outline" C={C} styles={styles}>
+                  <TextInput
+                    style={styles.fieldInput}
+                    placeholder="Min. 6 characters"
+                    placeholderTextColor={C.mutedForeground}
+                    secureTextEntry={!showNew}
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    editable={!loading}
+                    autoFocus
+                  />
+                  <TouchableOpacity onPress={() => setShowNew(v => !v)} style={styles.eyeBtn}>
+                    <Ionicons name={showNew ? 'eye-off-outline' : 'eye-outline'} size={20} color={C.mutedForeground} />
+                  </TouchableOpacity>
+                </Field>
+
+                <Field label="Confirm new password" icon="checkmark-circle-outline" C={C} styles={styles}>
+                  <TextInput
+                    style={styles.fieldInput}
+                    placeholder="Repeat password"
+                    placeholderTextColor={C.mutedForeground}
+                    secureTextEntry={!showConfirmNew}
+                    value={confirmNew}
+                    onChangeText={setConfirmNew}
+                    editable={!loading}
+                    returnKeyType="done"
+                    onSubmitEditing={handleResetPassword}
+                  />
+                  <TouchableOpacity onPress={() => setShowConfirmNew(v => !v)} style={styles.eyeBtn}>
+                    <Ionicons name={showConfirmNew ? 'eye-off-outline' : 'eye-outline'} size={20} color={C.mutedForeground} />
+                  </TouchableOpacity>
+                </Field>
+
+                <TouchableOpacity
+                  style={[styles.btn, loading && { opacity: 0.65 }]}
+                  onPress={handleResetPassword}
+                  disabled={loading}
+                  activeOpacity={0.85}
+                >
+                  {loading
+                    ? <ActivityIndicator color="#fff" />
+                    : <><Ionicons name="lock-open-outline" size={18} color="#fff" /><Text style={styles.btnText}>Reset Password</Text></>
+                  }
+                </TouchableOpacity>
+              </>
+            )}
+
+          </Animated.View>
+        )}
+
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-function Field({
-  label, icon, children,
-}: { label: string; icon: string; children: React.ReactNode }) {
-  const C = useTheme();
-  const s = useMemo(() => makeStyles(C), [C]);
+function AppLogo({ C, styles }: { C: AppColors; styles: ReturnType<typeof makeStyles> }) {
   return (
-    <View style={s.fieldGroup}>
-      <Text style={s.fieldLabel}>{label}</Text>
-      <View style={s.fieldRow}>
+    <View style={styles.logoOuter}>
+      <View style={styles.logoInner}>
+        <Ionicons name="school" size={32} color="#fff" />
+      </View>
+      <View style={styles.logoBadge}>
+        <Text style={styles.logoBadgeText}>JP</Text>
+      </View>
+    </View>
+  );
+}
+
+function Field({
+  label, icon, children, C, styles,
+}: { label: string; icon: string; children: React.ReactNode; C: AppColors; styles: ReturnType<typeof makeStyles> }) {
+  return (
+    <View style={styles.fieldGroup}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <View style={styles.fieldRow}>
         <Ionicons name={icon as any} size={18} color={C.mutedForeground} style={{ marginRight: 10 }} />
         {children}
       </View>
@@ -473,29 +752,50 @@ function makeStyles(C: AppColors) {
     scroll: { flexGrow: 1, paddingHorizontal: 26, justifyContent: 'center', minHeight: '100%' },
 
     brand: { alignItems: 'center', marginBottom: 36 },
-    logoBox: {
-      width: 68, height: 68, borderRadius: 20,
-      backgroundColor: C.primary,
-      alignItems: 'center', justifyContent: 'center', marginBottom: 14,
-    },
-    logoLetter: { fontSize: 32, fontFamily: 'Inter_700Bold', color: '#fff' },
-    appName:   { fontSize: 26, fontFamily: 'Inter_700Bold', color: C.foreground, letterSpacing: -0.5 },
-    tagline:   { fontSize: 14, fontFamily: 'Inter_400Regular', color: C.mutedForeground, marginTop: 4 },
 
-    // Tabs
+    logoOuter: {
+      width: 72, height: 72, marginBottom: 16,
+      alignItems: 'center', justifyContent: 'center',
+    },
+    logoInner: {
+      width: 72, height: 72, borderRadius: 22,
+      backgroundColor: C.primary,
+      alignItems: 'center', justifyContent: 'center',
+      shadowColor: C.primary,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.35,
+      shadowRadius: 10,
+      elevation: 8,
+    },
+    logoBadge: {
+      position: 'absolute',
+      bottom: -4, right: -4,
+      width: 26, height: 26,
+      borderRadius: 8,
+      backgroundColor: C.foreground,
+      alignItems: 'center', justifyContent: 'center',
+      borderWidth: 2, borderColor: C.background,
+    },
+    logoBadgeText: {
+      fontSize: 9, fontFamily: 'Inter_700Bold',
+      color: C.background, letterSpacing: 0.5,
+    },
+
+    appName: { fontSize: 26, fontFamily: 'Inter_700Bold', color: C.foreground, letterSpacing: -0.5 },
+    tagline: { fontSize: 14, fontFamily: 'Inter_400Regular', color: C.mutedForeground, marginTop: 4 },
+
     tabs: {
       flexDirection: 'row', borderRadius: C.radius,
       borderWidth: 1, borderColor: C.border,
       marginBottom: 28, overflow: 'hidden',
     },
-    tab:          { flex: 1, paddingVertical: 12, alignItems: 'center', backgroundColor: C.card },
-    tabActive:    { backgroundColor: C.primary },
-    tabText:      { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: C.mutedForeground },
-    tabTextActive:{ color: '#fff' },
+    tab:           { flex: 1, paddingVertical: 12, alignItems: 'center', backgroundColor: C.card },
+    tabActive:     { backgroundColor: C.primary },
+    tabText:       { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: C.mutedForeground },
+    tabTextActive: { color: '#fff' },
 
     form: { gap: 14 },
 
-    // Field
     fieldGroup: { gap: 6 },
     fieldLabel: { fontSize: 12, fontFamily: 'Inter_600SemiBold', color: C.mutedForeground, letterSpacing: 0.3 },
     fieldRow: {
@@ -517,6 +817,15 @@ function makeStyles(C: AppColors) {
     },
     btnText: { fontSize: 16, fontFamily: 'Inter_700Bold', color: '#fff' },
 
+    forgotLinkRow: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: 5, paddingVertical: 4,
+    },
+    forgotLink: {
+      fontSize: 13, fontFamily: 'Inter_600SemiBold',
+      color: C.primary, textAlign: 'center',
+    },
+
     switchText: {
       fontSize: 13, fontFamily: 'Inter_400Regular',
       color: C.mutedForeground, textAlign: 'center', marginTop: 4,
@@ -528,7 +837,6 @@ function makeStyles(C: AppColors) {
       lineHeight: 16, marginTop: -4,
     },
 
-    // Subjects
     subjectSection: { gap: 8 },
     subjectLabel: { fontSize: 12, fontFamily: 'Inter_600SemiBold', color: C.mutedForeground, letterSpacing: 0.3 },
     subjectRequired: { color: C.primary },
@@ -538,22 +846,20 @@ function makeStyles(C: AppColors) {
       borderRadius: 10, borderWidth: 1.5, borderColor: C.border,
       backgroundColor: C.card,
     },
-    chipSelected:  { backgroundColor: C.primary, borderColor: C.primary },
-    chipText:      { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: C.mutedForeground },
+    chipSelected:     { backgroundColor: C.primary, borderColor: C.primary },
+    chipText:         { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: C.mutedForeground },
     chipTextSelected: { color: '#fff' },
 
-    // Access code toggle
     codeToggle: {
-      flexDirection: 'row', alignItems: 'center', gap: 6,
-      paddingVertical: 4,
+      flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4,
     },
     codeToggleText: { fontSize: 13, fontFamily: 'Inter_500Medium', color: C.primary },
 
-    // PIN (legacy)
     backLink: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     backLinkText: { fontSize: 13, fontFamily: 'Inter_500Medium', color: C.mutedForeground },
     sectionTitle: { fontSize: 22, fontFamily: 'Inter_700Bold', color: C.foreground, letterSpacing: -0.3 },
-    sectionSub:   { fontSize: 14, fontFamily: 'Inter_400Regular', color: C.mutedForeground },
+    sectionSub:   { fontSize: 14, fontFamily: 'Inter_400Regular', color: C.mutedForeground, lineHeight: 21 },
+
     dotsRow: {
       flexDirection: 'row', justifyContent: 'center', gap: 14,
       marginTop: 28, marginBottom: 24,
@@ -566,5 +872,32 @@ function makeStyles(C: AppColors) {
       borderStyle: 'dashed', backgroundColor: C.card,
     },
     tapHintText: { fontSize: 13, fontFamily: 'Inter_500Medium', color: C.mutedForeground },
+
+    // Step indicator
+    stepRow: {
+      flexDirection: 'row', alignItems: 'center',
+      justifyContent: 'center', marginBottom: 4, marginTop: 4,
+    },
+    stepItem: { flexDirection: 'row', alignItems: 'center' },
+    stepDot: {
+      width: 28, height: 28, borderRadius: 14,
+      backgroundColor: C.border,
+      alignItems: 'center', justifyContent: 'center',
+    },
+    stepDotActive: { backgroundColor: C.primary },
+    stepDotDone:   { backgroundColor: '#22c55e' },
+    stepNum: { fontSize: 12, fontFamily: 'Inter_700Bold', color: C.mutedForeground },
+    stepLine: { width: 32, height: 2, backgroundColor: C.border, marginHorizontal: 4 },
+    stepLineDone: { backgroundColor: '#22c55e' },
+
+    // OTP
+    otpInfoBox: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      backgroundColor: 'rgba(37,211,102,0.1)',
+      borderRadius: C.radius, paddingHorizontal: 14, paddingVertical: 10,
+      borderWidth: 1, borderColor: 'rgba(37,211,102,0.25)',
+    },
+    otpInfoText: { fontSize: 13, fontFamily: 'Inter_500Medium', color: C.foreground, flex: 1 },
+    otpInput: { letterSpacing: 8, fontSize: 20, fontFamily: 'Inter_700Bold' },
   });
 }

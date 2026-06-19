@@ -178,6 +178,43 @@ export async function getPaymentConfig(): Promise<{ price: number; currency: str
   return data;
 }
 
+// ── OTP / Password Reset ───────────────────────────────────────────────────────
+export async function requestOTP(phone: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/request-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Failed to send OTP');
+}
+
+export async function verifyOTP(phone: string, code: string): Promise<string> {
+  const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone, code }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Invalid or expired code');
+  return data.resetToken as string;
+}
+
+export async function resetPassword(
+  phone: string,
+  resetToken: string,
+  newPassword: string,
+): Promise<Profile | null> {
+  const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone, resetToken, newPassword }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Password reset failed');
+  return data.profile || null;
+}
+
 // ── Push notification token registration ──────────────────────────────────────
 export async function registerPushToken(phone: string, sessionToken: string, pushToken: string): Promise<void> {
   try {
