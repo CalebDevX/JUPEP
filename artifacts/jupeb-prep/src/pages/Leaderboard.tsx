@@ -90,7 +90,7 @@ function PodiumCard({ entry }: { entry: LeaderboardEntry }) {
         <p className="text-xs font-semibold text-white/80 text-center max-w-[80px] leading-tight truncate">{entry.full_name.split(" ")[0]}</p>
         <div className="flex items-center gap-1">
           <Zap className="h-3 w-3 text-violet-400" />
-          <span className="text-xs font-bold text-white/70">{entry.xp.toLocaleString()}</span>
+          <span className="text-xs font-bold text-white/70">{(entry.xp ?? 0).toLocaleString()}</span>
         </div>
       </div>
       <div className={cn(
@@ -142,7 +142,7 @@ export default function Leaderboard() {
       : "";
     const msg =
       `🏆 *JUPEB Prep Leaderboard*\n\n` +
-      `I'm ranked *#${myEntry.rank}* with *${myEntry.xp.toLocaleString()} XP*!\n` +
+      `I'm ranked *#${myEntry.rank}* with *${(myEntry.xp ?? 0).toLocaleString()} XP*!\n` +
       streakLine +
       subjectLine +
       `🎯 Target grade: *${grade}*\n\n` +
@@ -155,7 +155,7 @@ export default function Leaderboard() {
     const top3 = entries.filter(e => e.rank <= 3);
     if (!top3.length) return;
     const podium = top3.map(e =>
-      `${e.rank === 1 ? "🥇" : e.rank === 2 ? "🥈" : "🥉"} #${e.rank} ${e.full_name} — ${e.xp.toLocaleString()} XP`
+      `${e.rank === 1 ? "🥇" : e.rank === 2 ? "🥈" : "🥉"} #${e.rank} ${e.full_name} — ${(e.xp ?? 0).toLocaleString()} XP`
     ).join("\n");
     const msg =
       `🏆 *JUPEB Prep — Top Students*\n\n` +
@@ -216,7 +216,7 @@ export default function Leaderboard() {
             <Star className="h-4 w-4 text-violet-400 flex-shrink-0" />
             <p className="text-sm text-violet-200 flex-1">
               You are ranked <span className="font-bold">#{myEntry.rank}</span> with{" "}
-              <span className="font-bold">{myEntry.xp.toLocaleString()} XP</span>
+              <span className="font-bold">{(myEntry.xp ?? 0).toLocaleString()} XP</span>
               {myEntry.streak > 0 && <span className="ml-1 text-orange-300">· {myEntry.streak}d streak 🔥</span>}
             </p>
             <button
@@ -300,7 +300,7 @@ export default function Leaderboard() {
                       )}
                       <div className="flex items-center gap-1">
                         <Zap className="h-3.5 w-3.5 text-violet-400" />
-                        <span className="text-sm font-bold text-white/80">{entry.xp.toLocaleString()}</span>
+                        <span className="text-sm font-bold text-white/80">{(entry.xp ?? 0).toLocaleString()}</span>
                         <span className="text-[10px] text-white/30">XP</span>
                       </div>
                     </div>
