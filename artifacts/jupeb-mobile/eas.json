@@ -8,6 +8,7 @@
       "android": {
         "buildType": "apk"
       },
+      "node": "20.19.0",
       "env": {
         "NPM_FLAGS": "--legacy-peer-deps"
       }
@@ -19,6 +20,7 @@
       "ios": {
         "resourceClass": "m-medium"
       },
+      "node": "20.19.0",
       "env": {
         "NPM_FLAGS": "--legacy-peer-deps"
       }
