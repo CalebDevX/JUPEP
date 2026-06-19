@@ -20,7 +20,7 @@ import { format, formatDistanceToNow } from "date-fns";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const ADMIN_PIN_KEY = "JUPEB2024";
 
-type AdminTab = "overview" | "students" | "codes" | "revenue" | "questions" | "anticheat" | "announcements" | "notes" | "settings" | "branding" | "whatsapp" | "communities";
+type AdminTab = "overview" | "students" | "codes" | "revenue" | "questions" | "anticheat" | "announcements" | "notes" | "settings" | "branding" | "whatsapp" | "communities" | "pushnotify";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -2134,6 +2134,144 @@ function BrandingTab() {
   );
 }
 
+// ─── Push Notify Tab ──────────────────────────────────────────────────────────
+
+function PushNotifyTab({ pin }: { pin: string }) {
+  const { toast } = useToast();
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [target, setTarget] = useState<"all" | "activated" | "free">("all");
+  const [sending, setSending] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
+  const [stats, setStats] = useState<{ total: number; registered: number; activated: number } | null>(null);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
+  const load = async () => {
+    setLoadingHistory(true);
+    try {
+      const [histRes, statsRes] = await Promise.all([
+        fetch(`${BASE}/api/notifications/history`, { headers: { "x-admin-pin": pin } }),
+        fetch(`${BASE}/api/notifications/stats`, { headers: { "x-admin-pin": pin } }),
+      ]);
+      const histData = await histRes.json();
+      const statsData = await statsRes.json();
+      if (Array.isArray(histData)) setHistory(histData);
+      if (statsData && typeof statsData.registered === "number") setStats(statsData);
+    } catch { toast({ title: "Failed to load notification data", variant: "destructive" }); }
+    finally { setLoadingHistory(false); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const send = async () => {
+    if (!title.trim() || !body.trim()) {
+      toast({ title: "Title and message are required", variant: "destructive" }); return;
+    }
+    setSending(true);
+    try {
+      const res = await fetch(`${BASE}/api/notifications/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-pin": pin },
+        body: JSON.stringify({ title: title.trim(), body: body.trim(), target }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send");
+      toast({ title: `✅ Sent to ${data.sent} device${data.sent !== 1 ? "s" : ""}${data.failed > 0 ? ` (${data.failed} failed)` : ""}` });
+      setTitle(""); setBody("");
+      load();
+    } catch (err: any) {
+      toast({ title: err.message || "Send failed", variant: "destructive" });
+    } finally { setSending(false); }
+  };
+
+  const targetLabels: Record<string, string> = {
+    all: "All registered devices",
+    activated: "Activated students only",
+    free: "Free trial students only",
+  };
+
+  return (
+    <div className="space-y-6">
+      <Section title="Push Notification Stats">
+        {stats ? (
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { label: "Registered Devices", value: stats.registered },
+              { label: "Activated Students", value: stats.activated },
+              { label: "Free Trial", value: stats.registered - stats.activated },
+            ].map((s) => (
+              <div key={s.label} className="bg-white/5 rounded-xl p-4 text-center">
+                <div className="text-3xl font-bold text-violet-400">{s.value}</div>
+                <div className="text-xs text-white/50 mt-1">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-white/40 text-sm">{loadingHistory ? "Loading…" : "No data"}</div>
+        )}
+      </Section>
+
+      <Section title="Send Push Notification">
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs text-white/50 uppercase tracking-wider mb-1.5 block">Target Audience</label>
+            <div className="flex gap-2 flex-wrap">
+              {(["all", "activated", "free"] as const).map((t) => (
+                <button key={t} onClick={() => setTarget(t)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${target === t ? "bg-violet-600 text-white" : "bg-white/5 text-white/60 hover:bg-white/10"}`}>
+                  {targetLabels[t]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-white/50 uppercase tracking-wider mb-1.5 block">Title</label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. New questions added! 📚"
+              className="bg-white/5 border-white/10 text-white placeholder:text-white/30" maxLength={65} />
+            <div className="text-right text-xs text-white/30 mt-1">{title.length}/65</div>
+          </div>
+          <div>
+            <label className="text-xs text-white/50 uppercase tracking-wider mb-1.5 block">Message</label>
+            <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="e.g. 50 new Government past questions are now available. Tap to start practising!"
+              className="bg-white/5 border-white/10 text-white placeholder:text-white/30 min-h-[90px]" maxLength={200} />
+            <div className="text-right text-xs text-white/30 mt-1">{body.length}/200</div>
+          </div>
+          <Button onClick={send} disabled={sending || !title.trim() || !body.trim()} className="bg-violet-600 hover:bg-violet-500 font-semibold h-10 px-6">
+            {sending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending…</> : <><Activity className="w-4 h-4 mr-2" /> Send Notification</>}
+          </Button>
+        </div>
+      </Section>
+
+      <Section title="Recent Notifications">
+        {loadingHistory ? (
+          <div className="flex items-center gap-2 text-white/40 text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>
+        ) : history.length === 0 ? (
+          <p className="text-white/40 text-sm">No notifications sent yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {history.map((n) => (
+              <div key={n.id} className="bg-white/5 rounded-xl p-4 space-y-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-white text-sm">{n.title}</p>
+                    <p className="text-white/60 text-xs mt-0.5">{n.body}</p>
+                  </div>
+                  <span className="shrink-0 text-xs bg-white/10 text-white/50 px-2 py-0.5 rounded-full capitalize">{n.target}</span>
+                </div>
+                <div className="flex items-center gap-4 pt-1 text-xs text-white/40">
+                  <span className="text-green-400">✓ {n.sent_count} delivered</span>
+                  {n.failed_count > 0 && <span className="text-red-400">✗ {n.failed_count} failed</span>}
+                  <span>{format(new Date(n.created_at), "MMM d, h:mm a")}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+    </div>
+  );
+}
+
 // ─── Tab Navigation ───────────────────────────────────────────────────────────
 
 const ADMIN_TABS: { id: AdminTab; label: string; icon: any; desc: string }[] = [
@@ -2146,6 +2284,7 @@ const ADMIN_TABS: { id: AdminTab; label: string; icon: any; desc: string }[] = [
   { id: "announcements", label: "Announcements", icon: Megaphone,       desc: "Post updates" },
   { id: "notes",         label: "Notes",         icon: FileText,        desc: "Upload study notes" },
   { id: "communities",   label: "Communities",   icon: Users,           desc: "Approve members" },
+  { id: "pushnotify",    label: "Push Alerts",   icon: Activity,        desc: "Mobile notifications" },
   { id: "whatsapp",      label: "WhatsApp",      icon: Megaphone,       desc: "Bot & notifications" },
   { id: "settings",      label: "Settings",      icon: Timer,           desc: "Timers & config" },
   { id: "branding",      label: "Branding",      icon: ImagePlus,       desc: "Bot image" },
@@ -2363,6 +2502,7 @@ export default function AdminPanel() {
               {tab === "announcements" && <AnnouncementsTab />}
               {tab === "notes"         && <NotesTab />}
               {tab === "communities"   && <CommunitiesTab pin={pin} />}
+              {tab === "pushnotify"    && <PushNotifyTab pin={pin} />}
               {tab === "whatsapp"      && <WhatsAppTab pin={pin} />}
               {tab === "settings"      && <SettingsTab />}
               {tab === "branding"      && <BrandingTab />}

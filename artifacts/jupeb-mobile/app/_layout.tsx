@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -13,9 +13,10 @@ import {
   useFonts,
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { queryClient } from '@/lib/query-client';
 import { LightColors, DarkColors } from '@/constants/colors';
+import { registerPushToken } from '@/src/utils/api';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -35,7 +36,7 @@ async function setupNotifications() {
     const { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') {
       const { status: asked } = await Notifications.requestPermissionsAsync();
-      if (asked !== 'granted') return;
+      if (asked !== 'granted') return null;
     }
     // Cancel stale scheduled notifications and reschedule
     await Notifications.cancelAllScheduledNotificationsAsync();
@@ -55,10 +56,38 @@ async function setupNotifications() {
       },
       trigger: { hour: 20, minute: 0, repeats: true } as any,
     });
+
+    // Return Expo push token for remote notifications
+    const Constants = await import('expo-constants');
+    const projectId = Constants.default.expoConfig?.extra?.eas?.projectId ?? Constants.default.easConfig?.projectId;
+    if (projectId) {
+      const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+      return tokenData.data;
+    }
+    return null;
   } catch (e) {
     // Notification setup is optional — never crash the app
     console.warn('Notification setup failed:', e);
+    return null;
   }
+}
+
+function PushTokenRegistrar() {
+  const { profile } = useAuth();
+  const registeredForRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!profile || Platform.OS === 'web') return;
+    if (registeredForRef.current === profile.phone) return;
+    registeredForRef.current = profile.phone;
+    setupNotifications().then((pushToken) => {
+      if (pushToken && profile.sessionToken) {
+        registerPushToken(profile.phone, profile.sessionToken, pushToken);
+      }
+    });
+  }, [profile]);
+
+  return null;
 }
 
 export default function RootLayout() {
@@ -75,7 +104,6 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
-      setupNotifications();
     }
   }, [fontsLoaded, fontError]);
 
@@ -86,6 +114,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
+            <PushTokenRegistrar />
             <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="index" />

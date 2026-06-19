@@ -177,3 +177,16 @@ export async function getPaymentConfig(): Promise<{ price: number; currency: str
   const data = await response.json();
   return data;
 }
+
+// ── Push notification token registration ──────────────────────────────────────
+export async function registerPushToken(phone: string, sessionToken: string, pushToken: string): Promise<void> {
+  try {
+    await fetch(`${API_BASE_URL}/notifications/register-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, token: sessionToken, pushToken }),
+    });
+  } catch {
+    // Non-critical — never crash the app over this
+  }
+}

@@ -18,6 +18,7 @@ import paymentRouter from "./payment";
 import whatsappRouter from "./whatsapp";
 import yarngptRouter from "./yarngpt";
 import textbookRouter from "./textbook";
+import notificationsRouter from "./notifications";
 
 const router: IRouter = Router();
 
@@ -40,5 +41,6 @@ router.use(paymentRouter);
 router.use(whatsappRouter);
 router.use(yarngptRouter);
 router.use(textbookRouter);
+router.use(notificationsRouter);
 
 export default router;
