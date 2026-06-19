@@ -9,7 +9,7 @@
         "buildType": "apk"
       },
       "env": {
-        "NPM_FLAGS": "--legacy-peer-deps"
+        "npm_config_legacy_peer_deps": "true"
       }
     },
     "production": {
@@ -20,7 +20,7 @@
         "resourceClass": "m-medium"
       },
       "env": {
-        "NPM_FLAGS": "--legacy-peer-deps"
+        "npm_config_legacy_peer_deps": "true"
       }
     }
   },
