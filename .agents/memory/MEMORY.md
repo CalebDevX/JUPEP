@@ -7,7 +7,7 @@
 - [Google GenAI SDK v1.x](genai-v1-text-property.md) — In @google/genai ≥1.x, response.text and chunk.text are getter properties NOT methods; call as .text not .text()
 - [Editorial Design System](jupeb-editorial-design.md) — Fraunces serif (already imported) as display font; ed-label/ed-display/ed-stat/ed-rule CSS utilities in index.css; bot image in localStorage jupeb_bot_image; user profile pic in jupeb_profile_picture
 - [Admin Panel & Leaderboard](jupeb-admin-leaderboard.md) — 9-tab admin panel at /admin (PIN: JUPEB2024), leaderboard at /leaderboard, XP sync on quiz complete via POST /api/student/sync-progress
-- [Aiven PostgreSQL SSL Fix](aiven-ssl-fix.md) — Must strip sslmode from URL and set ssl:{rejectUnauthorized:false} in pool; drizzle-kit push hangs so use raw Node.js migration script instead
+- [PostgreSQL DB Setup](jupeb-db-setup.md) — Replit-managed DB (no SSL); run raw migrations via node using pg@8.20.0 from pnpm store; drizzle-kit push hangs; students table is raw SQL (not in drizzle schema)
 - [Gemini Multi-Key Rotation](gemini-multi-key.md) — Multiple keys stored as JSON array under `gemini_api_keys` in settings.json; shared getAI() in src/lib/gemini-keys.ts rotates round-robin; admin UI in SettingsTab adds/removes keys
 - [Mobile Theme System](mobile-theme.md) — LightColors/DarkColors in constants/colors.ts; useTheme() hook; heroBg token for deep blue banner; makeStyles(C) pattern for reactive StyleSheets; @react-native-async-storage/async-storage must be installed
 - [Mobile Notes Tab](mobile-notes.md) — Textbook data served via GET /api/textbook/courses and /api/textbook/courses/:id/chapters/:cid; Notes tab replaces Subjects; routes: notes/[courseId] + notes/chapter/[chapterId]

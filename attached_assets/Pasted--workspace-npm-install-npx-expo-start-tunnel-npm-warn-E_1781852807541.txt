@@ -1,0 +1,50 @@
+~/workspace$ npm install
+npx expo start --tunnel
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: typescript@5.9.3
+npm warn Found: peer eslint@"^8.57.0 || ^9.0.0 || ^10.0.0" from @typescript-eslint/rule-tester@8.61.1
+npm warn node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/node_modules/@typescript-eslint/rule-tester
+npm warn   dev @typescript-eslint/rule-tester@"^8.24.1" from typescript@5.9.3
+npm warn   node_modules/.pnpm/typescript@5.9.3/node_modules/typescript
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer eslint@"^8.57.0 || ^9.0.0 || ^10.0.0" from @typescript-eslint/rule-tester@8.61.1
+npm warn node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/node_modules/@typescript-eslint/rule-tester
+npm warn   dev @typescript-eslint/rule-tester@"^8.24.1" from typescript@5.9.3
+npm warn   node_modules/.pnpm/typescript@5.9.3/node_modules/typescript
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: typescript@5.9.3
+npm warn Found: peer eslint@"^8.57.0 || ^9.0.0 || ^10.0.0" from @typescript-eslint/type-utils@8.61.1
+npm warn node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/node_modules/@typescript-eslint/type-utils
+npm warn   dev @typescript-eslint/type-utils@"^8.24.1" from typescript@5.9.3
+npm warn   node_modules/.pnpm/typescript@5.9.3/node_modules/typescript
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer eslint@"^8.57.0 || ^9.0.0 || ^10.0.0" from @typescript-eslint/type-utils@8.61.1
+npm warn node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/node_modules/@typescript-eslint/type-utils
+npm warn   dev @typescript-eslint/type-utils@"^8.24.1" from typescript@5.9.3
+npm warn   node_modules/.pnpm/typescript@5.9.3/node_modules/typescript
+npm warn ERESOLVE overriding peer dependency
+npm warn While resolving: typescript@5.9.3
+npm warn Found: peer eslint@"^8.57.0 || ^9.0.0 || ^10.0.0" from @typescript-eslint/utils@8.61.1
+npm warn node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/node_modules/@typescript-eslint/utils
+npm warn   dev @typescript-eslint/utils@"^8.24.1" from typescript@5.9.3
+npm warn   node_modules/.pnpm/typescript@5.9.3/node_modules/typescript
+npm warn   2 more (@typescript-eslint/rule-tester, @typescript-eslint/type-utils)
+npm warn
+npm warn Could not resolve dependency:
+npm warn peer eslint@"^8.57.0 || ^9.0.0 || ^10.0.0" from @typescript-eslint/utils@8.61.1
+npm warn node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/node_modules/@typescript-eslint/utils
+npm warn   dev @typescript-eslint/utils@"^8.24.1" from typescript@5.9.3
+npm warn   node_modules/.pnpm/typescript@5.9.3/node_modules/typescript
+npm warn   2 more (@typescript-eslint/rule-tester, @typescript-eslint/type-utils)
+npm error Cannot read properties of null (reading 'isDescendantOf')
+npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-06-19T06_55_25_292Z-debug-0.log
+Need to install the following packages:
+expo@56.0.12
+Ok to proceed? (y) y
+
+npm warn deprecated uuid@7.0.3: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+Starting project at /home/runner/workspace
+ConfigError: Cannot determine the project's Expo SDK version because the module `expo` is not installed. Install it with `npm install expo` and try again.
+~/workspace$ 

@@ -25,6 +25,11 @@ import {
   History,
   Calendar,
   Medal,
+  XCircle,
+  ClipboardList,
+  Bookmark,
+  BarChart3,
+  Link2,
 } from "lucide-react";
 import { getGamificationState, getLevel } from "@/lib/gamification";
 import { cn } from "@/lib/utils";
@@ -67,15 +72,24 @@ const navGroups: { label: string | null; items: NavItem[] }[] = [
       { href: "/progress",    label: "Progress",    icon: TrendingUp,      color: "text-cyan-500"    },
       { href: "/achievements",label: "Achievements",icon: Medal,           color: "text-amber-500"   },
       { href: "/leaderboard", label: "Leaderboard", icon: Trophy,          color: "text-amber-500"   },
+      { href: "/weakness",    label: "Weakness Map",icon: BarChart3,       color: "text-cyan-500"    },
     ],
   },
   {
     label: "Explore",
     items: [
-      { href: "/subjects",   label: "Subjects",     icon: Library,         color: "text-blue-500"    },
-      { href: "/syllabus",   label: "Syllabus",     icon: ScrollText,      color: "text-emerald-500" },
-      { href: "/history",    label: "History",      icon: History,         color: "text-indigo-500"  },
-      { href: "/community",  label: "Community",    icon: Users,           color: "text-sky-500"     },
+      { href: "/subjects",     label: "Subjects",      icon: Library,       color: "text-blue-500"    },
+      { href: "/syllabus",     label: "Syllabus",      icon: ScrollText,    color: "text-emerald-500" },
+      { href: "/history",      label: "History",       icon: History,       color: "text-indigo-500"  },
+      { href: "/community",    label: "Community",     icon: Users,         color: "text-sky-500"     },
+    ],
+  },
+  {
+    label: "My Library",
+    items: [
+      { href: "/bookmarks",    label: "Bookmarks",     icon: Bookmark,      color: "text-amber-500"   },
+      { href: "/wrong-answers",label: "Wrong Answers", icon: XCircle,       color: "text-red-500"     },
+      { href: "/mock",         label: "Mock Exam",     icon: ClipboardList, color: "text-violet-500"  },
     ],
   },
 ];

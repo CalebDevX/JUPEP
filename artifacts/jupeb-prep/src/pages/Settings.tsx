@@ -8,7 +8,104 @@ import {
   User, Target, Bell, Shield, Info,
   Trash2, ChevronRight, CheckCircle2,
   LogOut, Camera, Calendar, Clock, Flame, Trophy, Loader2,
+  Link2, Copy, Gift,
 } from "lucide-react";
+
+function ReferralCard() {
+  const { phone } = getAuthInfo();
+  const [code, setCode] = useState<string | null>(null);
+  const [stats, setStats] = useState({ totalReferrals: 0, totalDaysEarned: 0 });
+  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!phone) return;
+    fetch(`${BASE}/api/referral/stats?phone=${encodeURIComponent(phone)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) { setCode(data.code); setStats(data); }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [phone]);
+
+  async function generateCode() {
+    if (!phone) return;
+    setLoading(true);
+    const r = await fetch(`${BASE}/api/referral/code?phone=${encodeURIComponent(phone)}`);
+    if (r.ok) { const d = await r.json(); setCode(d.code); }
+    setLoading(false);
+  }
+
+  function copyCode() {
+    if (!code) return;
+    navigator.clipboard.writeText(code).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  function shareWhatsApp() {
+    if (!code) return;
+    const msg = encodeURIComponent(`🎓 Join me on JUPEB Prep — the best exam prep app!\n\nUse my referral code *${code}* when you sign up and we both get 7 FREE days of access.\n\nSign up at: https://jupeb.app`);
+    window.open(`https://wa.me/?text=${msg}`, "_blank");
+  }
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+      className="bg-white/[0.04] border border-white/[0.07] rounded-2xl overflow-hidden">
+      <div className="px-4 py-3.5 border-b border-white/[0.06] flex items-center gap-3">
+        <div className="w-8 h-8 rounded-xl bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+          <Gift className="h-4 w-4 text-emerald-400" />
+        </div>
+        <h2 className="text-sm font-bold text-white">Refer a Friend</h2>
+      </div>
+      <div className="p-4 space-y-4">
+        <p className="text-sm text-white/60 leading-relaxed">
+          Share your code — when a friend signs up with it, you <span className="text-emerald-400 font-semibold">both get 7 free days</span> of access. 🎉
+        </p>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { label: "Successful Referrals", value: stats.totalReferrals },
+            { label: "Days Earned", value: stats.totalDaysEarned },
+          ].map(s => (
+            <div key={s.label} className="bg-white/[0.04] border border-white/[0.07] rounded-xl p-3 text-center">
+              <p className="text-white text-xl font-black">{s.value}</p>
+              <p className="text-white/40 text-xs">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Code */}
+        {code ? (
+          <div className="flex items-center gap-2">
+            <div className="flex-1 bg-white/[0.06] border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between">
+              <span className="text-white font-mono font-bold text-lg tracking-widest">{code}</span>
+              <button onClick={copyCode} className={cn(
+                "text-xs font-semibold rounded-lg px-2.5 py-1.5 transition-all",
+                copied ? "text-emerald-400 bg-emerald-500/15" : "text-white/50 hover:text-white hover:bg-white/10"
+              )}>
+                {copied ? "Copied!" : <Copy className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+            <button onClick={shareWhatsApp}
+              className="flex items-center gap-2 bg-[#25d366]/15 hover:bg-[#25d366]/25 border border-[#25d366]/25 text-[#25d366] text-sm font-semibold rounded-xl px-3 py-3 transition-colors whitespace-nowrap">
+              <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.531 5.856L0 24l6.305-1.654A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.884 0-3.655-.503-5.19-1.384l-.373-.221-3.864 1.014 1.031-3.764-.243-.388A9.946 9.946 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+              Share
+            </button>
+          </div>
+        ) : (
+          <button onClick={generateCode} disabled={loading || !phone}
+            className="w-full flex items-center justify-center gap-2 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/20 text-emerald-300 font-semibold rounded-xl py-3 text-sm transition-colors disabled:opacity-50">
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
+            Get My Referral Code
+          </button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -371,6 +468,9 @@ export default function Settings() {
             <Toggle enabled={notifications} onToggle={() => setNotifications(v => !v)} />
           </div>
         </Section>
+
+        {/* Referral */}
+        <ReferralCard />
 
         {/* About */}
         <Section icon={Info} title="About" color="text-emerald-400" bg="bg-emerald-500/15">

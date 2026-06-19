@@ -70,6 +70,15 @@ export default function TabsLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: 'AI Tutor',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline' as IoniconName} size={22} color={color} />
+          ),
+        }}
+      />
       <Tabs.Screen name="subjects" options={{ href: null }} />
     </Tabs>
       <AnnouncementBanner />

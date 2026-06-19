@@ -29,6 +29,10 @@ import Subscribe from "@/pages/Subscribe";
 import PaymentCallback from "@/pages/PaymentCallback";
 import StudyPlanner from "@/pages/StudyPlanner";
 import Achievements from "@/pages/Achievements";
+import WrongAnswers from "@/pages/WrongAnswers";
+import MockExam from "@/pages/MockExam";
+import Bookmarks from "@/pages/Bookmarks";
+import WeaknessMap from "@/pages/WeaknessMap";
 import { SessionExpiredGate } from "@/components/SessionExpiredGate";
 
 const queryClient = new QueryClient({
@@ -113,6 +117,10 @@ function ProtectedRoutes() {
       <Route path="/settings" component={Settings} />
       <Route path="/planner" component={StudyPlanner} />
       <Route path="/achievements" component={Achievements} />
+      <Route path="/wrong-answers" component={WrongAnswers} />
+      <Route path="/mock" component={MockExam} />
+      <Route path="/bookmarks" component={Bookmarks} />
+      <Route path="/weakness" component={WeaknessMap} />
       <Route component={NotFound} />
     </Switch>
   );

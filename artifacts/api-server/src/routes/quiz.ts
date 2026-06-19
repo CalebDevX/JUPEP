@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { quizSessionsTable, questionsTable, subjectsTable } from "@workspace/db";
+import { quizSessionsTable, questionsTable, subjectsTable, wrongAnswersTable } from "@workspace/db";
 import { eq, and, inArray, sql } from "drizzle-orm";
 
 const router = Router();
@@ -238,6 +238,26 @@ router.post("/quiz/sessions/:sessionId/submit", async (req, res) => {
       answers: answerMap,
       completedAt: new Date(),
     }).where(eq(quizSessionsTable.id, id));
+
+    // Record wrong answers for the Wrong Answers Bank
+    const phone = (req.body as any).phone as string | undefined;
+    if (phone) {
+      const wrongOnes = questionResults.filter(r => !r.isCorrect && r.selectedOption);
+      if (wrongOnes.length > 0) {
+        const wrongQuestions = questions.filter(q =>
+          wrongOnes.some(w => w.questionId === q.id)
+        );
+        await db.insert(wrongAnswersTable).values(
+          wrongQuestions.map(q => ({
+            studentPhone: phone,
+            questionId: q.id,
+            subjectId: q.subjectId,
+            paper: q.paper,
+            selectedOption: answerMap[q.id] ?? null,
+          }))
+        ).onConflictDoNothing();
+      }
+    }
 
     const feedbackMap: Record<string, string> = {
       A: "Excellent! You are well prepared for this paper.",

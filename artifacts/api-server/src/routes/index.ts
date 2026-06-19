@@ -19,6 +19,9 @@ import whatsappRouter from "./whatsapp";
 import yarngptRouter from "./yarngpt";
 import textbookRouter from "./textbook";
 import notificationsRouter from "./notifications";
+import wrongAnswersRouter from "./wrong-answers";
+import bookmarksRouter from "./bookmarks";
+import referralsRouter from "./referrals";
 
 const router: IRouter = Router();
 
@@ -42,5 +45,8 @@ router.use(whatsappRouter);
 router.use(yarngptRouter);
 router.use(textbookRouter);
 router.use(notificationsRouter);
+router.use(wrongAnswersRouter);
+router.use(bookmarksRouter);
+router.use(referralsRouter);
 
 export default router;
