@@ -1,0 +1,224 @@
+
+calebosky@PRECIOUS MINGW64 ~/Desktop/jupeb-mobile-new
+$ npm install
+npm error code ERESOLVE
+npm error ERESOLVE unable to resolve dependency tree
+npm error
+npm error While resolving: jupeb-mobile@1.0.0
+npm error Found: react@19.2.3
+npm error node_modules/react
+npm error   react@"19.2.3" from the root project
+npm error
+npm error Could not resolve dependency:
+npm error peer react@"^19.2.7" from react-dom@19.2.7
+npm error node_modules/react-dom
+npm error   react-dom@"^19.2.3" from the root project
+npm error
+npm error Fix the upstream dependency conflict, or retry
+npm error this command with --force or --legacy-peer-deps
+npm error to accept an incorrect (and potentially broken) dependency resolution.
+npm error
+npm error
+npm error For a full report see:
+npm error C:\Users\caleb\AppData\Local\npm-cache\_logs\2026-06-18T20_43_12_921Z-eresolve-report.txt
+npm error A complete log of this run can be found in: C:\Users\caleb\AppData\Local\npm-cache\_logs\2026-06-18T20_43_12_921Z-debug-0.log
+
+calebosky@PRECIOUS MINGW64 ~/Desktop/jupeb-mobile-new
+$ 
+
+calebosky@PRECIOUS MINGW64 ~/Desktop/jupeb-mobile-new
+$ --legacy-peer-deps
+bash: --legacy-peer-deps: command not found
+
+calebosky@PRECIOUS MINGW64 ~/Desktop/jupeb-mobile-new
+$ --legacy-peer-deps
+bash: --legacy-peer-deps: command not found
+
+calebosky@PRECIOUS MINGW64 ~/Desktop/jupeb-mobile-new
+$ npm install --legacy-peer-deps
+npm warn deprecated uuid@7.0.3: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+
+added 607 packages, removed 9 packages, changed 6 packages, and audited 614 packages in 4m
+
+68 packages are looking for funding
+  run `npm fund` for details
+
+11 moderate severity vulnerabilities
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+calebosky@PRECIOUS MINGW64 ~/Desktop/jupeb-mobile-new
+$ npm start
+
+> jupeb-mobile@1.0.0 start
+> expo start
+
+Starting project at C:\Users\caleb\Desktop\jupeb-mobile-new
+Starting Metro Bundler
+
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+█ ▄▄▄▄▄ █   █▄ ▀▄██ ▄▄▄▄▄ █
+█ █   █ █ ▀▄ █▀▄█▀█ █   █ █
+█ █▄▄▄█ █▀██▀▀▀▀▄██ █▄▄▄█ █
+█▄▄▄▄▄▄▄█▄▀▄█ █ █▄█▄▄▄▄▄▄▄█
+█  ▀█  ▄█▀▀▀▄▀▀▄▀▄▀█ ▀▄▄ ▄█
+███▄▀ ▀▄▀██▀ ▄█▄  ▄█▀   ▀██
+█▀██▄  ▄██▀▄█▄█▄ ▄▀▄ ▀▄ ▀██
+███▀▀▄ ▄▀▀▄▀█▀▄█ ▀ ▀██ ▀███
+█▄▄▄█▄▄▄▄▀▀▄▄ █▄▀ ▄▄▄ ▀ ▄▄█
+█ ▄▄▄▄▄ █▀▄█ ▄██▀ █▄█ ▀▀███
+█ █   █ █▄█▀▀▀▀▄█ ▄ ▄▄▀ ▀▀█
+█ █▄▄▄█ █▀ ▀ ███▀█▀ ▀█▀▀ ██
+█▄▄▄▄▄▄▄█▄▄█▄██▄███▄▄▄▄▄▄▄█
+
+› Scan the QR code above to open in Expo Go.
+› Metro: exp://10.128.186.194:8081
+› Web: http://localhost:8081
+
+› Using Expo Go (Press s to switch to development build)
+› Press ? │ show all commands
+
+2 packages may need updating. Run npx expo install --check for details.
+Logs for your project will appear below. Press Ctrl+C to exit.
+ ERROR  Project is incompatible with this version of Expo Go
+
+This project requires a newer version of Expo Go.
+
+How to fix this error:
+Download the latest version of Expo Go from the Play Store.
+ ERROR  Project is incompatible with this version of Expo Go
+
+This project requires a newer version of Expo Go.
+
+How to fix this error:
+Download the latest version of Expo Go from the Play Store.
+ ERROR  Project is incompatible with this version of Expo Go
+
+This project requires a newer version of Expo Go.
+
+How to fix this error:
+Download the latest version of Expo Go from the Play Store.
+ ERROR  Project is incompatible with this version of Expo Go
+
+This project requires a newer version of Expo Go.
+
+How to fix this error:
+Download the latest version of Expo Go from the Play Store.
+ ERROR  Project is incompatible with this version of Expo Go
+
+This project requires a newer version of Expo Go.
+
+How to fix this error:
+Download the latest version of Expo Go from the Play Store.
+ ERROR  Project is incompatible with this version of Expo Go
+
+This project requires a newer version of Expo Go.
+
+How to fix this error:
+Download the latest version of Expo Go from the Play Store.
+Web Bundling failed 32613ms node_modules\expo-router\entry.js (1477 modules)
+Unable to resolve "react-native-worklets" from "node_modules\react-native-reanimated\lib\module\initializers.js"
+  1 | 'use strict';
+  2 |
+> 3 | import { runOnUISync } from 'react-native-worklets';
+    |                              ^
+  4 | import { IS_WEB, ReanimatedError, SHOULD_BE_USE_WEB } from './common';
+  5 | import { initSvgCssSupport } from './css/svg';
+  6 | import { getStaticFeatureFlag } from './featureFlags';
+
+Import stack:
+
+ node_modules\react-native-reanimated\lib\module\initializers.js
+ | import "react-native-worklets"
+
+ node_modules\react-native-reanimated\lib\module\index.js
+ | import "./initializers"
+
+ node_modules\react-native-gesture-handler\lib\module\handlers\gestures\reanimatedWrapper.js
+ | import "react-native-reanimated"
+
+ node_modules\react-native-gesture-handler\lib\module\handlers\gestures\GestureDetector\useAnimatedGesture.js
+ | import "../reanimatedWrapper"
+
+ node_modules\react-native-gesture-handler\lib\module\handlers\gestures\GestureDetector\index.js
+ | import "./useAnimatedGesture"
+
+ node_modules\react-native-gesture-handler\lib\module\components\Text.js
+ | import "../handlers/gestures/GestureDetector"
+
+ node_modules\react-native-gesture-handler\lib\module\index.js
+ | import "./components/Text"
+
+ app\_layout.tsx
+ | import "react-native-gesture-handler"
+
+ app (require.context)
+
+Web Bundling failed 2634ms node_modules\expo-router\entry.js (1446 modules)
+Unable to resolve "react-native-worklets" from "node_modules\react-native-reanimated\lib\module\initializers.js"
+  1 | 'use strict';
+  2 |
+> 3 | import { runOnUISync } from 'react-native-worklets';
+    |                              ^
+  4 | import { IS_WEB, ReanimatedError, SHOULD_BE_USE_WEB } from './common';
+  5 | import { initSvgCssSupport } from './css/svg';
+  6 | import { getStaticFeatureFlag } from './featureFlags';
+
+Import stack:
+
+ node_modules\react-native-reanimated\lib\module\initializers.js
+ | import "react-native-worklets"
+
+ node_modules\react-native-reanimated\lib\module\index.js
+ | import "./initializers"
+
+ node_modules\react-native-gesture-handler\lib\module\handlers\gestures\reanimatedWrapper.js
+ | import "react-native-reanimated"
+
+ node_modules\react-native-gesture-handler\lib\module\handlers\gestures\GestureDetector\useAnimatedGesture.js
+ | import "../reanimatedWrapper"
+
+ node_modules\react-native-gesture-handler\lib\module\handlers\gestures\GestureDetector\index.js
+ | import "./useAnimatedGesture"
+
+ node_modules\react-native-gesture-handler\lib\module\components\Text.js
+ | import "../handlers/gestures/GestureDetector"
+
+ node_modules\react-native-gesture-handler\lib\module\index.js
+ | import "./components/Text"
+
+ app\_layout.tsx
+ | import "react-native-gesture-handler"
+
+ app (require.context)
+
+C:\Users\caleb\Desktop\jupeb-mobile-new\node_modules\@expo\cli\build\src\utils\errors.js:130
+    throw error;
+    ^
+
+Error: ENOENT: no such file or directory, watch 'C:\Users\caleb\Desktop\jupeb-mobile-new\node_modules\@babel\.plugin-transform-arrow-functions-AeQJbRLS\lib'
+    at FSWatcher.<computed> (node:internal/fs/watchers:316:19)
+    at Object.watch (node:fs:2538:36)
+    at #watchdir (C:\Users\caleb\Desktop\jupeb-mobile-new\node_modules\@expo\metro-file-map\build\watchers\FallbackWatcher.js:164:38)
+    at C:\Users\caleb\Desktop\jupeb-mobile-new\node_modules\@expo\metro-file-map\build\watchers\FallbackWatcher.js:268:39
+    at Walker.<anonymous> (C:\Users\caleb\Desktop\jupeb-mobile-new\node_modules\@expo\metro-file-map\build\watchers\FallbackWatcher.js:410:33)
+    at Walker.emit (node:events:509:28)
+    at C:\Users\caleb\Desktop\jupeb-mobile-new\node_modules\walker\lib\walker.js:69:16
+    at FSReqCallback.oncomplete (node:fs:185:23) {
+  errno: -4058,
+  syscall: 'watch',
+  code: 'ENOENT',
+  path: 'C:\\Users\\caleb\\Desktop\\jupeb-mobile-new\\node_modules\\@babel\\.plugin-transform-arrow-functions-AeQJbRLS\\lib',
+  filename: 'C:\\Users\\caleb\\Desktop\\jupeb-mobile-new\\node_modules\\@babel\\.plugin-transform-arrow-functions-AeQJbRLS\\lib'
+}
+
+Node.js v24.15.0
+
+calebosky@PRECIOUS MINGW64 ~/Desktop/jupeb-mobile-new
+$ 
