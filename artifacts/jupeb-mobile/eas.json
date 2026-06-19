@@ -8,6 +8,7 @@
       "android": {
         "buildType": "apk"
       },
+      "channel": "preview",
       "env": {
         "npm_config_legacy_peer_deps": "true"
       }
@@ -19,9 +20,18 @@
       "ios": {
         "resourceClass": "m-medium"
       },
+      "channel": "production",
       "env": {
         "npm_config_legacy_peer_deps": "true"
       }
+    }
+  },
+  "update": {
+    "preview": {
+      "channel": "preview"
+    },
+    "production": {
+      "channel": "production"
     }
   },
   "submit": {

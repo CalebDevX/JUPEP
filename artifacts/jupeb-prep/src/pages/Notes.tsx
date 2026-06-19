@@ -321,9 +321,6 @@ export default function Notes() {
                           <Badge className={cn("text-[10px] border px-2 py-0", colorClass)}>
                             {note.subjectName}
                           </Badge>
-                          <Badge variant="secondary" className="text-[10px] bg-white/5 text-white/40 border-0 px-2 py-0">
-                            Paper {note.paper} — {paperLabels[note.paper]}
-                          </Badge>
                           {note.tags?.filter(t => t !== "ai-generated").map(tag => (
                             <Badge key={tag} variant="secondary" className="text-[10px] bg-white/5 text-white/30 border-0 px-1.5 py-0">
                               {tag}
