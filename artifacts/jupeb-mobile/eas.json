@@ -1,0 +1,32 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://c1a02cd7-2fbe-4c40-95b5-eb049f8213b8-00-2hyxoqd6m9jjr.riker.replit.dev/api"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://c1a02cd7-2fbe-4c40-95b5-eb049f8213b8-00-2hyxoqd6m9jjr.riker.replit.dev/api"
+      }
+    },
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://c1a02cd7-2fbe-4c40-95b5-eb049f8213b8-00-2hyxoqd6m9jjr.riker.replit.dev/api"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

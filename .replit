@@ -61,7 +61,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd artifacts/jupeb-mobile && BROWSER=echo npx expo start --web --port 8080"
+args = "pkill -f 'expo start' 2>/dev/null; pkill -f 'metro' 2>/dev/null; sleep 2; cd artifacts/jupeb-mobile && BROWSER=echo npx expo start --web --port 8080"
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
