@@ -74,7 +74,7 @@ router.get("/student/rank", async (req, res) => {
   }
   try {
     const auth = await pool.query(
-      "SELECT full_name, xp, streak, session_token FROM students WHERE phone=$1",
+      "SELECT full_name, xp, streak, last_active, session_token FROM students WHERE phone=$1",
       [phone.trim()]
     );
     if (!auth.rows.length) return res.status(404).json({ error: "Student not found" });
