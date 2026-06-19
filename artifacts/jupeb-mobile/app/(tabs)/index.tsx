@@ -110,6 +110,7 @@ export default function HomeScreen() {
   const [dailyDone, setDailyDone]     = useState(0);
   const [tipIndex, setTipIndex]       = useState(new Date().getDay() % STUDY_TIPS.length);
   const [readCount, setReadCount]     = useState(0);
+  const [weekActivity, setWeekActivity] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
   const [focusActive, setFocusActive] = useState(false);
   const [focusSecs, setFocusSecs]     = useState(POMODORO_SECS);
   const [dictQuery, setDictQuery]     = useState('');
@@ -138,6 +139,16 @@ export default function HomeScreen() {
     });
     AsyncStorage.getAllKeys().then(keys => {
       setReadCount((keys as string[]).filter(k => k.startsWith('jupeb_chapter_read_')).length);
+    }).catch(() => {});
+    // Load last 7 days of activity
+    const today = new Date();
+    const dayKeys = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - (6 - i));
+      return `jupeb_daily_done_${d.toDateString()}`;
+    });
+    Promise.all(dayKeys.map(k => AsyncStorage.getItem(k))).then(vals => {
+      setWeekActivity(vals.map(v => Math.max(0, parseInt(v ?? '0', 10) || 0)));
     }).catch(() => {});
     Animated.parallel([
       Animated.timing(fadeA, { toValue: 1, duration: 400, useNativeDriver: true }),
@@ -355,6 +366,59 @@ export default function HomeScreen() {
             </Text>
           </View>
         </View>
+
+        {/* ── WEEKLY ACTIVITY ─────────────────────────────────────────────── */}
+        {(() => {
+          const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+          const today = new Date();
+          const maxVal = Math.max(...weekActivity, DAILY_GOAL, 1);
+          const totalWeek = weekActivity.reduce((a, b) => a + b, 0);
+          const activeDays = weekActivity.filter(v => v > 0).length;
+          return (
+            <View style={S.section}>
+              <View style={S.sectionRow}>
+                <Text style={S.sectionTitle}>This Week</Text>
+                <Text style={S.weekSummaryText}>{totalWeek} questions · {activeDays}/7 days</Text>
+              </View>
+              <View style={S.weekCard}>
+                <View style={S.weekBars}>
+                  {weekActivity.map((count, i) => {
+                    const dayDate = new Date(today);
+                    dayDate.setDate(today.getDate() - (6 - i));
+                    const dayLabel = DAY_LABELS[dayDate.getDay()];
+                    const isToday = i === 6;
+                    const hitGoal = count >= DAILY_GOAL;
+                    const barPct = count / maxVal;
+                    const barColor = hitGoal ? C.success : isToday ? C.primary : `${C.primary}80`;
+                    return (
+                      <View key={i} style={S.weekBarCol}>
+                        {count > 0 && (
+                          <Text style={[S.weekBarCount, { color: hitGoal ? C.success : C.mutedForeground }]}>
+                            {count}
+                          </Text>
+                        )}
+                        <View style={S.weekBarTrack}>
+                          <View style={[S.weekBarFill, {
+                            height: `${Math.max(barPct * 100, count > 0 ? 8 : 3)}%`,
+                            backgroundColor: barColor,
+                          }]} />
+                          <View style={[S.weekGoalLine, { bottom: `${(DAILY_GOAL / maxVal) * 100}%` }]} />
+                        </View>
+                        <Text style={[S.weekBarDay, isToday && { color: C.primary, fontFamily: 'Inter_700Bold' }]}>
+                          {isToday ? 'Today' : dayLabel}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+                <View style={S.weekGoalHint}>
+                  <View style={S.weekGoalDot} />
+                  <Text style={S.weekGoalHintText}>Daily goal ({DAILY_GOAL} questions)</Text>
+                </View>
+              </View>
+            </View>
+          );
+        })()}
 
         {/* ── QUICK ACTIONS GRID ─────────────────────────────────────────── */}
         <View style={S.section}>
@@ -656,6 +720,39 @@ function makeStyles(C: AppColors) {
     },
     tipLabel: { fontSize: 10, fontFamily: 'Inter_600SemiBold', color: C.mutedForeground, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 },
     tipText:  { fontSize: 13, fontFamily: 'Inter_400Regular', color: C.foreground, lineHeight: 19 },
+
+    // ── Weekly activity chart
+    weekSummaryText: { fontSize: 12, fontFamily: 'Inter_500Medium', color: C.mutedForeground },
+    weekCard: {
+      backgroundColor: C.card, borderRadius: C.radiusLg,
+      borderWidth: 1, borderColor: C.border, padding: 16,
+    },
+    weekBars: { flexDirection: 'row', alignItems: 'flex-end', height: 90, gap: 6 },
+    weekBarCol: { flex: 1, alignItems: 'center', height: '100%', justifyContent: 'flex-end' },
+    weekBarCount: { fontSize: 9, fontFamily: 'Inter_600SemiBold', marginBottom: 3 },
+    weekBarTrack: {
+      width: '100%', flex: 1, justifyContent: 'flex-end',
+      backgroundColor: C.border, borderRadius: 4, overflow: 'visible',
+      position: 'relative',
+    },
+    weekBarFill: { width: '100%', borderRadius: 4, minHeight: 3 },
+    weekGoalLine: {
+      position: 'absolute', left: -2, right: -2, height: 1.5,
+      backgroundColor: `${C.mutedForeground}50`,
+    },
+    weekBarDay: {
+      fontSize: 9, fontFamily: 'Inter_500Medium',
+      color: C.mutedForeground, marginTop: 6,
+    },
+    weekGoalHint: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      marginTop: 14, paddingTop: 12,
+      borderTopWidth: 1, borderTopColor: C.border,
+    },
+    weekGoalDot: {
+      width: 20, height: 1.5, backgroundColor: `${C.mutedForeground}50`, borderRadius: 1,
+    },
+    weekGoalHintText: { fontSize: 11, fontFamily: 'Inter_400Regular', color: C.mutedForeground },
 
     // ── Countdown
     countdownCard: {
