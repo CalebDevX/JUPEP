@@ -111,7 +111,7 @@ externalPort = 3000
 
 [nix]
 channel = "stable-25_05"
-packages = ["photofield", "python313Packages.pyngrok", "psmisc"]
+packages = ["photofield", "python313Packages.pyngrok", "psmisc", "eas-cli"]
 
 [userenv]
 
