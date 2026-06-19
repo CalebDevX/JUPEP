@@ -1,0 +1,170 @@
+ █▀▄█ ▄██▀ █▄█ ▀▀███
+█ █   █ █▄█▀▀▀▀▄█ ▄ ▄▄▀ ▀▀█
+█ █▄▄▄█ █▀ ▀ ███▀█▀ ▀█▀▀ ██
+█▄▄▄▄▄▄▄█▄▄█▄██▄███▄▄▄▄▄▄▄█
+
+› Scan the QR code above to open in Expo Go.
+› Metro: exp://10.128.186.194:8081
+› Web: http://localhost:8081
+
+› Using Expo Go
+› Press s │ switch to development build
+
+› Press a │ open Android
+› Press w │ open web
+
+› Press j │ open debugger
+› Press r │ reload app
+› Press m │ toggle menu
+› shift+m │ more tools
+› Press o │ open project code in your editor
+
+› Press ? │ show all commands
+
+3 packages may need updating. Run npx expo install --check for details.
+Logs for your project will appear below. Press Ctrl+C to exit.
+ ERROR  Project is incompatible with this version of Expo Go
+
+This project requires a newer version of Expo Go.
+
+How to fix this error:
+Download the latest version of Expo Go from the Play Store.
+Android Bundled 70338ms node_modules\expo-router\entry.js (1934 modules)
+ WARN  Route "./_layout.tsx" is missing the required default export. Ensure a React component is exported as default.
+ ERROR  [Error: Incompatible React versions: The "react" and "react-native-renderer" packages must have the exact same version. Instead got:
+  - react:                  19.2.7
+  - react-native-renderer:  19.2.3
+Learn more: https://react.dev/warnings/version-mismatch] 
+
+Code: _layout.tsx
+  2 | import { Stack } from 'expo-router';
+  3 | import { StatusBar } from 'expo-status-bar';
+> 4 | import { GestureHandlerRootView } from 'react-native-gesture-handler';
+    | ^
+  5 | import { SafeAreaProvider } from 'react-native-safe-area-context';
+  6 | import { QueryClientProvider } from '@tanstack/react-query';
+  7 | import { useColorScheme, Platform } from 'react-native';
+Call Stack
+  <global> (app\_layout.tsx:4)
+ ERROR  [Error: Incompatible React versions: The "react" and "react-native-renderer" packages must have the exact same version. Instead got:
+  - react:                  19.2.7
+  - react-native-renderer:  19.2.3
+Learn more: https://react.dev/warnings/version-mismatch] 
+
+Code: _layout.tsx
+  2 | import { Stack } from 'expo-router';
+  3 | import { StatusBar } from 'expo-status-bar';
+> 4 | import { GestureHandlerRootView } from 'react-native-gesture-handler';
+    | ^
+  5 | import { SafeAreaProvider } from 'react-native-safe-area-context';
+  6 | import { QueryClientProvider } from '@tanstack/react-query';
+  7 | import { useColorScheme, Platform } from 'react-native';
+Call Stack
+  <global> (app\_layout.tsx:4)
+ ERROR  [Error: Incompatible React versions: The "react" and "react-native-renderer" packages must have the exact same version. Instead got:
+  - react:                  19.2.7
+  - react-native-renderer:  19.2.3
+Learn more: https://react.dev/warnings/version-mismatch] 
+
+Code: _layout.tsx
+  2 | import { Stack } from 'expo-router';
+  3 | import { StatusBar } from 'expo-status-bar';
+> 4 | import { GestureHandlerRootView } from 'react-native-gesture-handler';
+    | ^
+  5 | import { SafeAreaProvider } from 'react-native-safe-area-context';
+  6 | import { QueryClientProvider } from '@tanstack/react-query';
+  7 | import { useColorScheme, Platform } from 'react-native';
+Call Stack
+  <global> (app\_layout.tsx:4)
+ WARN  Route "./_layout.tsx" is missing the required default export. Ensure a React component is exported as default.
+ ERROR  [Error: Incompatible React versions: The "react" and "react-native-renderer" packages must have the exact same version. Instead got:
+  - react:                  19.2.7
+  - react-native-renderer:  19.2.3
+Learn more: https://react.dev/warnings/version-mismatch] 
+
+Code: _layout.tsx
+  2 | import { Stack } from 'expo-router';
+  3 | import { StatusBar } from 'expo-status-bar';
+> 4 | import { GestureHandlerRootView } from 'react-native-gesture-handler';
+    | ^
+  5 | import { SafeAreaProvider } from 'react-native-safe-area-context';
+  6 | import { QueryClientProvider } from '@tanstack/react-query';
+  7 | import { useColorScheme, Platform } from 'react-native';
+Call Stack
+  <global> (app\_layout.tsx:4)
+ ERROR  [Error: Incompatible React versions: The "react" and "react-native-renderer" packages must have the exact same version. Instead got:
+  - react:                  19.2.7
+  - react-native-renderer:  19.2.3
+Learn more: https://react.dev/warnings/version-mismatch] 
+
+Code: _layout.tsx
+  2 | import { Stack } from 'expo-router';
+  3 | import { StatusBar } from 'expo-status-bar';
+> 4 | import { GestureHandlerRootView } from 'react-native-gesture-handler';
+    | ^
+  5 | import { SafeAreaProvider } from 'react-native-safe-area-context';
+  6 | import { QueryClientProvider } from '@tanstack/react-query';
+  7 | import { useColorScheme, Platform } from 'react-native';
+Call Stack
+  <global> (app\_layout.tsx:4)
+ ERROR  [Error: Incompatible React versions: The "react" and "react-native-renderer" packages must have the exact same version. Instead got:
+  - react:                  19.2.7
+  - react-native-renderer:  19.2.3
+Learn more: https://react.dev/warnings/version-mismatch] 
+
+Code: _layout.tsx
+  2 | import { Stack } from 'expo-router';
+  3 | import { StatusBar } from 'expo-status-bar';
+> 4 | import { GestureHandlerRootView } from 'react-native-gesture-handler';
+    | ^
+  5 | import { SafeAreaProvider } from 'react-native-safe-area-context';
+  6 | import { QueryClientProvider } from '@tanstack/react-query';
+  7 | import { useColorScheme, Platform } from 'react-native';
+Call Stack
+  <global> (app\_layout.tsx:4)
+ ERROR  [TypeError: Cannot read property 'ErrorBoundary' of undefined] 
+
+Code: useScreens.js
+  139 |     }), [sorted, protectedScreens]);
+  140 | }
+> 141 | function fromImport(value, { ErrorBoundary, SuspenseFallback, ...component }) {
+      | ^
+  142 |     // If possible, add a more helpful display name for the component stack to improve debugging of React errors such as `Text strings must be rendered within a <Text> component.`.
+  143 |     if (component?.default && __DEV__) {
+  144 |         component.default.displayName ??= `${component.default.name ?? 'Route'}(${value.contextKey})`;
+Call Stack
+  fromImport (node_modules\expo-router\build\useScreens.js:141)
+  getQualifiedRouteComponent (node_modules\expo-router\build\useScreens.js:206:34)
+  useStore (node_modules\expo-router\build\global-state\useStore.js:55:68)
+  ContextNavigator (node_modules\expo-router\build\ExpoRoot.js:122:46)
+  callComponent.react_stack_bottom_frame (node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js:17130:29)
+  renderWithHooks (node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js:5648:40)
+  updateFunctionComponent (node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js:8081:34)
+  beginWork (node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js:9340:41)
+  run (<native>)
+  runWithFiberInDEV (node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js:697:33)
+  performUnitOfWork (node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js:14134:39)
+  workLoopSync (node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js:13966:58)
+  renderRootSync (node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js:13947:23)
+  performWorkOnRoot (node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js:13160:43)
+  performWorkOnRootViaSchedulerTask (node_modules\react-native\Libraries\Renderer\implementations\ReactFabric-dev.js:3673:24) 
+
+Code: ExpoRoot.js
+  83 |                     initialMetrics: INITIAL_METRICS, children: children }) }) }));
+  84 |     }, [ParentWrapper]);
+> 85 |     return (0, jsx_runtime_1.jsx)(ContextNavigator, { ...props, wrapper: wrapper });
+     |                                 ^
+  86 | }
+  87 | const initialUrl = react_native_1.Platform.OS === 'web' && typeof window !== 'undefined'
+  88 |     ? new URL(window.location.href)
+Call Stack
+  ExpoRoot (node_modules\expo-router\build\ExpoRoot.js:85:33)
+  App (node_modules\expo-router\build\qualified-entry.js:20:91)
+  WithDevTools (node_modules\expo\src\launch\withDevTools.tsx:21:12)
+
+
+
+
+
+
+
