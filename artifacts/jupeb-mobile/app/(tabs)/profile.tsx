@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ScrollView, View, Text, StyleSheet, TouchableOpacity,
   Alert, Platform, Modal, TextInput, ActivityIndicator,
-  KeyboardAvoidingView,
+  KeyboardAvoidingView, Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
+import { useThemeContext, type ThemeMode } from '@/context/ThemeContext';
 import { setPin, removePin } from '@/src/utils/api';
 import type { AppColors } from '@/constants/colors';
 
@@ -55,7 +56,7 @@ function InfoRow({ icon, label, value, valueColor, actionLabel, actionColor, onP
   return inner;
 }
 
-// ── 6-dot PIN dots display ────────────────────────────────────────────────────
+// ── 6-dot PIN dots ────────────────────────────────────────────────────────────
 function PinDots({ value, accent }: { value: string; accent: string }) {
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginVertical: 16 }}>
@@ -74,18 +75,11 @@ function PinDots({ value, accent }: { value: string; accent: string }) {
   );
 }
 
-// ── PIN step types ────────────────────────────────────────────────────────────
 type PinModalMode = 'set' | 'change' | 'remove';
 type PinStep = 'current' | 'new' | 'confirm';
 
 function PinModal({
-  visible,
-  mode,
-  onClose,
-  onSuccess,
-  phone,
-  sessionToken,
-  C,
+  visible, mode, onClose, onSuccess, phone, sessionToken, C,
 }: {
   visible: boolean;
   mode: PinModalMode;
@@ -102,7 +96,6 @@ function PinModal({
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
   const inputRef                = useRef<TextInput>(null);
-
   const accent = C.primary;
 
   const reset = useCallback(() => {
@@ -113,10 +106,8 @@ function PinModal({
 
   const handleClose = () => { reset(); onClose(); };
 
-  const activePin = step === 'current' ? currentPin
-    : step === 'new' ? newPin : confirmPin;
-  const setActivePin = step === 'current' ? setCurrentPin
-    : step === 'new' ? setNewPin : setConfirmPin;
+  const activePin = step === 'current' ? currentPin : step === 'new' ? newPin : confirmPin;
+  const setActivePin = step === 'current' ? setCurrentPin : step === 'new' ? setNewPin : setConfirmPin;
 
   const stepTitle = mode === 'remove'
     ? 'Enter your current PIN to remove it'
@@ -129,16 +120,10 @@ function PinModal({
     setActivePin(digits);
     setError('');
     if (digits.length < 6) return;
-
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    if (mode === 'remove') {
-      await submit(digits, '', '');
-      return;
-    }
+    if (mode === 'remove') { await submit(digits, '', ''); return; }
     if (step === 'current') { setStep('new'); setNewPin(''); setTimeout(() => inputRef.current?.focus(), 50); return; }
     if (step === 'new')     { setStep('confirm'); setConfirmPin(''); setTimeout(() => inputRef.current?.focus(), 50); return; }
-    // confirm step
     if (digits !== newPin) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError("PINs don't match. Try again.");
@@ -163,8 +148,8 @@ function PinModal({
     } catch (e: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError(e.message || 'Something went wrong.');
-      if (mode === 'remove' || step === 'current') { setCurrentPin(''); }
-      else { setConfirmPin(''); }
+      if (mode === 'remove' || step === 'current') setCurrentPin('');
+      else setConfirmPin('');
     } finally {
       setLoading(false);
     }
@@ -175,8 +160,7 @@ function PinModal({
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <TouchableOpacity
           style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}
-          activeOpacity={1}
-          onPress={handleClose}
+          activeOpacity={1} onPress={handleClose}
         >
           <TouchableOpacity activeOpacity={1} onPress={() => {}}>
             <View style={{
@@ -184,82 +168,44 @@ function PinModal({
               borderTopLeftRadius: 24, borderTopRightRadius: 24,
               padding: 24, paddingBottom: 40,
             }}>
-              {/* Handle bar */}
               <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: C.border, alignSelf: 'center', marginBottom: 20 }} />
-
-              {/* Icon */}
               <View style={{
                 width: 52, height: 52, borderRadius: 16,
                 backgroundColor: `${accent}15`, borderWidth: 1, borderColor: `${accent}25`,
                 alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 12,
               }}>
-                <Ionicons
-                  name={mode === 'remove' ? 'lock-open-outline' : 'lock-closed-outline'}
-                  size={22} color={accent}
-                />
+                <Ionicons name={mode === 'remove' ? 'lock-open-outline' : 'lock-closed-outline'} size={22} color={accent} />
               </View>
-
               <Text style={{ fontSize: 17, fontFamily: 'Inter_700Bold', color: C.foreground, textAlign: 'center', marginBottom: 4 }}>
                 {mode === 'set' ? 'Set PIN' : mode === 'change' ? 'Change PIN' : 'Remove PIN'}
               </Text>
               <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', color: C.mutedForeground, textAlign: 'center', marginBottom: 4 }}>
                 {stepTitle}
               </Text>
-
-              {/* Progress dots for multi-step */}
               {mode !== 'remove' && (
                 <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginBottom: 4 }}>
                   {(mode === 'change' ? ['current','new','confirm'] as PinStep[] : ['new','confirm'] as PinStep[]).map((s) => (
-                    <View key={s} style={{
-                      width: 6, height: 6, borderRadius: 3,
-                      backgroundColor: s === step ? accent : C.border,
-                    }} />
+                    <View key={s} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: s === step ? accent : C.border }} />
                   ))}
                 </View>
               )}
-
-              {/* PIN dots */}
               <PinDots value={activePin} accent={accent} />
-
-              {/* Hidden input that captures keystrokes */}
               <TextInput
-                ref={inputRef}
-                value={activePin}
-                onChangeText={handleChange}
-                keyboardType="number-pad"
-                maxLength={6}
-                autoFocus
+                ref={inputRef} value={activePin} onChangeText={handleChange}
+                keyboardType="number-pad" maxLength={6} autoFocus
                 style={{ position: 'absolute', opacity: 0, width: 1, height: 1 }}
                 editable={!loading}
               />
-
-              {/* Error */}
               {error ? (
-                <View style={{
-                  flexDirection: 'row', alignItems: 'center', gap: 7,
-                  backgroundColor: `${C.destructive}12`, borderRadius: 10,
-                  borderWidth: 1, borderColor: `${C.destructive}25`,
-                  padding: 12, marginBottom: 14,
-                }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: `${C.destructive}12`, borderRadius: 10, borderWidth: 1, borderColor: `${C.destructive}25`, padding: 12, marginBottom: 14 }}>
                   <Ionicons name="alert-circle-outline" size={15} color={C.destructive} />
-                  <Text style={{ flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium', color: C.destructive }}>
-                    {error}
-                  </Text>
+                  <Text style={{ flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium', color: C.destructive }}>{error}</Text>
                 </View>
               ) : null}
-
-              {/* Loading */}
-              {loading && (
-                <View style={{ alignItems: 'center', marginBottom: 14 }}>
-                  <ActivityIndicator color={accent} />
-                </View>
-              )}
-
-              {/* Hint */}
+              {loading && <View style={{ alignItems: 'center', marginBottom: 14 }}><ActivityIndicator color={accent} /></View>}
               <Text style={{ fontSize: 11, fontFamily: 'Inter_400Regular', color: C.mutedForeground, textAlign: 'center' }}>
                 {loading ? 'Saving…' : `Tap the number pad and enter ${6 - activePin.length} more digit${6 - activePin.length === 1 ? '' : 's'}`}
               </Text>
-
               <TouchableOpacity onPress={handleClose} style={{ marginTop: 20, alignItems: 'center' }}>
                 <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: C.mutedForeground }}>Cancel</Text>
               </TouchableOpacity>
@@ -271,6 +217,43 @@ function PinModal({
   );
 }
 
+// ── Theme selector ────────────────────────────────────────────────────────────
+const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: React.ComponentProps<typeof Ionicons>['name']; desc: string }[] = [
+  { mode: 'auto',  label: 'Auto',   icon: 'phone-portrait-outline', desc: 'Follows system' },
+  { mode: 'light', label: 'Light',  icon: 'sunny-outline',           desc: 'Always light' },
+  { mode: 'dark',  label: 'Dark',   icon: 'moon-outline',            desc: 'Always dark' },
+  { mode: 'sepia', label: 'Sepia',  icon: 'book-outline',            desc: 'Warm reading' },
+];
+
+function ThemeSelector({ C, S }: { C: AppColors; S: any }) {
+  const { mode, setMode } = useThemeContext();
+  return (
+    <View style={S.card}>
+      <Text style={S.cardTitle}>Display & Reading</Text>
+      <View style={S.themeGrid}>
+        {THEME_OPTIONS.map(opt => {
+          const active = mode === opt.mode;
+          return (
+            <TouchableOpacity
+              key={opt.mode}
+              onPress={() => { Haptics.selectionAsync(); setMode(opt.mode); }}
+              style={[
+                S.themeOption,
+                { backgroundColor: active ? `${C.primary}12` : C.muted, borderColor: active ? C.primary : C.border },
+              ]}
+              activeOpacity={0.75}
+            >
+              <Ionicons name={opt.icon} size={20} color={active ? C.primary : C.mutedForeground} />
+              <Text style={[S.themeLabel, { color: active ? C.primary : C.foreground }]}>{opt.label}</Text>
+              <Text style={[S.themeDesc, { color: C.mutedForeground }]}>{opt.desc}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 // ── Main profile screen ───────────────────────────────────────────────────────
 export default function ProfileScreen() {
   const { profile, logout } = useAuth();
@@ -278,10 +261,11 @@ export default function ProfileScreen() {
   const topPad = Platform.OS === 'web' ? 0 : insets.top;
   const botPad = Platform.OS === 'web' ? 0 : insets.bottom;
   const C = useTheme();
+  const { autoSync, setAutoSync } = useThemeContext();
   const S = useMemo(() => makeStyles(C), [C]);
 
-  const [pinModal, setPinModal]   = useState<PinModalMode | null>(null);
-  const [hasPin, setHasPin]       = useState<boolean>(profile?.hasPin ?? false);
+  const [pinModal, setPinModal]     = useState<PinModalMode | null>(null);
+  const [hasPin, setHasPin]         = useState<boolean>(profile?.hasPin ?? false);
   const [pinSuccess, setPinSuccess] = useState<string | null>(null);
 
   const statusColor = profile?.paymentStatus === 'active' || profile?.paymentStatus === 'paid'
@@ -308,7 +292,6 @@ export default function ProfileScreen() {
       : hasPin   ? 'PIN changed successfully.'
       :             'PIN set successfully. You\'ll need it next time you log in.'
     );
-    // Update stored profile
     try {
       const raw = await SecureStore.getItemAsync(PROFILE_KEY);
       if (raw) {
@@ -333,7 +316,6 @@ export default function ProfileScreen() {
     >
       <Text style={S.pageTitle}>Profile</Text>
 
-      {/* PIN success toast */}
       {pinSuccess && (
         <View style={S.successToast}>
           <Ionicons name="checkmark-circle-outline" size={16} color="#16a34a" />
@@ -354,7 +336,7 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* Account info */}
+      {/* Account */}
       <View style={S.card}>
         <Text style={S.cardTitle}>Account</Text>
         <InfoRow icon="person-outline" label="Full Name" value={profile.fullName} C={C} S={S} />
@@ -363,7 +345,32 @@ export default function ProfileScreen() {
         {profile.accessCode && <InfoRow icon="key-outline" label="Access Code" value={profile.accessCode} C={C} S={S} />}
       </View>
 
-      {/* Security — PIN */}
+      {/* Theme / Reading mode */}
+      <ThemeSelector C={C} S={S} />
+
+      {/* App settings */}
+      <View style={S.card}>
+        <Text style={S.cardTitle}>App Settings</Text>
+        <View style={S.toggleRow}>
+          <View style={S.infoLeft}>
+            <Ionicons name="sync-outline" size={15} color={C.mutedForeground} />
+            <View>
+              <Text style={S.infoLabel}>Auto-sync Notes</Text>
+              <Text style={[S.toggleSub, { color: C.mutedForeground }]}>
+                Refresh chapters automatically when online
+              </Text>
+            </View>
+          </View>
+          <Switch
+            value={autoSync}
+            onValueChange={v => { Haptics.selectionAsync(); setAutoSync(v); }}
+            trackColor={{ false: C.border, true: `${C.primary}60` }}
+            thumbColor={autoSync ? C.primary : C.mutedForeground}
+          />
+        </View>
+      </View>
+
+      {/* Security */}
       <View style={S.card}>
         <Text style={S.cardTitle}>Security</Text>
         <InfoRow
@@ -421,7 +428,6 @@ export default function ProfileScreen() {
 
       <Text style={S.version}>JUPEB Prep v1.0.0</Text>
 
-      {/* PIN Modal */}
       {pinModal && (
         <PinModal
           visible
@@ -484,6 +490,23 @@ function makeStyles(C: AppColors) {
     infoLabel: { fontSize: 14, fontFamily: 'Inter_400Regular', color: C.mutedForeground },
     infoValue: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: C.foreground, maxWidth: '55%', textAlign: 'right' },
     infoAction: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: C.primary },
+
+    // Theme selector
+    themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 12, paddingTop: 0 },
+    themeOption: {
+      flex: 1, minWidth: '44%', alignItems: 'center', gap: 4,
+      borderWidth: 1.5, borderRadius: C.radius, paddingVertical: 12,
+    },
+    themeLabel: { fontSize: 13, fontFamily: 'Inter_700Bold' },
+    themeDesc: { fontSize: 10, fontFamily: 'Inter_400Regular' },
+
+    // Auto-sync toggle
+    toggleRow: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 16, paddingVertical: 12,
+      borderTopWidth: 1, borderTopColor: C.border,
+    },
+    toggleSub: { fontSize: 11, fontFamily: 'Inter_400Regular', marginTop: 2 },
 
     pinHint: {
       flexDirection: 'row', alignItems: 'flex-start', gap: 7,

@@ -61,8 +61,8 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pkill -f 'expo start' 2>/dev/null; pkill -f 'metro' 2>/dev/null; sleep 2; cd artifacts/jupeb-mobile && BROWSER=echo ./node_modules/.bin/expo start --web --port 8080"
-waitForPort = 8080
+args = "pkill -f 'expo start' 2>/dev/null; pkill -f 'metro' 2>/dev/null; fuser -k 8000/tcp 2>/dev/null; sleep 2; cd artifacts/jupeb-mobile && BROWSER=echo ./node_modules/.bin/expo start --web --port 8000"
+waitForPort = 8000
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
@@ -82,8 +82,16 @@ localPort = 5000
 externalPort = 5000
 
 [[ports]]
+localPort = 8000
+externalPort = 8000
+
+[[ports]]
 localPort = 8080
 externalPort = 8080
+
+[[ports]]
+localPort = 8081
+externalPort = 80
 
 [[ports]]
 localPort = 8082

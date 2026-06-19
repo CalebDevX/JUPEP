@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { useColorScheme, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -14,8 +14,8 @@ import {
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { ThemeProvider, useThemeContext } from '@/context/ThemeContext';
 import { queryClient } from '@/lib/query-client';
-import { LightColors, DarkColors } from '@/constants/colors';
 import { registerPushToken } from '@/src/utils/api';
 
 SplashScreen.preventAutoHideAsync();
@@ -38,9 +38,7 @@ async function setupNotifications() {
       const { status: asked } = await Notifications.requestPermissionsAsync();
       if (asked !== 'granted') return null;
     }
-    // Cancel stale scheduled notifications and reschedule
     await Notifications.cancelAllScheduledNotificationsAsync();
-    // 9am daily reminder
     await Notifications.scheduleNotificationAsync({
       content: {
         title: '📚 Time to study!',
@@ -48,7 +46,6 @@ async function setupNotifications() {
       },
       trigger: { hour: 9, minute: 0, repeats: true } as any,
     });
-    // 8pm nudge
     await Notifications.scheduleNotificationAsync({
       content: {
         title: "Don't break your streak! 🔥",
@@ -57,8 +54,6 @@ async function setupNotifications() {
       trigger: { hour: 20, minute: 0, repeats: true } as any,
     });
 
-    // Return Expo push token for remote notifications
-    // Works in Expo Go without a projectId; in production EAS builds uses the configured projectId
     try {
       const Constants = await import('expo-constants');
       const projectId =
@@ -72,7 +67,6 @@ async function setupNotifications() {
       return null;
     }
   } catch (e) {
-    // Notification setup is optional — never crash the app
     console.warn('Notification setup failed:', e);
     return null;
   }
@@ -96,10 +90,37 @@ function PushTokenRegistrar() {
   return null;
 }
 
-export default function RootLayout() {
-  const scheme = useColorScheme();
-  const C = scheme === 'dark' ? DarkColors : LightColors;
+function ThemedStatusBar() {
+  const { mode, colors } = useThemeContext();
+  const isDark = mode === 'dark' || (mode === 'auto' && colors.background === '#09090b');
+  return <StatusBar style={isDark ? 'light' : 'dark'} />;
+}
 
+function AppShell() {
+  const { colors } = useThemeContext();
+  return (
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <PushTokenRegistrar />
+            <ThemedStatusBar />
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="login" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="quiz/[groupId]" />
+              <Stack.Screen name="notes/[courseId]" />
+              <Stack.Screen name="notes/chapter/[chapterId]" />
+            </Stack>
+          </AuthProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -116,23 +137,8 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: C.background }}>
-      <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <PushTokenRegistrar />
-            <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="login" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="quiz/[groupId]" />
-              <Stack.Screen name="notes/[courseId]" />
-              <Stack.Screen name="notes/chapter/[chapterId]" />
-            </Stack>
-          </AuthProvider>
-        </QueryClientProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <ThemeProvider>
+      <AppShell />
+    </ThemeProvider>
   );
 }
