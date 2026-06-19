@@ -64,6 +64,39 @@ export const DarkColors = {
   radiusSm: 8,
 };
 
+// Warm sepia — easy on the eyes for night reading
+export const SepiaColors = {
+  background: '#f5edd8',
+  foreground: '#3b2710',
+  primary: '#c26010',
+  primaryForeground: '#ffffff',
+  primaryDim: 'rgba(194,96,16,0.12)',
+  card: '#ede0c4',
+  cardForeground: '#3b2710',
+  border: '#d4bc94',
+  muted: '#e8d9bc',
+  mutedForeground: '#8a7155',
+  invertedBg: '#3b2710',
+  invertedFg: '#f5edd8',
+  destructive: '#c0392b',
+  destructiveDim: 'rgba(192,57,43,0.12)',
+  secondary: '#e8d9bc',
+  secondaryForeground: '#6b4f30',
+  success: '#2e7d52',
+  successDim: 'rgba(46,125,82,0.12)',
+  warning: '#c07d00',
+  warningDim: 'rgba(192,125,0,0.12)',
+  info: '#2563a8',
+  infoDim: 'rgba(37,99,168,0.12)',
+  tabBar: '#ede0c4',
+  tabBarBorder: '#d4bc94',
+  heroBg: '#3b2710',
+  heroText: '#f5edd8',
+  radius: 14,
+  radiusLg: 20,
+  radiusSm: 8,
+};
+
 export type AppColors = typeof LightColors;
 
 export const Colors: AppColors =
