@@ -93,6 +93,10 @@ localPort = 8082
 externalPort = 3003
 
 [[ports]]
+localPort = 8083
+externalPort = 4200
+
+[[ports]]
 localPort = 22717
 externalPort = 3001
 
@@ -102,7 +106,7 @@ externalPort = 3000
 
 [nix]
 channel = "stable-25_05"
-packages = ["photofield"]
+packages = ["photofield", "python313Packages.pyngrok", "psmisc"]
 
 [userenv]
 
