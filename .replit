@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web", "bash", "postgresql-16"]
+modules = ["nodejs-20", "web", "python-3.12"]
 
 [deployment]
 router = "application"
@@ -37,7 +37,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd artifacts/api-server && PORT=3000 node --enable-source-maps ./dist/index.mjs"
+args = "cd artifacts/api-server && pnpm run build && PORT=3000 node --enable-source-maps ./dist/index.mjs"
 waitForPort = 3000
 
 [[workflows.workflow]]
@@ -75,10 +75,6 @@ timeoutMs = 20000
 [[ports]]
 localPort = 3000
 externalPort = 3000
-
-[[ports]]
-localPort = 5000
-externalPort = 5000
 
 [[ports]]
 localPort = 8080
