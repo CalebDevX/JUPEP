@@ -1,7 +1,8 @@
 import { Tabs } from 'expo-router';
-import { Platform, useColorScheme } from 'react-native';
+import { Platform, useColorScheme, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LightColors, DarkColors } from '@/constants/colors';
+import AnnouncementBanner from '@/components/AnnouncementBanner';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -12,7 +13,8 @@ export default function TabsLayout() {
   const bottomInset = Platform.OS === 'ios' ? 26 : Platform.OS === 'web' ? 10 : 8;
 
   return (
-    <Tabs
+    <View style={{ flex: 1 }}>
+      <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
@@ -70,5 +72,7 @@ export default function TabsLayout() {
       />
       <Tabs.Screen name="subjects" options={{ href: null }} />
     </Tabs>
+      <AnnouncementBanner />
+    </View>
   );
 }

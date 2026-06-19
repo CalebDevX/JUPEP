@@ -18,7 +18,6 @@ const SUBJECTS = [
   { key: 'CRS001', label: 'Christian Religious Studies', short: 'CRS' },
   { key: 'GOV001', label: 'Government',                  short: 'GOV' },
   { key: 'LIT001', label: 'Literature in English',       short: 'LIT' },
-  { key: 'ENG001', label: 'Use of English',              short: 'ENG' },
   { key: 'MTH001', label: 'Mathematics',                 short: 'MTH' },
   { key: 'BIO001', label: 'Biology',                     short: 'BIO' },
   { key: 'CHM001', label: 'Chemistry',                   short: 'CHM' },
@@ -74,38 +73,42 @@ export default function LoginScreen() {
       Alert.alert('Invalid number', 'Please enter a valid phone number.');
       return;
     }
-    if (!password.trim()) {
-      Alert.alert('Password required', 'Please enter your password.');
-      return;
-    }
     try {
       setLoading(true);
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      await loginWithPass(cleanPhone, password.trim());
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (err: any) {
-      // Legacy PIN account?
-      if (err.requiresPassword === true || err.message === 'PASSWORD_REQUIRED') {
-        // Already using password but something else went wrong — shouldn't happen
+
+      if (password.trim()) {
+        // Try password login first
+        try {
+          await loginWithPass(cleanPhone, password.trim());
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          return;
+        } catch (err: any) {
+          if (err.message?.includes('Incorrect password') || err.message?.includes('No account')) {
+            triggerShake();
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert('Login failed', err.message);
+            return;
+          }
+          // Fall through to PIN path
+        }
       }
-      // Check if it's a PIN account (shouldn't normally happen with new accounts)
-      if (err.message?.includes('Incorrect password') || err.message?.includes('No account')) {
+
+      // No password entered OR password login hit a non-credential error — try phone/PIN path
+      const needsPin = await loginPhone(cleanPhone);
+      if (needsPin) {
+        setStep('pin');
+        setTimeout(() => pinInputRef.current?.focus(), 100);
+      } else {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (err: any) {
+      if (err.requiresPassword === true || err.message === 'PASSWORD_REQUIRED') {
+        Alert.alert('Password required', 'This account is protected. Please enter your password above.');
+      } else {
         triggerShake();
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Login failed', err.message);
-      } else {
-        // Try legacy PIN path
-        try {
-          const needsPin = await loginPhone(cleanPhone);
-          if (needsPin) {
-            setStep('pin');
-            setTimeout(() => pinInputRef.current?.focus(), 100);
-          }
-        } catch (err2: any) {
-          triggerShake();
-          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-          Alert.alert('Login failed', err2.message || 'Could not sign in. Please try again.');
-        }
+        Alert.alert('Login failed', err.message || 'Could not sign in. Please try again.');
       }
     } finally {
       setLoading(false);

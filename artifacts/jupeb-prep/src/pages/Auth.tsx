@@ -29,7 +29,6 @@ const ALL_SUBJECTS = [
   { code: "LIT", name: "Literature in English",    emoji: "📖" },
   { code: "GOV", name: "Government",                emoji: "🏛️" },
   { code: "ECO", name: "Economics",                 emoji: "📊" },
-  { code: "ENG", name: "English Language",          emoji: "✍️" },
   { code: "HIS", name: "History",                   emoji: "📜" },
   { code: "GEO", name: "Geography",                 emoji: "🌍" },
   { code: "ACC", name: "Accounting",                emoji: "🧾" },
@@ -45,11 +44,14 @@ const ALL_SUBJECTS = [
   { code: "CMP", name: "Computer Science",          emoji: "💻" },
 ];
 
-const GRADE_OPTIONS = [
-  { value: "aaa1", label: "AAA+1", points: "16 pts", desc: "Medicine, Law, Pharmacy" },
-  { value: "aab1", label: "AAB+1", points: "15 pts", desc: "Engineering, Economics"  },
-  { value: "bbb1", label: "BBB+1", points: "12 pts", desc: "Sciences, Social Sciences"},
-  { value: "ccc1", label: "CCC+1", points: "9 pts",  desc: "Arts, Humanities"        },
+const JUPEB_COURSES = [
+  "Law", "Medicine & Surgery", "Pharmacy", "Nursing Science",
+  "Engineering (Civil)", "Engineering (Electrical/Electronic)", "Engineering (Mechanical)", "Engineering (Chemical)",
+  "Computer Science", "Economics", "Accounting", "Business Administration",
+  "Mass Communication", "Political Science", "Sociology", "Psychology",
+  "English & Literary Studies", "History & International Studies", "Philosophy",
+  "Theatre Arts", "Fine Arts", "Geography", "Architecture",
+  "Agricultural Science", "Estate Management", "Others (type manually)",
 ];
 
 type Tab      = "login" | "register";
@@ -116,6 +118,73 @@ function GoogleButton({ onClick, loading }: { onClick: () => void; loading?: boo
       )}
       Continue with Google
     </button>
+  );
+}
+
+function CourseSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen]             = useState(false);
+  const [manualMode, setManualMode] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  if (manualMode) {
+    return (
+      <div className="space-y-2">
+        <input type="text" placeholder="Type your course…" value={value}
+          onChange={e => onChange(e.target.value)} autoFocus className={inputCls} />
+        <button type="button" onClick={() => { setManualMode(false); onChange(""); }}
+          className="text-[11px] text-gray-400 hover:text-orange-500 transition-colors">
+          ← Back to list
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <button type="button" onClick={() => setOpen(v => !v)}
+        className={cn("w-full flex items-center gap-3 border px-4 py-3 text-sm text-left transition-all duration-200 rounded-lg bg-white shadow-sm",
+          open ? "border-orange-400 ring-2 ring-orange-400/10" : "border-gray-200 hover:border-gray-300")}>
+        <GraduationCap className="h-4 w-4 text-gray-400 flex-shrink-0" />
+        <span className={cn("flex-1", value ? "text-gray-900" : "text-gray-400")}>{value || "Select your intended course"}</span>
+        <ChevronDown className={cn("h-4 w-4 text-gray-400 flex-shrink-0 transition-transform", open && "rotate-180")} />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.12 }}
+            className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 shadow-xl overflow-hidden z-50 rounded-lg">
+            <div className="overflow-y-auto max-h-56">
+              {JUPEB_COURSES.map(course => {
+                const isOthers   = course === "Others (type manually)";
+                const isSelected = value === course;
+                return (
+                  <button key={course} type="button"
+                    onClick={() => {
+                      if (isOthers) { setManualMode(true); setOpen(false); }
+                      else { onChange(course); setOpen(false); }
+                    }}
+                    className={cn("w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 transition-colors",
+                      isSelected ? "bg-orange-50 text-orange-600 font-medium" :
+                      isOthers   ? "text-orange-500 hover:bg-orange-50 border-t border-gray-100 font-medium" :
+                                   "text-gray-600 hover:bg-gray-50 hover:text-gray-900")}>
+                    <span className="flex-1">{course}</span>
+                    {isSelected && <Check className="h-3.5 w-3.5 flex-shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -399,7 +468,6 @@ function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
   const [email, setEmail]             = useState(googlePreFill?.email || "");
   const [targetUniversity, setTargetUniversity] = useState("");
   const [course, setCourse]           = useState("");
-  const [targetGrade, setTargetGrade] = useState("aaa1");
   const [subjects, setSubjects]       = useState<string[]>([]);
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState("");
@@ -435,7 +503,7 @@ function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
           fullName: fullName.trim(), phone: phone.trim(),
           email: email.trim() || null, subjects,
           targetUniversity: targetUniversity.trim(),
-          targetGrade, accessCode: "",
+          course: course.trim(), accessCode: "",
         }),
       });
       const data = await res.json();
@@ -531,31 +599,7 @@ function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
               </div>
               <div>
                 <Label>Intended Course <span className="text-red-400">*</span></Label>
-                <div className="relative">
-                  <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
-                  <input type="text" placeholder="e.g. Law, Medicine, Engineering" value={course}
-                    onChange={e => setCourse(e.target.value)} className={cn(inputCls, "pl-10")} />
-                </div>
-              </div>
-              <div>
-                <Label>Target Grade <span className="text-red-400">*</span></Label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {GRADE_OPTIONS.map(g => (
-                    <motion.button key={g.value} type="button" onClick={() => setTargetGrade(g.value)}
-                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                      className={cn("flex flex-col items-start px-3 py-2.5 border text-left transition-all duration-200 rounded-lg",
-                        targetGrade === g.value
-                          ? "border-orange-400 bg-orange-50 ring-1 ring-orange-400/20"
-                          : "border-gray-200 hover:border-gray-300 bg-white")}>
-                      <div className="flex items-center gap-1.5">
-                        <span className={cn("text-sm font-bold", targetGrade === g.value ? "text-orange-600" : "text-gray-600")}>{g.label}</span>
-                        <span className={cn("text-[9px] px-1.5 py-0.5 font-bold tracking-wider rounded-md",
-                          targetGrade === g.value ? "bg-orange-100 text-orange-500" : "bg-gray-100 text-gray-400")}>{g.points}</span>
-                      </div>
-                      <span className="text-[10px] text-gray-400 mt-0.5 leading-tight">{g.desc}</span>
-                    </motion.button>
-                  ))}
-                </div>
+                <CourseSelect value={course} onChange={setCourse} />
               </div>
             </>
           )}
