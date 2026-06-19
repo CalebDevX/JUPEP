@@ -5,8 +5,9 @@ import {
   User, Phone, Mail, GraduationCap, BookOpen,
   ChevronRight, ArrowLeft, Loader2, CheckCircle2,
   MessageCircle, ChevronDown, Search, Check, Zap, Trophy, Brain,
-  Building2, Users, Star, Lock,
+  Building2, Users, Star, Lock, RefreshCw, ShieldCheck, KeyRound,
 } from "lucide-react";
+import { LogoMark } from "@/components/Logo";
 import { cn } from "@/lib/utils";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -321,6 +322,194 @@ function PinDots({ value }: { value: string }) {
   );
 }
 
+type ResetStep = "phone" | "otp" | "password" | "done";
+
+function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
+  const [, navigate]          = useLocation();
+  const [step, setStep]       = useState<ResetStep>("phone");
+  const [phone, setPhone]     = useState("");
+  const [otp, setOtp]         = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState("");
+
+  const requestOtp = async () => {
+    if (!phone.trim() || phone.replace(/\D/g, "").length < 10)
+      return setError("Please enter a valid phone number.");
+    setError(""); setLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/auth/request-otp`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: phone.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send OTP.");
+      setStep("otp");
+    } catch (err: any) { setError(err.message); }
+    finally { setLoading(false); }
+  };
+
+  const verifyOtp = async () => {
+    if (otp.replace(/\D/g, "").length < 6) return setError("Please enter the 6-digit OTP.");
+    setError(""); setLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/auth/verify-otp`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: phone.trim(), code: otp.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Invalid code.");
+      setResetToken(data.resetToken);
+      setStep("password");
+    } catch (err: any) { setError(err.message); }
+    finally { setLoading(false); }
+  };
+
+  const resetPassword = async () => {
+    if (newPass.trim().length < 6) return setError("Password must be at least 6 characters.");
+    if (newPass.trim() !== confirmPass.trim()) return setError("Passwords do not match.");
+    setError(""); setLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/auth/reset-password`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: phone.trim(), resetToken, newPassword: newPass.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Reset failed.");
+      if (data.profile) {
+        localStorage.setItem("jupeb_profile", JSON.stringify(data.profile));
+        localStorage.setItem("jupeb_display_name", data.profile.fullName);
+        if (data.profile.sessionToken) localStorage.setItem("jupeb_session_token", data.profile.sessionToken);
+      }
+      setStep("done");
+    } catch (err: any) { setError(err.message); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <motion.div initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 20, scale: 0.95 }} transition={{ duration: 0.2 }}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-5">
+
+        {step !== "done" && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-orange-50 border border-orange-200 flex items-center justify-center">
+                <KeyRound className="h-4 w-4 text-orange-500" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-900">Reset Password</p>
+                <p className="text-[10px] text-gray-400">
+                  {step === "phone" ? "Enter your phone" : step === "otp" ? "Enter OTP code" : "Set new password"}
+                </p>
+              </div>
+            </div>
+            <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none">×</button>
+          </div>
+        )}
+
+        <AnimatePresence mode="wait">
+          {step === "phone" && (
+            <motion.div key="phone" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4">
+              <p className="text-xs text-gray-500">We'll send a 6-digit OTP to your WhatsApp number.</p>
+              <div>
+                <Label>Phone Number <span className="text-red-400">*</span></Label>
+                <div className="relative">
+                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+                  <input type="tel" placeholder="08012345678" value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && requestOtp()} autoFocus
+                    className={cn(inputCls, "pl-10")} />
+                </div>
+              </div>
+              <AnimatePresence>{error && <ErrorBox msg={error} />}</AnimatePresence>
+              <button onClick={requestOtp} disabled={loading}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm rounded-lg transition-colors disabled:opacity-50">
+                {loading ? <><Loader2 className="h-4 w-4 animate-spin" />Sending…</> : <>Send OTP via WhatsApp<ChevronRight className="h-4 w-4" /></>}
+              </button>
+            </motion.div>
+          )}
+
+          {step === "otp" && (
+            <motion.div key="otp" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4">
+              <div className="text-center bg-orange-50 border border-orange-100 rounded-xl p-3">
+                <p className="text-xs font-semibold text-orange-700">OTP sent to your WhatsApp</p>
+                <p className="text-[11px] text-orange-500 mt-0.5">{phone} · Valid for 10 minutes</p>
+              </div>
+              <div>
+                <Label>6-Digit OTP <span className="text-red-400">*</span></Label>
+                <input type="text" inputMode="numeric" maxLength={6} placeholder="••••••" value={otp}
+                  onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} autoFocus
+                  className={cn(inputCls, "text-center text-xl tracking-[0.5em] font-bold")} />
+              </div>
+              <AnimatePresence>{error && <ErrorBox msg={error} />}</AnimatePresence>
+              <button onClick={verifyOtp} disabled={loading || otp.length < 6}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm rounded-lg transition-colors disabled:opacity-50">
+                {loading ? <><Loader2 className="h-4 w-4 animate-spin" />Verifying…</> : <><ShieldCheck className="h-4 w-4" />Verify Code</>}
+              </button>
+              <button onClick={requestOtp} disabled={loading} className="text-xs text-center text-orange-500 hover:text-orange-600 w-full transition-colors flex items-center justify-center gap-1">
+                <RefreshCw className="h-3 w-3" />Resend OTP
+              </button>
+            </motion.div>
+          )}
+
+          {step === "password" && (
+            <motion.div key="password" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4">
+              <p className="text-xs text-gray-500">Choose a strong new password for your account.</p>
+              <div>
+                <Label>New Password <span className="text-red-400">*</span></Label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+                  <input type={showPass ? "text" : "password"} placeholder="Min. 6 characters" value={newPass}
+                    onChange={e => setNewPass(e.target.value)} className={cn(inputCls, "pl-10 pr-10")} />
+                  <button type="button" onClick={() => setShowPass(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showPass ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <Label>Confirm Password <span className="text-red-400">*</span></Label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+                  <input type="password" placeholder="Repeat password" value={confirmPass}
+                    onChange={e => setConfirmPass(e.target.value)} className={cn(inputCls, "pl-10")} />
+                </div>
+              </div>
+              <AnimatePresence>{error && <ErrorBox msg={error} />}</AnimatePresence>
+              <button onClick={resetPassword} disabled={loading}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm rounded-lg transition-colors disabled:opacity-50">
+                {loading ? <><Loader2 className="h-4 w-4 animate-spin" />Resetting…</> : <>Reset Password<ChevronRight className="h-4 w-4" /></>}
+              </button>
+            </motion.div>
+          )}
+
+          {step === "done" && (
+            <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4 text-center py-4">
+              <div className="w-14 h-14 rounded-full bg-green-50 border-2 border-green-200 flex items-center justify-center mx-auto">
+                <CheckCircle2 className="h-7 w-7 text-green-500" />
+              </div>
+              <div>
+                <p className="font-bold text-gray-900">Password Reset!</p>
+                <p className="text-xs text-gray-400 mt-1">Your new password has been set. You are now logged in.</p>
+              </div>
+              <button onClick={() => { onClose(); navigate("/"); }}
+                className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm rounded-lg transition-colors">
+                Go to Dashboard →
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    </div>
+  );
+}
+
 function LoginForm({ onGoogleClick, googleLoading }: { onGoogleClick: () => void; googleLoading: boolean }) {
   const [, navigate]            = useLocation();
   const [loginStep, setLoginStep] = useState<LoginStep>("phone");
@@ -328,6 +517,7 @@ function LoginForm({ onGoogleClick, googleLoading }: { onGoogleClick: () => void
   const [pin, setPin]           = useState("");
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
+  const [showForgot, setShowForgot] = useState(false);
   const pinRef                  = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -447,9 +637,10 @@ function LoginForm({ onGoogleClick, googleLoading }: { onGoogleClick: () => void
             {loading ? <><Loader2 className="h-4 w-4 animate-spin" />Verifying…</> : <>Sign In<ChevronRight className="h-4 w-4" /></>}
           </button>
 
-          <p className="text-center text-[11px] text-gray-400">
-            Forgot your PIN? Contact support to reset it.
-          </p>
+          <button type="button" onClick={() => setShowForgot(true)}
+            className="text-center text-[11px] text-orange-500 hover:text-orange-600 transition-colors w-full">
+            Forgot your password or PIN? Reset it here →
+          </button>
         </motion.div>
       )}
     </AnimatePresence>

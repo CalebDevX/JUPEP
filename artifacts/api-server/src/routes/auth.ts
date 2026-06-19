@@ -13,6 +13,17 @@ pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS profile_picture TEXT`)
 pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS pin_hash TEXT`).catch(() => {});
 pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS password_hash TEXT`).catch(() => {});
 
+// OTP table for password reset
+pool.query(`CREATE TABLE IF NOT EXISTS otp_codes (
+  id SERIAL PRIMARY KEY,
+  phone TEXT NOT NULL,
+  code TEXT NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  used BOOLEAN DEFAULT FALSE,
+  reset_token TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+)`).catch(() => {});
+
 function hashPin(phone: string, pin: string): string {
   return crypto.createHash("sha256").update(`${phone.trim()}:${pin}`).digest("hex");
 }
@@ -360,6 +371,80 @@ router.get("/auth/verify-session", async (req, res) => {
     res.json({ valid: r.rows[0].session_token === token });
   } catch {
     res.json({ valid: true }); // fail-open so DB issues don't lock users out
+  }
+});
+
+// ── OTP Password Reset ────────────────────────────────────────────────────────
+
+router.post("/auth/request-otp", async (req, res) => {
+  const { phone } = req.body;
+  if (!phone?.trim()) return res.status(400).json({ error: "Phone number is required." });
+  const cleanPhone = phone.trim().replace(/\s/g, "");
+  try {
+    const r = await pool.query("SELECT id FROM students WHERE phone=$1", [cleanPhone]);
+    if (!r.rows.length) return res.status(404).json({ error: "No account found with this phone number." });
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    await pool.query("UPDATE otp_codes SET used=TRUE WHERE phone=$1 AND used=FALSE", [cleanPhone]);
+    await pool.query(
+      "INSERT INTO otp_codes(phone, code, expires_at) VALUES($1,$2,$3)",
+      [cleanPhone, code, expiresAt]
+    );
+    await pool.query(
+      "INSERT INTO wa_notifications(phone, message, status) VALUES($1,$2,'pending')",
+      [cleanPhone, `🔐 *JUPEB Prep – Password Reset*\n\nYour OTP is: *${code}*\n\nValid for 10 minutes. Do NOT share this code.`]
+    );
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to send OTP." });
+  }
+});
+
+router.post("/auth/verify-otp", async (req, res) => {
+  const { phone, code } = req.body;
+  if (!phone?.trim() || !code?.trim()) return res.status(400).json({ error: "Phone and code are required." });
+  const cleanPhone = phone.trim().replace(/\s/g, "");
+  try {
+    const r = await pool.query(
+      "SELECT id FROM otp_codes WHERE phone=$1 AND code=$2 AND used=FALSE AND expires_at > NOW()",
+      [cleanPhone, code.trim()]
+    );
+    if (!r.rows.length) return res.status(400).json({ error: "Invalid or expired code. Please request a new one." });
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    await pool.query("UPDATE otp_codes SET used=TRUE, reset_token=$1 WHERE id=$2", [resetToken, r.rows[0].id]);
+    res.json({ success: true, resetToken });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Verification failed." });
+  }
+});
+
+router.post("/auth/reset-password", async (req, res) => {
+  const { phone, resetToken, newPassword } = req.body;
+  if (!phone?.trim() || !resetToken?.trim() || !newPassword?.trim())
+    return res.status(400).json({ error: "All fields are required." });
+  if (newPassword.trim().length < 6)
+    return res.status(400).json({ error: "Password must be at least 6 characters." });
+  const cleanPhone = phone.trim().replace(/\s/g, "");
+  try {
+    const r = await pool.query(
+      "SELECT id FROM otp_codes WHERE phone=$1 AND reset_token=$2 AND created_at > NOW() - INTERVAL '15 minutes'",
+      [cleanPhone, resetToken.trim()]
+    );
+    if (!r.rows.length) return res.status(400).json({ error: "Reset link expired. Please start over." });
+    const pwHash = hashPassword(cleanPhone, newPassword.trim());
+    const newToken = crypto.randomBytes(32).toString("hex");
+    await pool.query(
+      "UPDATE students SET password_hash=$1, session_token=$2, pin_hash=NULL WHERE phone=$3",
+      [pwHash, newToken, cleanPhone]
+    );
+    await pool.query("UPDATE otp_codes SET reset_token=NULL WHERE id=$1", [r.rows[0].id]);
+    const s = await pool.query("SELECT * FROM students WHERE phone=$1", [cleanPhone]);
+    if (s.rows.length) return res.json({ success: true, profile: buildProfile(s.rows[0], newToken) });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Password reset failed." });
   }
 });
 
