@@ -58,13 +58,19 @@ async function setupNotifications() {
     });
 
     // Return Expo push token for remote notifications
-    const Constants = await import('expo-constants');
-    const projectId = Constants.default.expoConfig?.extra?.eas?.projectId ?? Constants.default.easConfig?.projectId;
-    if (projectId) {
-      const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+    // Works in Expo Go without a projectId; in production EAS builds uses the configured projectId
+    try {
+      const Constants = await import('expo-constants');
+      const projectId =
+        Constants.default.expoConfig?.extra?.eas?.projectId ??
+        Constants.default.easConfig?.projectId;
+      const tokenData = await Notifications.getExpoPushTokenAsync(
+        projectId ? { projectId } : undefined
+      );
       return tokenData.data;
+    } catch {
+      return null;
     }
-    return null;
   } catch (e) {
     // Notification setup is optional — never crash the app
     console.warn('Notification setup failed:', e);
