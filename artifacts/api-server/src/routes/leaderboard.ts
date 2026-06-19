@@ -92,11 +92,17 @@ router.get("/student/rank", async (req, res) => {
     const xpToNext = above ? Math.max(1, above.xp - student.xp) : 0;
     const nextRank = rank ? rank - 1 : null;
 
+    // Normalize last_active to YYYY-MM-DD string
+    const lastActive: string | null = student.last_active
+      ? new Date(student.last_active).toISOString().slice(0, 10)
+      : null;
+
     res.json({
       rank,
       xp: student.xp ?? 0,
       streak: student.streak ?? 0,
       full_name: student.full_name,
+      last_active: lastActive,
       xpToNext,
       nextRank,
       totalStudents: lb.rows.length,

@@ -123,7 +123,7 @@ async function setupNotifications(): Promise<string | null> {
   }
 }
 
-// ── Reschedule 9 AM notification with personalised message ────────────────────
+// ── Reschedule 9 AM + manage smart 10 PM streak reminder ─────────────────────
 async function reschedulePersonalizedNotification(phone: string, sessionToken: string) {
   if (Platform.OS === 'web') return;
   try {
@@ -137,19 +137,41 @@ async function reschedulePersonalizedNotification(phone: string, sessionToken: s
     const Notifications = await import('expo-notifications');
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
 
-    // Cancel the existing 9 AM generic notification (keep 8 PM)
+    // Cancel existing 9 AM and 10 PM scheduled slots so we can replace them
     for (const n of scheduled) {
       const trigger = n.trigger as any;
-      if (trigger?.hour === 9) {
+      if (trigger?.hour === 9 || trigger?.hour === 22) {
         await Notifications.cancelScheduledNotificationAsync(n.identifier);
       }
     }
 
+    // ── 9 AM: personalised daily challenge ────────────────────────────────────
     const { title, body } = buildPersonalizedMessage(rankData);
     await Notifications.scheduleNotificationAsync({
       content: { title, body, sound: 'default' },
       trigger: { hour: 9, minute: 0, repeats: true } as any,
     });
+
+    // ── 10 PM: streak-protection reminder (only if not practiced today) ───────
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const practicedToday = rankData.last_active === today;
+
+    if (!practicedToday) {
+      const firstName = (rankData.full_name || '').split(' ')[0] || 'Hey';
+      const streakLine =
+        rankData.streak > 1
+          ? `Your ${rankData.streak}-day streak is on the line!`
+          : 'Start your streak tonight!';
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `⚠️ ${streakLine}`,
+          body: `${firstName}, you haven't practiced today. Just one quiz keeps your streak alive 🔥`,
+          sound: 'default',
+        },
+        trigger: { hour: 22, minute: 0, repeats: true } as any,
+      });
+    }
+    // If they already practiced today → no 10 PM nag; they've earned the peace
   } catch {
     // Silently fall back to generic notification
   }
