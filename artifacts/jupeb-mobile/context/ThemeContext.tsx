@@ -5,8 +5,17 @@ import { LightColors, DarkColors, SepiaColors, type AppColors } from '@/constant
 
 export type ThemeMode = 'auto' | 'light' | 'dark' | 'sepia';
 
-const THEME_KEY = 'jupeb_theme_mode';
+const THEME_KEY     = 'jupeb_theme_mode';
 const AUTO_SYNC_KEY = 'jupeb_auto_sync';
+const FONT_SIZE_KEY = 'jupeb_font_size';
+
+export const FONT_SIZES = [
+  { label: 'S',  value: 13 },
+  { label: 'M',  value: 15 },
+  { label: 'L',  value: 17 },
+  { label: 'XL', value: 20 },
+];
+export const DEFAULT_FONT_SIZE = 15;
 
 type ThemeContextType = {
   mode: ThemeMode;
@@ -14,6 +23,8 @@ type ThemeContextType = {
   setMode: (mode: ThemeMode) => void;
   autoSync: boolean;
   setAutoSync: (v: boolean) => void;
+  fontSize: number;
+  setFontSize: (n: number) => void;
 };
 
 const ThemeContext = createContext<ThemeContextType>({
@@ -22,23 +33,24 @@ const ThemeContext = createContext<ThemeContextType>({
   setMode: () => {},
   autoSync: true,
   setAutoSync: () => {},
+  fontSize: DEFAULT_FONT_SIZE,
+  setFontSize: () => {},
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemScheme = useColorScheme();
-  const [mode, setModeState] = useState<ThemeMode>('auto');
+  const [mode, setModeState]         = useState<ThemeMode>('auto');
   const [autoSync, setAutoSyncState] = useState(true);
+  const [fontSize, setFontSizeState] = useState(DEFAULT_FONT_SIZE);
 
   useEffect(() => {
-    AsyncStorage.multiGet([THEME_KEY, AUTO_SYNC_KEY]).then(pairs => {
-      const saved = pairs[0][1] as ThemeMode | null;
-      const sync = pairs[1][1];
-      if (saved && ['auto', 'light', 'dark', 'sepia'].includes(saved)) {
-        setModeState(saved);
-      }
-      if (sync !== null) {
-        setAutoSyncState(sync === 'true');
-      }
+    AsyncStorage.multiGet([THEME_KEY, AUTO_SYNC_KEY, FONT_SIZE_KEY]).then(pairs => {
+      const savedMode = pairs[0][1] as ThemeMode | null;
+      const savedSync = pairs[1][1];
+      const savedSize = pairs[2][1];
+      if (savedMode && ['auto','light','dark','sepia'].includes(savedMode)) setModeState(savedMode);
+      if (savedSync !== null) setAutoSyncState(savedSync === 'true');
+      if (savedSize) setFontSizeState(parseInt(savedSize) || DEFAULT_FONT_SIZE);
     }).catch(() => {});
   }, []);
 
@@ -52,14 +64,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(AUTO_SYNC_KEY, String(v)).catch(() => {});
   }, []);
 
+  const setFontSize = useCallback((n: number) => {
+    setFontSizeState(n);
+    AsyncStorage.setItem(FONT_SIZE_KEY, String(n)).catch(() => {});
+  }, []);
+
   const colors: AppColors =
-    mode === 'sepia' ? SepiaColors
+    mode === 'sepia'  ? SepiaColors
     : mode === 'dark' ? DarkColors
-    : mode === 'light' ? LightColors
+    : mode === 'light'? LightColors
     : systemScheme === 'dark' ? DarkColors : LightColors;
 
   return (
-    <ThemeContext.Provider value={{ mode, colors, setMode, autoSync, setAutoSync }}>
+    <ThemeContext.Provider value={{ mode, colors, setMode, autoSync, setAutoSync, fontSize, setFontSize }}>
       {children}
     </ThemeContext.Provider>
   );
