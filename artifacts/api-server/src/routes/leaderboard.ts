@@ -66,4 +66,44 @@ router.post("/student/sync-progress", async (req, res) => {
   }
 });
 
+// ── Student rank lookup (authenticated) ───────────────────────────────────────
+router.get("/student/rank", async (req, res) => {
+  const { phone, token } = req.query as { phone?: string; token?: string };
+  if (!phone?.trim() || !token?.trim()) {
+    return res.status(400).json({ error: "phone and token are required" });
+  }
+  try {
+    const auth = await pool.query(
+      "SELECT full_name, xp, streak, session_token FROM students WHERE phone=$1",
+      [phone.trim()]
+    );
+    if (!auth.rows.length) return res.status(404).json({ error: "Student not found" });
+    if (auth.rows[0].session_token !== token.trim()) return res.status(401).json({ error: "Invalid session" });
+
+    const student = auth.rows[0];
+
+    // Fetch full leaderboard to compute rank
+    const lb = await pool.query(
+      "SELECT phone, full_name, xp FROM students WHERE is_active=true ORDER BY xp DESC, streak DESC"
+    );
+    const idx = lb.rows.findIndex((r: any) => r.phone === phone.trim());
+    const rank = idx === -1 ? null : idx + 1;
+    const above = idx > 0 ? lb.rows[idx - 1] : null;
+    const xpToNext = above ? Math.max(1, above.xp - student.xp) : 0;
+    const nextRank = rank ? rank - 1 : null;
+
+    res.json({
+      rank,
+      xp: student.xp ?? 0,
+      streak: student.streak ?? 0,
+      full_name: student.full_name,
+      xpToNext,
+      nextRank,
+      totalStudents: lb.rows.length,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

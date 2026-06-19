@@ -106,6 +106,110 @@ router.post("/notifications/send", adminAuth, async (req, res) => {
   }
 });
 
+// ── Send personalised daily challenge (admin) ─────────────────────────────────
+router.post("/notifications/send-daily-challenge", adminAuth, async (_req, res) => {
+  try {
+    // All active students with a push token
+    const studentsResult = await pool.query(
+      `SELECT phone, full_name, xp, streak, expo_push_token
+       FROM students
+       WHERE expo_push_token IS NOT NULL AND expo_push_token != '' AND is_active = true
+       ORDER BY xp DESC`
+    );
+    if (studentsResult.rows.length === 0) {
+      return res.json({ success: true, sent: 0, failed: 0, message: "No registered devices" });
+    }
+
+    // Full leaderboard for rank calculation
+    const lbResult = await pool.query(
+      `SELECT phone, xp FROM students WHERE is_active=true ORDER BY xp DESC, streak DESC`
+    );
+    const leaderboard: { phone: string; xp: number }[] = lbResult.rows;
+    const rankMap = new Map<string, number>();
+    leaderboard.forEach((s, i) => rankMap.set(s.phone, i + 1));
+
+    function buildMessage(student: any): { title: string; body: string } {
+      const firstName = (student.full_name || "").split(" ")[0] || "Hey";
+      const rank = rankMap.get(student.phone);
+      const idx = rank ? rank - 1 : -1;
+      const above = idx > 0 ? leaderboard[idx - 1] : null;
+      const xpGap = above ? Math.max(1, above.xp - student.xp) : 0;
+
+      if (!rank || rank > 100) {
+        return {
+          title: `📚 Daily Challenge, ${firstName}!`,
+          body: "Complete a quiz today to earn XP and appear on the leaderboard 🚀",
+        };
+      }
+      if (rank === 1) {
+        return {
+          title: `👑 You're #1, ${firstName}!`,
+          body: `Lead the pack today. Keep your ${student.streak || 0}-day streak alive 🔥`,
+        };
+      }
+      if (rank <= 3) {
+        return {
+          title: `🏆 You're #${rank}, ${firstName}!`,
+          body: `Only ${xpGap} XP from #${rank - 1}. One quiz session could get you there! 🔥`,
+        };
+      }
+      if (rank <= 10) {
+        return {
+          title: `🔥 #${rank} → #${rank - 1} is ${xpGap} XP away!`,
+          body: `${firstName}, practice today and climb the top-10 leaderboard. You've got this!`,
+        };
+      }
+      if (rank <= 20) {
+        return {
+          title: `📈 Top 10 in sight, ${firstName}!`,
+          body: `You're ranked #${rank}. Earn ${xpGap} XP today to break into the top 10!`,
+        };
+      }
+      return {
+        title: `📚 Daily Challenge, ${firstName}!`,
+        body: `You're ranked #${rank}. Practice today to climb higher and earn bonus XP 🚀`,
+      };
+    }
+
+    const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
+    const messages = studentsResult.rows.map((s: any) => {
+      const { title, body } = buildMessage(s);
+      return { to: s.expo_push_token, title, body, sound: "default" };
+    });
+
+    let sentCount = 0;
+    let failedCount = 0;
+    for (let i = 0; i < messages.length; i += 100) {
+      const chunk = messages.slice(i, i + 100);
+      try {
+        const response = await fetch(EXPO_PUSH_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(chunk),
+        });
+        const data = await response.json();
+        if (data.data) {
+          for (const ticket of data.data) {
+            if (ticket.status === "ok") sentCount++;
+            else failedCount++;
+          }
+        }
+      } catch {
+        failedCount += chunk.length;
+      }
+    }
+
+    await pool.query(
+      "INSERT INTO push_notifications (title, body, target, sent_count, failed_count) VALUES ($1,$2,$3,$4,$5)",
+      ["Daily Challenge (personalised)", `${messages.length} personalised rank-aware messages`, "personalised", sentCount, failedCount]
+    ).catch(() => {});
+
+    res.json({ success: true, sent: sentCount, failed: failedCount, total: messages.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Get notification history (admin) ─────────────────────────────────────────
 router.get("/notifications/history", adminAuth, async (_req, res) => {
   try {

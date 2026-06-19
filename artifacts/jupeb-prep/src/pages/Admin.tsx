@@ -2142,6 +2142,7 @@ function PushNotifyTab({ pin }: { pin: string }) {
   const [body, setBody] = useState("");
   const [target, setTarget] = useState<"all" | "activated" | "free">("all");
   const [sending, setSending] = useState(false);
+  const [sendingChallenge, setSendingChallenge] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [stats, setStats] = useState<{ total: number; registered: number; activated: number } | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(true);
@@ -2184,6 +2185,22 @@ function PushNotifyTab({ pin }: { pin: string }) {
     } finally { setSending(false); }
   };
 
+  const sendChallenge = async () => {
+    setSendingChallenge(true);
+    try {
+      const res = await fetch(`${BASE}/api/notifications/send-daily-challenge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-pin": pin },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send");
+      toast({ title: `✅ Daily challenge sent to ${data.sent} device${data.sent !== 1 ? "s" : ""} (personalised per rank)${data.failed > 0 ? ` · ${data.failed} failed` : ""}` });
+      load();
+    } catch (err: any) {
+      toast({ title: err.message || "Send failed", variant: "destructive" });
+    } finally { setSendingChallenge(false); }
+  };
+
   const targetLabels: Record<string, string> = {
     all: "All registered devices",
     activated: "Activated students only",
@@ -2209,6 +2226,33 @@ function PushNotifyTab({ pin }: { pin: string }) {
         ) : (
           <div className="text-white/40 text-sm">{loadingHistory ? "Loading…" : "No data"}</div>
         )}
+      </Section>
+
+      <Section title="🎯 Daily Challenge (Personalised)">
+        <div className="space-y-3">
+          <p className="text-white/60 text-sm leading-relaxed">
+            Sends a unique, rank-aware notification to every student with a registered device.
+            Each message is generated from their live leaderboard position — e.g.{" "}
+            <em>"You're 50 XP from #3 — practice now!"</em>
+          </p>
+          <div className="grid grid-cols-2 gap-3 text-xs text-white/50 bg-white/5 rounded-xl p-4">
+            <div>🥇 <strong>#1</strong> — "Keep your streak alive, lead the pack"</div>
+            <div>🏆 <strong>#2–3</strong> — "Only X XP from #N above you"</div>
+            <div>🔥 <strong>#4–10</strong> — "#N→#N-1 is X XP away"</div>
+            <div>📈 <strong>#11–20</strong> — "Top 10 in sight — earn X XP"</div>
+            <div>📚 <strong>#21–100</strong> — "Climb from #N — practice now"</div>
+            <div>🚀 <strong>Unranked</strong> — "Appear on the leaderboard"</div>
+          </div>
+          <Button
+            onClick={sendChallenge}
+            disabled={sendingChallenge}
+            className="bg-orange-600 hover:bg-orange-500 font-semibold h-10 px-6"
+          >
+            {sendingChallenge
+              ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending challenges…</>
+              : <><Activity className="w-4 h-4 mr-2" /> Send Daily Challenge to All Students</>}
+          </Button>
+        </div>
       </Section>
 
       <Section title="Send Push Notification">
