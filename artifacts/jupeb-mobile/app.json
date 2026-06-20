@@ -7,11 +7,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0f0f14"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.jupeb.prep"
@@ -42,7 +37,15 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-updates"
+      "expo-updates",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0f0f14"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false

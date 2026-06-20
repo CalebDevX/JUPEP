@@ -250,10 +250,10 @@ export default function Notes() {
             </SelectTrigger>
             <SelectContent className="bg-[#1e1e28] border-white/10">
               <SelectItem value="all" className="text-white">All Papers</SelectItem>
-              <SelectItem value="001" className="text-white">1st In-Course</SelectItem>
-              <SelectItem value="002" className="text-white">1st Semester</SelectItem>
-              <SelectItem value="003" className="text-white">2nd In-Course</SelectItem>
-              <SelectItem value="004" className="text-white">2nd Semester</SelectItem>
+              <SelectItem value="001" className="text-white">Paper 001</SelectItem>
+              <SelectItem value="002" className="text-white">Paper 002</SelectItem>
+              <SelectItem value="003" className="text-white">Paper 003</SelectItem>
+              <SelectItem value="004" className="text-white">Paper 004</SelectItem>
               <SelectItem value="jupeb" className="text-white">JUPEB Final</SelectItem>
             </SelectContent>
           </Select>
