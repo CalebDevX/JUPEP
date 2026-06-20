@@ -1,9 +1,9 @@
-import { getBaseUrl } from './api-url';
+import { getApiUrl } from './api-url';
 
 export const API_BASE_URL = '';
 
 function base(): string {
-  return getBaseUrl();
+  return getApiUrl();
 }
 
 export interface Profile {
