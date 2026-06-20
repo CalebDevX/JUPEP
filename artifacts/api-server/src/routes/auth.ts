@@ -13,6 +13,7 @@ pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS profile_picture TEXT`)
 pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS pin_hash TEXT`).catch(() => {});
 pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS password_hash TEXT`).catch(() => {});
 pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS google_id TEXT`).catch(() => {});
+pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP`).catch(() => {});
 
 // OTP table for password reset
 pool.query(`CREATE TABLE IF NOT EXISTS otp_codes (

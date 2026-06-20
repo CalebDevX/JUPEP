@@ -2,6 +2,7 @@ import { Router } from "express";
 import { pool, db } from "@workspace/db";
 import { accessCodesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import crypto from "crypto";
 
 const ADMIN_PIN = process.env.ADMIN_PIN || "JUPEB2024";
 const router = Router();
@@ -56,6 +57,27 @@ router.patch("/admin/students/:id", adminAuth, async (req, res) => {
     const { isActive } = req.body;
     await pool.query("UPDATE students SET is_active=$1 WHERE id=$2", [isActive, req.params.id]);
     res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/admin/students/set-password", adminAuth, async (req, res) => {
+  try {
+    const { phone, password } = req.body;
+    if (!phone?.trim() || !password?.trim()) {
+      return res.status(400).json({ error: "phone and password are required." });
+    }
+    if (password.trim().length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters." });
+    }
+    const hash = crypto.createHash("sha256").update(`pw2:${phone.trim()}:${password.trim()}`).digest("hex");
+    const r = await pool.query(
+      "UPDATE students SET password_hash=$1, pin_hash=NULL WHERE phone=$2 RETURNING phone, full_name",
+      [hash, phone.trim()]
+    );
+    if (r.rowCount === 0) return res.status(404).json({ error: "Student not found." });
+    res.json({ success: true, phone: r.rows[0].phone, fullName: r.rows[0].full_name });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
