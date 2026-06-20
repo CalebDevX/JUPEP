@@ -67,6 +67,9 @@ export default function WrongAnswersScreen() {
   const [items, setItems] = useState<WrongAnswer[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [markingId, setMarkingId] = useState<number | null>(null);
@@ -81,10 +84,22 @@ export default function WrongAnswersScreen() {
     const base = getApiUrl();
     try {
       const [waRes, statsRes] = await Promise.all([
-        fetch(`${base}/student/wrong-answers?phone=${encodeURIComponent(profile.phone)}`),
+        fetch(`${base}/student/wrong-answers?phone=${encodeURIComponent(profile.phone)}&limit=30&offset=0`),
         fetch(`${base}/student/wrong-answers/stats?phone=${encodeURIComponent(profile.phone)}`),
       ]);
-      if (waRes.ok) setItems(await waRes.json());
+      if (waRes.ok) {
+        const data = await waRes.json();
+        // Handle both old (array) and new (paginated) response shapes
+        if (Array.isArray(data)) {
+          setItems(data);
+          setHasMore(false);
+          setOffset(data.length);
+        } else {
+          setItems(data.items ?? []);
+          setHasMore(data.hasMore ?? false);
+          setOffset(data.items?.length ?? 0);
+        }
+      }
       if (statsRes.ok) setStats(await statsRes.json());
     } catch {
       if (!silent) Alert.alert('Error', 'Failed to load wrong answers. Check your connection.');
@@ -93,6 +108,23 @@ export default function WrongAnswersScreen() {
       setRefreshing(false);
     }
   }, [profile?.phone]);
+
+  const loadMore = useCallback(async () => {
+    if (!profile?.phone || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    const base = getApiUrl();
+    try {
+      const res = await fetch(`${base}/student/wrong-answers?phone=${encodeURIComponent(profile.phone)}&limit=30&offset=${offset}`);
+      if (res.ok) {
+        const data = await res.json();
+        const newItems: WrongAnswer[] = Array.isArray(data) ? data : (data.items ?? []);
+        setItems(prev => [...prev, ...newItems]);
+        setHasMore(data.hasMore ?? false);
+        setOffset(prev => prev + newItems.length);
+      }
+    } catch { /* silent */ }
+    finally { setLoadingMore(false); }
+  }, [profile?.phone, loadingMore, hasMore, offset]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -373,6 +405,20 @@ export default function WrongAnswersScreen() {
             </TouchableOpacity>
           );
         })}
+
+        {/* Load More button */}
+        {hasMore && (
+          <TouchableOpacity
+            style={S.loadMoreBtn}
+            onPress={loadMore}
+            disabled={loadingMore}
+          >
+            {loadingMore
+              ? <ActivityIndicator size="small" color={C.primary} />
+              : <Text style={[S.loadMoreText, { color: C.primary }]}>Load more questions</Text>
+            }
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </View>
   );
@@ -679,6 +725,20 @@ function makeStyles(C: AppColors) {
       fontFamily: 'Inter_700Bold',
       fontSize: 14,
       color: '#fff',
+    },
+    loadMoreBtn: {
+      borderWidth: 1,
+      borderColor: '#e5e7eb',
+      borderRadius: 14,
+      paddingVertical: 13,
+      alignItems: 'center' as const,
+      marginHorizontal: 16,
+      marginTop: 8,
+      marginBottom: 24,
+    },
+    loadMoreText: {
+      fontFamily: 'Inter_600SemiBold',
+      fontSize: 14,
     },
   });
 }

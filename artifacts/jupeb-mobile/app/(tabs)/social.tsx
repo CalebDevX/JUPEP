@@ -40,22 +40,32 @@ function getInitials(name: string) {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 }
 
+const PAGE_SIZE = 20;
+
 // ── Leaderboard panel ─────────────────────────────────────────────────────────
 function LeaderboardPanel({ C, S }: { C: AppColors; S: ReturnType<typeof makeStyles> }) {
   const { isOnline } = useNetworkStatus();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(0);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     setError(null);
+    setOffset(0);
     try {
-      const res = await fetch(`${getApiBase()}/leaderboard`);
+      const res = await fetch(`${getApiBase()}/leaderboard?limit=${PAGE_SIZE}&offset=0`);
       if (!res.ok) throw new Error(`Server error ${res.status}`);
-      const data: LeaderboardEntry[] = await res.json();
-      setEntries(data);
+      const data = await res.json();
+      // Support both old array shape and new paginated shape
+      const list: LeaderboardEntry[] = Array.isArray(data) ? data : (data.entries ?? []);
+      setEntries(list);
+      setHasMore(data.hasMore ?? false);
+      setOffset(list.length);
     } catch (e: any) {
       setError(isOnline ? e.message : "You're offline. Connect to view the leaderboard.");
     } finally {
@@ -63,6 +73,21 @@ function LeaderboardPanel({ C, S }: { C: AppColors; S: ReturnType<typeof makeSty
       setRefreshing(false);
     }
   }, [isOnline]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetch(`${getApiBase()}/leaderboard?limit=${PAGE_SIZE}&offset=${offset}`);
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      const data = await res.json();
+      const list: LeaderboardEntry[] = Array.isArray(data) ? data : (data.entries ?? []);
+      setEntries(prev => [...prev, ...list]);
+      setHasMore(data.hasMore ?? false);
+      setOffset(prev => prev + list.length);
+    } catch { /* silently fail */ }
+    finally { setLoadingMore(false); }
+  }, [loadingMore, hasMore, offset]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -181,6 +206,20 @@ function LeaderboardPanel({ C, S }: { C: AppColors; S: ReturnType<typeof makeSty
           </View>
         );
       })}
+
+      {/* Load more */}
+      {hasMore && (
+        <TouchableOpacity
+          style={[S.loadMoreBtn, { borderColor: C.border }]}
+          onPress={loadMore}
+          disabled={loadingMore}
+        >
+          {loadingMore
+            ? <ActivityIndicator size="small" color={C.primary} />
+            : <Text style={[S.loadMoreText, { color: C.primary }]}>Load more students</Text>
+          }
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }
@@ -234,7 +273,7 @@ function CommunityPanel({ C, S }: { C: AppColors; S: ReturnType<typeof makeStyle
       const res = await fetch(`${getApiBase()}/communities/${communityId}/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ guestName: joinName.trim(), whatsapp: joinPhone.trim() }),
+        body: JSON.stringify({ displayName: joinName.trim(), whatsappNumber: joinPhone.trim() }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -500,6 +539,11 @@ function makeStyles(C: AppColors) {
       backgroundColor: C.muted, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2,
     },
     statChipText: { fontSize: 10, fontFamily: 'Inter_500Medium', color: C.mutedForeground },
+    loadMoreBtn: {
+      borderWidth: 1, borderRadius: 14, paddingVertical: 13,
+      alignItems: 'center' as const, marginTop: 12, marginBottom: 8,
+    },
+    loadMoreText: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
     leaderXp: { fontSize: 14, fontFamily: 'Inter_700Bold' },
 
     // Community

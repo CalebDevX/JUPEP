@@ -5,9 +5,11 @@ import { eq, and, isNull, desc } from "drizzle-orm";
 
 const router = Router();
 
-// GET /api/student/wrong-answers?phone=...&subjectId=...&paper=...
+// GET /api/student/wrong-answers?phone=...&subjectId=...&paper=...&limit=...&offset=...
 router.get("/student/wrong-answers", async (req, res) => {
   const { phone, subjectId, paper } = req.query as Record<string, string>;
+  const limit = Math.min(parseInt(req.query.limit as string || "30"), 100);
+  const offset = Math.max(0, parseInt(req.query.offset as string || "0"));
   if (!phone) return res.status(400).json({ error: "phone required" });
 
   try {
@@ -37,10 +39,12 @@ router.get("/student/wrong-answers", async (req, res) => {
           ...(paper ? [eq(wrongAnswersTable.paper, paper)] : []),
         )
       )
-      .orderBy(desc(wrongAnswersTable.attemptedAt)) as any;
+      .orderBy(desc(wrongAnswersTable.attemptedAt))
+      .limit(limit)
+      .offset(offset) as any;
 
     const rows = await query;
-    res.json(rows);
+    res.json({ items: rows, hasMore: rows.length === limit, offset, limit });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch wrong answers" });
   }

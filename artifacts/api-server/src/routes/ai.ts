@@ -1,10 +1,49 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
+import { db, pool } from "@workspace/db";
 import { notesTable, subjectsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { getAI } from "../lib/gemini-keys";
 
 const router = Router();
+
+// ── Chat history table ────────────────────────────────────────────────────────
+pool.query(`CREATE TABLE IF NOT EXISTS chat_messages (
+  id SERIAL PRIMARY KEY,
+  phone TEXT NOT NULL,
+  role TEXT NOT NULL,
+  content TEXT NOT NULL,
+  source_type TEXT,
+  source_ref TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+)`).catch(() => {});
+pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_messages_phone ON chat_messages(phone)`).catch(() => {});
+
+// ── GET chat history ──────────────────────────────────────────────────────────
+router.get("/ai/chat-history", async (req, res) => {
+  try {
+    const { phone, limit = "60" } = req.query as Record<string, string>;
+    if (!phone?.trim()) return res.status(400).json({ error: "phone is required" });
+    const rows = await pool.query(
+      "SELECT id, role, content, source_type, source_ref, created_at FROM chat_messages WHERE phone=$1 ORDER BY created_at ASC LIMIT $2",
+      [phone.trim(), parseInt(limit)]
+    );
+    res.json(rows.rows);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── DELETE chat history ───────────────────────────────────────────────────────
+router.delete("/ai/chat-history", async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone?.trim()) return res.status(400).json({ error: "phone is required" });
+    await pool.query("DELETE FROM chat_messages WHERE phone=$1", [phone.trim()]);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 function buildSystemPrompt(studentName?: string, studentSubjects?: string[]): string {
   const nameClause = studentName
@@ -60,7 +99,7 @@ Remember: Every Nigerian student deserves excellent academic support. Make every
 
 router.post("/ai/chat", async (req, res) => {
   try {
-    const { message, history = [], studentName, studentSubjects } = req.body;
+    const { message, history = [], studentName, studentSubjects, phone, stream: wantsStream = true, sourceType, sourceRef } = req.body;
     if (!message) return res.status(400).json({ error: "Message is required" });
 
     const ai = getAI();
@@ -73,6 +112,32 @@ router.post("/ai/chat", async (req, res) => {
       { role: "user", parts: [{ text: message }] },
     ];
 
+    // Save user message to DB (fire-and-forget)
+    if (phone?.trim()) {
+      pool.query(
+        "INSERT INTO chat_messages(phone, role, content, source_type, source_ref) VALUES($1,'user',$2,$3,$4)",
+        [phone.trim(), message, sourceType || null, sourceRef || null]
+      ).catch(() => {});
+    }
+
+    // Non-streaming mode: return plain JSON (for mobile clients)
+    if (wantsStream === false) {
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        config: { systemInstruction: buildSystemPrompt(studentName, studentSubjects) },
+        contents,
+      });
+      const reply = response.text || "";
+      if (phone?.trim()) {
+        pool.query(
+          "INSERT INTO chat_messages(phone, role, content) VALUES($1,'assistant',$2)",
+          [phone.trim(), reply]
+        ).catch(() => {});
+      }
+      return res.json({ reply });
+    }
+
+    // Streaming mode (SSE)
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
@@ -84,11 +149,20 @@ router.post("/ai/chat", async (req, res) => {
       contents,
     });
 
+    let fullReply = "";
     for await (const chunk of stream) {
       const text = chunk.text;
       if (text) {
+        fullReply += text;
         res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
       }
+    }
+
+    if (phone?.trim() && fullReply) {
+      pool.query(
+        "INSERT INTO chat_messages(phone, role, content) VALUES($1,'assistant',$2)",
+        [phone.trim(), fullReply]
+      ).catch(() => {});
     }
 
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`);

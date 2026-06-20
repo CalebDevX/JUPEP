@@ -458,7 +458,7 @@ export default function HomeScreen() {
               { icon: 'help-circle' as const, label: 'Practice Quiz',  sub: 'Past questions',  color: '#f97316', route: '/(tabs)/quiz',    locked: false },
               { icon: 'book' as const,         label: 'Study Notes',   sub: 'CRS · GOV · LIT', color: '#10b981', route: '/(tabs)/notes',   locked: false },
               { icon: 'close-circle' as const, label: 'Wrong Answers', sub: 'Fix weak spots',  color: '#ef4444', route: '/wrong-answers',  locked: false },
-              { icon: 'chatbubble-ellipses' as const, label: 'AI Tutor', sub: 'Ask anything',  color: '#8b5cf6', route: '/ai-chat',         locked: true  },
+              { icon: 'chatbubble-ellipses' as const, label: 'AI Tutor', sub: 'Ask anything',  color: '#8b5cf6', route: '/(tabs)/chat',     locked: true  },
               { icon: 'library' as const,      label: 'Dictionary',    sub: 'Word meanings',   color: '#0ea5e9', route: '/dictionary',      locked: false },
               { icon: 'trophy' as const,       label: 'Leaderboard',   sub: 'Top students',    color: '#f59e0b', route: '/(tabs)/social',   locked: false },
             ].map(a => (

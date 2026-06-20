@@ -182,7 +182,7 @@ export default function PastQuestionsScreen() {
   // ── Load past papers list ──────────────────────────────────────────────────
   useEffect(() => {
     setLoading(true);
-    fetch(`${getApiBase()}/api/questions/past-papers`)
+    fetch(`${getApiBase()}/questions/past-papers`)
       .then(r => r.json())
       .then(data => { setPapers(Array.isArray(data) ? data : []); setLoading(false); })
       .catch(() => setLoading(false));
@@ -199,7 +199,7 @@ export default function PastQuestionsScreen() {
     });
     if (selected.examType) params.set('examType', selected.examType);
     else params.set('paper', selected.paper);
-    fetch(`${getApiBase()}/api/questions?${params}`)
+    fetch(`${getApiBase()}/questions?${params}`)
       .then(r => r.json())
       .then(data => { setQuestions(Array.isArray(data) ? data : []); setLoadingQ(false); })
       .catch(() => setLoadingQ(false));

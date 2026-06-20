@@ -18,7 +18,7 @@ export function useAppUpdate() {
     const androidCfg = (Constants.expoConfig as any)?.android;
     const currentBuild: number = androidCfg?.versionCode ? parseInt(String(androidCfg.versionCode)) : 1;
 
-    fetch(`${getApiBase()}/api/app/version`)
+    fetch(`${getApiBase()}/app/version`)
       .then(r => r.json())
       .then((data: UpdateInfo) => {
         if (!data?.downloadUrl) return;
