@@ -23,18 +23,17 @@ function fmtMinutes(min: number) {
   return `${min} Min`;
 }
 
-const PAPER_OPTIONS = [
-  { value: "001",   label: "1st In-Course Exam",   short: "Paper 001" },
-  { value: "002",   label: "1st Semester Exam",     short: "Paper 002" },
-  { value: "003",   label: "2nd In-Course Exam",    short: "Paper 003" },
-  { value: "004",   label: "2nd Semester Exam",     short: "Paper 004" },
-  { value: "mock",  label: "Full Mock Exam",        short: "Mock (All)"  },
-  { value: "jupeb", label: "JUPEB Final Exam",      short: "JUPEB Final" },
+const EXAM_TYPE_OPTIONS = [
+  { value: "first_incourse",  label: "1st In-Course Exam",  short: "1st Incourse", papers: "Papers 001 & 002" },
+  { value: "first_semester",  label: "1st Semester Exam",   short: "1st Semester", papers: "Papers 001 & 002" },
+  { value: "second_incourse", label: "2nd In-Course Exam",  short: "2nd Incourse", papers: "Papers 003 & 004" },
+  { value: "mock",            label: "Mock Exam",           short: "Mock (All)",   papers: "All Papers (001–004)" },
+  { value: "final_jupeb",     label: "Final JUPEB Exam",    short: "JUPEB Final",  papers: "All Papers (001–004)" },
 ];
 
 const CUSTOM_TIMES = [10, 15, 20, 30, 45, 60, 90, 120];
 
-interface AvailRow { subjectId: number; paper: string; questionType: string; count: number; }
+interface AvailRow { subjectId: number; paper: string; examType: string | null; questionType: string; count: number; }
 
 export default function QuizLauncher() {
   const [, setLocation] = useLocation();
@@ -46,7 +45,7 @@ export default function QuizLauncher() {
   const trialRemaining = getTrialRemaining();
 
   const [subjectId, setSubjectId]   = useState<string>("");
-  const [paper, setPaper]           = useState<string>("001");
+  const [examType, setExamType]     = useState<string>("first_incourse");
   const [type, setType]             = useState<string>("objective");
   const [count, setCount]           = useState<string>(activated ? "20" : String(Math.min(5, trialRemaining)));
   const [timerMode, setTimerMode]   = useState<"none" | "best" | "custom">("best");
@@ -78,24 +77,30 @@ export default function QuizLauncher() {
     }
   }, [subjects, subjectId]);
 
-  const isMock  = paper === "mock";
-  const isJupeb = paper === "jupeb";
-  const isMixed = isMock || isJupeb;
+  const isMixed = examType === "mock" || examType === "final_jupeb";
 
   // How many questions exist for current selection
-  const availCount = (sid: string, p: string, qt: string): number => {
+  const availCount = (sid: string, et: string, qt: string): number => {
     const sid_ = Number(sid);
-    if (p === "mock" || p === "jupeb") {
-      // Mock/jupeb = sum across 001-004 for mixed types
-      return avail.filter(r => r.subjectId === sid_).reduce((s, r) => s + r.count, 0);
-    }
+    // Match by examType (new data) or by legacy paper mapping
+    const matching = avail.filter(r => {
+      if (r.subjectId !== sid_) return false;
+      if (r.examType) return r.examType === et;
+      // Legacy: match by paper (old data has no examType stored)
+      const legacyMap: Record<string, string[]> = {
+        first_incourse: ["001"], first_semester: ["002"],
+        second_incourse: ["003"], final_jupeb: ["004"],
+        mock: ["001","002","003","004"],
+      };
+      return (legacyMap[et] ?? []).includes(r.paper);
+    });
     if (qt === "objective" || qt === "theory") {
-      return avail.find(r => r.subjectId === sid_ && r.paper === p && r.questionType === qt)?.count ?? 0;
+      return matching.filter(r => r.questionType === qt).reduce((s, r) => s + r.count, 0);
     }
-    return avail.filter(r => r.subjectId === sid_ && r.paper === p).reduce((s, r) => s + r.count, 0);
+    return matching.reduce((s, r) => s + r.count, 0);
   };
 
-  const currentCount = subjectId ? availCount(subjectId, paper, isMixed ? "mixed" : type) : 0;
+  const currentCount = subjectId ? availCount(subjectId, examType, isMixed ? "mixed" : type) : 0;
   const hasQuestions = currentCount > 0;
 
   // Best time: 1.5 min/question for objective, 25 min/question for theory
@@ -120,7 +125,8 @@ export default function QuizLauncher() {
     startQuiz.mutate({
       data: {
         subjectId: Number(subjectId),
-        paper: paper as any,
+        examType: examType as any,
+        paper: examType as any,
         questionType: isMixed ? "mixed" : type as any,
         questionCount: Number(count),
         timedMinutes,
@@ -139,14 +145,10 @@ export default function QuizLauncher() {
     });
   };
 
-  // Helper: does a paper have any questions for current subject?
-  const paperHasQuestions = (p: string) => {
+  // Helper: does an exam type have any questions for current subject?
+  const examTypeHasQuestions = (et: string) => {
     if (!subjectId) return false;
-    const sid = Number(subjectId);
-    if (p === "mock" || p === "jupeb") {
-      return avail.some(r => r.subjectId === sid);
-    }
-    return avail.some(r => r.subjectId === sid && r.paper === p);
+    return availCount(subjectId, et, "mixed") > 0;
   };
 
   return (
@@ -200,23 +202,26 @@ export default function QuizLauncher() {
             </Select>
           </div>
 
-          {/* Exam / Paper */}
+          {/* Exam Type */}
           <div className="space-y-1.5">
-            <Label className="text-xs text-white/50 uppercase tracking-wider">Exam Paper</Label>
-            <Select value={paper} onValueChange={setPaper}>
+            <Label className="text-xs text-white/50 uppercase tracking-wider">Exam Type</Label>
+            <Select value={examType} onValueChange={setExamType}>
               <SelectTrigger className="h-11 bg-white/5 border-white/10 text-white">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-[#1e1e28] border-white/10">
-                {PAPER_OPTIONS.map(p => {
-                  const has = paperHasQuestions(p.value);
+                {EXAM_TYPE_OPTIONS.map(opt => {
+                  const has = examTypeHasQuestions(opt.value);
                   return (
-                    <SelectItem key={p.value} value={p.value} className="text-white">
+                    <SelectItem key={opt.value} value={opt.value} className="text-white">
                       <span className="flex items-center gap-2">
-                        {p.label}
+                        <span>
+                          <span className="font-medium">{opt.label}</span>
+                          <span className="text-white/40 text-xs ml-1.5">({opt.papers})</span>
+                        </span>
                         {has
-                          ? <CheckCircle2 className="h-3 w-3 text-emerald-400" />
-                          : <XCircle className="h-3 w-3 text-white/25" />}
+                          ? <CheckCircle2 className="h-3 w-3 text-emerald-400 flex-shrink-0" />
+                          : <XCircle className="h-3 w-3 text-white/25 flex-shrink-0" />}
                       </span>
                     </SelectItem>
                   );
@@ -235,9 +240,9 @@ export default function QuizLauncher() {
                 <div>
                   <p className="text-sm font-semibold text-red-300">No questions available</p>
                   <p className="text-xs text-white/40 mt-0.5">
-                    Questions for this subject + paper combination haven't been added yet.
+                    Questions for this subject + exam type haven't been added yet.
                     {avail.some(r => r.subjectId === Number(subjectId))
-                      ? " Try a different exam paper."
+                      ? " Try a different exam type."
                       : " Try a different subject."}
                   </p>
                 </div>
@@ -254,7 +259,7 @@ export default function QuizLauncher() {
                   { val: "objective", label: "Objective (MCQ)", emoji: "☑️" },
                   { val: "theory",    label: "Theory (Essay)",  emoji: "✍️" },
                 ].map(opt => {
-                  const cnt = subjectId ? availCount(subjectId, paper, opt.val) : 0;
+                  const cnt = subjectId ? availCount(subjectId, examType, opt.val) : 0;
                   return (
                     <button
                       key={opt.val}

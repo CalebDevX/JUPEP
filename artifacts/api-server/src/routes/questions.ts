@@ -3,14 +3,16 @@ import { db } from "@workspace/db";
 import { questionsTable, subjectsTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 
+
 const router = Router();
 
 router.get("/questions", async (req, res) => {
   try {
-    const { subjectId, paper, questionType, year, limit = "50", offset = "0" } = req.query;
+    const { subjectId, paper, examType, questionType, year, limit = "50", offset = "0" } = req.query;
     const conditions: any[] = [];
     if (subjectId) conditions.push(eq(questionsTable.subjectId, parseInt(subjectId as string)));
     if (paper) conditions.push(eq(questionsTable.paper, paper as string));
+    if (examType) conditions.push(eq(questionsTable.examType, examType as string));
     if (questionType) conditions.push(eq(questionsTable.questionType, questionType as string));
     if (year) conditions.push(eq(questionsTable.year, parseInt(year as string)));
 
@@ -20,6 +22,7 @@ router.get("/questions", async (req, res) => {
         subjectId: questionsTable.subjectId,
         subjectName: subjectsTable.name,
         paper: questionsTable.paper,
+        examType: questionsTable.examType,
         year: questionsTable.year,
         questionType: questionsTable.questionType,
         questionText: questionsTable.questionText,
@@ -49,9 +52,9 @@ router.get("/questions", async (req, res) => {
 
 router.post("/questions", async (req, res) => {
   try {
-    const { subjectId, paper, year, questionType, questionText, options, correctOption, explanation, markingGuide, marks } = req.body;
+    const { subjectId, paper, examType, year, questionType, questionText, options, correctOption, explanation, markingGuide, marks } = req.body;
     const [question] = await db.insert(questionsTable).values({
-      subjectId, paper, year, questionType, questionText, options, correctOption, explanation, markingGuide, marks: marks ?? 1,
+      subjectId, paper, examType, year, questionType, questionText, options, correctOption, explanation, markingGuide, marks: marks ?? 1,
     }).returning();
     const [subject] = await db.select({ name: subjectsTable.name }).from(subjectsTable).where(eq(subjectsTable.id, subjectId));
     res.status(201).json({ ...question, subjectName: subject?.name ?? null, createdAt: question.createdAt.toISOString() });

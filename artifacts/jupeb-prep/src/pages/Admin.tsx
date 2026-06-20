@@ -775,7 +775,7 @@ function QuestionsTab() {
 
   // Add question form state
   const [formData, setFormData] = useState({
-    subjectId: "", paper: "001", year: new Date().getFullYear().toString(),
+    subjectId: "", paper: "001", examType: "first_incourse", year: new Date().getFullYear().toString(),
     questionType: "objective", questionText: "", optionA: "", optionB: "", optionC: "", optionD: "",
     correctOption: "A", explanation: "", markingGuide: "", marks: "5",
   });
@@ -785,8 +785,8 @@ function QuestionsTab() {
     e.preventDefault();
     if (!formData.subjectId || !formData.questionText) { toast({ title: "Fill required fields", variant: "destructive" }); return; }
     const payload: any = {
-      subjectId: Number(formData.subjectId), paper: formData.paper, year: Number(formData.year),
-      questionType: formData.questionType, questionText: formData.questionText,
+      subjectId: Number(formData.subjectId), paper: formData.paper, examType: formData.examType,
+      year: Number(formData.year), questionType: formData.questionType, questionText: formData.questionText,
     };
     if (formData.questionType === "objective") {
       payload.options = [formData.optionA, formData.optionB, formData.optionC, formData.optionD];
@@ -974,13 +974,26 @@ function QuestionsTab() {
                     </SelectContent>
                   </Select>
                 </Field>
-                <Field label="Paper">
+                <Field label="Exam Type">
+                  <Select value={formData.examType} onValueChange={v => set("examType", v)}>
+                    <SelectTrigger className={inputCls}><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-[#1a1a2e] border-white/10">
+                      <SelectItem value="first_incourse"  className="text-white">1st In-Course Exam</SelectItem>
+                      <SelectItem value="first_semester"  className="text-white">1st Semester Exam</SelectItem>
+                      <SelectItem value="second_incourse" className="text-white">2nd In-Course Exam</SelectItem>
+                      <SelectItem value="mock"            className="text-white">Mock Exam</SelectItem>
+                      <SelectItem value="final_jupeb"     className="text-white">Final JUPEB Exam</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="Paper (Content Unit)">
                   <Select value={formData.paper} onValueChange={v => set("paper", v)}>
                     <SelectTrigger className={inputCls}><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-[#1a1a2e] border-white/10">
-                      {[["001","1st Incourse"],["002","1st Semester"],["003","2nd Incourse"],["004","Mock"]].map(([v,l]) => (
-                        <SelectItem key={v} value={v} className="text-white">{v} — {l}</SelectItem>
-                      ))}
+                      <SelectItem value="001" className="text-white">Paper 001 (1st half)</SelectItem>
+                      <SelectItem value="002" className="text-white">Paper 002 (1st half)</SelectItem>
+                      <SelectItem value="003" className="text-white">Paper 003 (2nd half)</SelectItem>
+                      <SelectItem value="004" className="text-white">Paper 004 (2nd half)</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>
@@ -1222,12 +1235,18 @@ function AnnouncementsTab() {
 // ─── Notes Tab ────────────────────────────────────────────────────────────────
 
 const PAPER_LABELS: Record<string, string> = {
-  "001": "1st In-Course Exam",
-  "002": "1st Semester Exam",
-  "003": "2nd In-Course Exam",
-  "004": "Mock Exam",
-  "mock": "Mock Exam",
-  "jupeb": "JUPEB Final Exam",
+  "001": "Paper 001",
+  "002": "Paper 002",
+  "003": "Paper 003",
+  "004": "Paper 004",
+};
+
+const EXAM_TYPE_LABELS: Record<string, string> = {
+  "first_incourse":  "1st In-Course Exam",
+  "first_semester":  "1st Semester Exam",
+  "second_incourse": "2nd In-Course Exam",
+  "mock":            "Mock Exam",
+  "final_jupeb":     "Final JUPEB Exam",
 };
 
 function NotesTab() {

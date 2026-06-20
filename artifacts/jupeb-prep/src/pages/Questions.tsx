@@ -11,10 +11,18 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const PAPER_LABELS: Record<string, string> = {
-  "001": "1st Incourse",
-  "002": "1st Semester",
-  "003": "2nd Incourse",
-  "004": "Mock Exam",
+  "001": "Paper 001",
+  "002": "Paper 002",
+  "003": "Paper 003",
+  "004": "Paper 004",
+};
+
+const EXAM_TYPE_LABELS: Record<string, string> = {
+  "first_incourse":  "1st In-Course",
+  "first_semester":  "1st Semester",
+  "second_incourse": "2nd In-Course",
+  "mock":            "Mock Exam",
+  "final_jupeb":     "Final JUPEB",
 };
 
 const SUBJECT_COLORS: Record<string, string> = {
@@ -27,6 +35,7 @@ export default function Questions() {
   const [searchParams] = useSearchParams();
   const [subjectId, setSubjectId] = useState<string>(searchParams.get("subjectId") || "all");
   const [paper, setPaper] = useState<string>(searchParams.get("paper") || "all");
+  const [examType, setExamType] = useState<string>(searchParams.get("examType") || "all");
   const [type, setType] = useState<string>("all");
   const [year, setYear] = useState<string>("all");
   const [page, setPage] = useState(1);
@@ -40,11 +49,12 @@ export default function Questions() {
   const queryParams = useMemo(() => ({
     ...(subjectId !== "all" ? { subjectId: Number(subjectId) } : {}),
     ...(paper !== "all" ? { paper: paper as ListQuestionsPaper } : {}),
+    ...(examType !== "all" ? { examType } : {}),
     ...(type !== "all" ? { questionType: type as ListQuestionsQuestionType } : {}),
     ...(year !== "all" ? { year: Number(year) } : {}),
     limit,
     offset: (page - 1) * limit,
-  } as any), [subjectId, paper, type, year, page]);
+  } as any), [subjectId, paper, examType, type, year, page]);
 
   const { data: questions, isLoading } = useListQuestions(queryParams);
 
@@ -92,16 +102,29 @@ export default function Questions() {
             </SelectContent>
           </Select>
 
+          <Select value={examType} onValueChange={v => { setExamType(v); setPage(1); }}>
+            <SelectTrigger className="w-[160px] bg-white/5 border-white/10 text-white h-9 text-sm">
+              <SelectValue placeholder="All Exam Types" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#1e1e28] border-white/10">
+              <SelectItem value="all" className="text-white">All Exam Types</SelectItem>
+              <SelectItem value="first_incourse"  className="text-white">1st In-Course</SelectItem>
+              <SelectItem value="first_semester"  className="text-white">1st Semester</SelectItem>
+              <SelectItem value="second_incourse" className="text-white">2nd In-Course</SelectItem>
+              <SelectItem value="mock"            className="text-white">Mock Exam</SelectItem>
+              <SelectItem value="final_jupeb"     className="text-white">Final JUPEB</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={paper} onValueChange={v => { setPaper(v); setPage(1); }}>
-            <SelectTrigger className="w-[145px] bg-white/5 border-white/10 text-white h-9 text-sm">
+            <SelectTrigger className="w-[120px] bg-white/5 border-white/10 text-white h-9 text-sm">
               <SelectValue placeholder="All Papers" />
             </SelectTrigger>
             <SelectContent className="bg-[#1e1e28] border-white/10">
               <SelectItem value="all" className="text-white">All Papers</SelectItem>
-              <SelectItem value="001" className="text-white">1st Incourse</SelectItem>
-              <SelectItem value="002" className="text-white">1st Semester</SelectItem>
-              <SelectItem value="003" className="text-white">2nd Incourse</SelectItem>
-              <SelectItem value="004" className="text-white">Mock Exam</SelectItem>
+              <SelectItem value="001" className="text-white">Paper 001</SelectItem>
+              <SelectItem value="002" className="text-white">Paper 002</SelectItem>
+              <SelectItem value="003" className="text-white">Paper 003</SelectItem>
+              <SelectItem value="004" className="text-white">Paper 004</SelectItem>
             </SelectContent>
           </Select>
 
@@ -170,7 +193,10 @@ export default function Questions() {
                             {q.subjectName}
                           </Badge>
                           <Badge variant="secondary" className="text-[10px] bg-white/5 text-white/40 border-0 px-1.5 py-0">
-                            {PAPER_LABELS[q.paper]}
+                            {(q as any).examType ? EXAM_TYPE_LABELS[(q as any).examType] ?? (q as any).examType : PAPER_LABELS[q.paper] ?? q.paper}
+                          </Badge>
+                          <Badge variant="secondary" className="text-[10px] bg-white/5 text-white/30 border-0 px-1.5 py-0">
+                            Paper {q.paper}
                           </Badge>
                           <Badge variant="secondary" className={cn(
                             "text-[10px] border-0 px-1.5 py-0",

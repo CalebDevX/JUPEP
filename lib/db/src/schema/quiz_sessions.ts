@@ -7,6 +7,7 @@ export const quizSessionsTable = pgTable("quiz_sessions", {
   id: serial("id").primaryKey(),
   subjectId: integer("subject_id").notNull().references(() => subjectsTable.id),
   paper: text("paper").notNull(),
+  examType: text("exam_type"), // "first_incourse" | "first_semester" | "second_incourse" | "mock" | "final_jupeb"
   questionType: text("question_type").notNull(),
   questionIds: jsonb("question_ids").$type<number[]>().notNull(),
   status: text("status").notNull().default("in_progress"), // "in_progress" | "completed"

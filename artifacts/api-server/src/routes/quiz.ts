@@ -1,17 +1,9 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { quizSessionsTable, questionsTable, subjectsTable, wrongAnswersTable } from "@workspace/db";
+import { quizSessionsTable, questionsTable, subjectsTable, wrongAnswersTable, EXAM_TYPE_PAPERS, EXAM_TYPE_LABELS, type ExamType } from "@workspace/db";
 import { eq, and, inArray, sql } from "drizzle-orm";
 
 const router = Router();
-
-const PAPER_LABELS: Record<string, string> = {
-  "001": "1st In-Course Exam",
-  "002": "1st Semester Exam",
-  "003": "2nd In-Course Exam",
-  "004": "2nd Semester Exam",
-  "mock": "Full Mock (001–004)",
-};
 
 const GRADE_MAP = (pct: number) => {
   if (pct >= 70) return "A";
@@ -28,6 +20,8 @@ function formatSession(session: any, questions: any[], subjectName: string | nul
     subjectId: session.subjectId,
     subjectName,
     paper: session.paper,
+    examType: session.examType,
+    examTypeLabel: EXAM_TYPE_LABELS[session.examType as ExamType] ?? session.examType ?? session.paper,
     questionType: session.questionType,
     questions,
     status: session.status,
@@ -39,19 +33,19 @@ function formatSession(session: any, questions: any[], subjectName: string | nul
   };
 }
 
-// Returns question counts per subject × paper × type so the frontend
-// can show which combos are available before the user tries to start.
+// Returns question counts per subject × examType × questionType
 router.get("/quiz/available", async (_req, res) => {
   try {
     const rows = await db
       .select({
         subjectId: questionsTable.subjectId,
         paper: questionsTable.paper,
+        examType: questionsTable.examType,
         questionType: questionsTable.questionType,
         count: sql<number>`cast(count(*) as int)`,
       })
       .from(questionsTable)
-      .groupBy(questionsTable.subjectId, questionsTable.paper, questionsTable.questionType);
+      .groupBy(questionsTable.subjectId, questionsTable.paper, questionsTable.examType, questionsTable.questionType);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch availability" });
@@ -60,18 +54,34 @@ router.get("/quiz/available", async (_req, res) => {
 
 router.post("/quiz/start", async (req, res) => {
   try {
-    const { subjectId, paper, questionType, year, questionCount = 20, timedMinutes, shuffle = true } = req.body;
+    const {
+      subjectId,
+      examType,         // preferred: "first_incourse" | "first_semester" | "second_incourse" | "mock" | "final_jupeb"
+      paper,            // legacy fallback
+      questionType,
+      year,
+      questionCount = 20,
+      timedMinutes,
+      shuffle = true,
+    } = req.body;
 
+    // Resolve the exam type — support both new (examType) and legacy (paper) params
+    const resolvedExamType: string = examType ?? paper ?? "first_incourse";
     const conditions: any[] = [eq(questionsTable.subjectId, subjectId)];
 
-    if (paper === "mock") {
-      // Mock covers papers 001, 002, 003, 004 only (not jupeb final papers)
-      conditions.push(inArray(questionsTable.paper, ["001", "002", "003", "004"]));
+    // Filter by examType if stored on questions (new data), else fall back to paper-based filtering
+    const examPapers = EXAM_TYPE_PAPERS[resolvedExamType as ExamType];
+    if (examPapers) {
+      // Use examType field for precise filtering (new questions have this set)
+      // Also fall back to paper-based filter for legacy questions
+      conditions.push(
+        sql`(${questionsTable.examType} = ${resolvedExamType} OR (${questionsTable.examType} IS NULL AND ${questionsTable.paper} = ANY(ARRAY[${sql.raw(examPapers.map(p => `'${p}'`).join(","))}])))`
+      );
     } else {
-      conditions.push(eq(questionsTable.paper, paper));
+      conditions.push(eq(questionsTable.paper, resolvedExamType));
     }
 
-    if (questionType !== "mixed") {
+    if (questionType && questionType !== "mixed") {
       conditions.push(eq(questionsTable.questionType, questionType));
     }
     if (year) conditions.push(eq(questionsTable.year, year));
@@ -89,13 +99,19 @@ router.post("/quiz/start", async (req, res) => {
 
     const questionIds = allQuestions.map(q => q.id);
 
+    // Derive a legacy paper value for the sessions table
+    const sessionPaper = examPapers?.[0] ?? resolvedExamType;
+    const isBroadExam = resolvedExamType === "mock" || resolvedExamType === "final_jupeb";
+    const defaultMinutes = isBroadExam ? 120 : questionType === "theory" ? 120 : 60;
+
     const [session] = await db.insert(quizSessionsTable).values({
       subjectId,
-      paper,
-      questionType,
+      paper: sessionPaper,
+      examType: resolvedExamType,
+      questionType: questionType ?? "objective",
       questionIds,
       status: "in_progress",
-      timedMinutes: timedMinutes ?? (paper === "mock" ? 120 : questionType === "theory" ? 120 : 60),
+      timedMinutes: timedMinutes ?? defaultMinutes,
     }).returning();
 
     const [subject] = await db.select({ name: subjectsTable.name }).from(subjectsTable).where(eq(subjectsTable.id, subjectId));
