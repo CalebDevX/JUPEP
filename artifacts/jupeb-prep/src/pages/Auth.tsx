@@ -943,8 +943,8 @@ export default function Auth() {
 
         {/* Logo */}
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 relative z-10">
-          <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
-            <GraduationCap className="h-5 w-5 text-white" />
+          <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-orange-500/30 bg-[#0f172a]">
+            <img src="/logo.png" alt="JUPEB Prep" className="w-10 h-10 object-cover" />
           </div>
           <div>
             <p className="text-white font-bold text-lg leading-none">JUPEB Prep</p>
@@ -995,8 +995,8 @@ export default function Auth() {
         {/* Mobile header */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="flex flex-col items-center mb-8 lg:hidden">
-          <div className="w-14 h-14 rounded-2xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/20 mb-3">
-            <GraduationCap className="h-7 w-7 text-white" />
+          <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-lg shadow-orange-500/20 mb-3 bg-[#0f172a]">
+            <img src="/logo.png" alt="JUPEB Prep" className="w-14 h-14 object-cover" />
           </div>
           <h1 className="text-2xl font-black text-gray-900">JUPEB Prep</h1>
           <p className="text-gray-400 text-xs tracking-widest uppercase mt-1">Foundation Studies Platform</p>
