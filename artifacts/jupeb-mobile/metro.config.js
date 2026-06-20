@@ -3,14 +3,10 @@ const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
-// ── 1. Module alias: Reanimated 4.x renamed the worklets package ───────────
-// ── 2. Force gesture-handler and reanimated to use compiled output ─────────
+// ── Force gesture-handler and reanimated to use compiled output ─────────────
 //    Their package.json "react-native" fields point to TypeScript source
 //    which requires Babel plugins that aren't hoisted in our node_modules.
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (moduleName === 'react-native-worklets') {
-    return context.resolveRequest(context, 'react-native-worklets-core', platform);
-  }
   if (moduleName === 'react-native-gesture-handler') {
     return {
       type: 'sourceFile',
@@ -32,7 +28,7 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   return context.resolveRequest(context, moduleName, platform);
 };
 
-// ── 3. Do NOT run Babel on the pre-compiled gesture-handler / reanimated ───
+// ── Do NOT run Babel on pre-compiled gesture-handler / reanimated ───────────
 //    Expo's transform pipeline re-processes node_modules that match the
 //    allowlist. We exclude these two packages so their compiled JS is used
 //    as-is without triggering missing @babel/plugin-proposal-* errors.
@@ -52,7 +48,7 @@ config.transformer.transformIgnorePatterns = [
     '|native-base' +
     '|react-native-svg' +
     '|nativewind' +
-    '|react-native-worklets-core' +
+    '|react-native-worklets' +
     ').*',
 ];
 
