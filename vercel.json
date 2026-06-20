@@ -1,0 +1,9 @@
+{
+  "buildCommand": "pnpm --filter @workspace/jupeb-prep run build",
+  "outputDirectory": "artifacts/jupeb-prep/dist/public",
+  "installCommand": "pnpm install",
+  "framework": null,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

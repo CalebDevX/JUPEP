@@ -13,7 +13,7 @@
       "channel": "preview",
       "env": {
         "npm_config_legacy_peer_deps": "true",
-        "EXPO_PUBLIC_API_URL": "https://jupebprep.replit.app/api"
+        "EXPO_PUBLIC_API_URL": "https://edu.achek.com.ng"
       }
     },
     "production": {
@@ -28,7 +28,7 @@
       "credentialsSource": "local",
       "env": {
         "npm_config_legacy_peer_deps": "true",
-        "EXPO_PUBLIC_API_URL": "https://jupebprep.replit.app/api"
+        "EXPO_PUBLIC_API_URL": "https://edu.achek.com.ng"
       }
     }
   },
