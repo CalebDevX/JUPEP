@@ -1,0 +1,117 @@
+
+
+production
+
+
+Trial
+
+
+
+JUPEP
+Deployments
+Variables
+Metrics
+Console
+Settings
+Unexposed service
+US West
+1 Replica
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+JUPEP
+
+Failed
+Jun 20, 2026, 1:36 PM
+Get Help
+DetailsBuildDeployNetwork Flow
+Diagnosis › Try running a diagnosis to understand why this deployment failed.
+
+Diagnose
+You reached the start of the range
+Jun 20, 2026, 1:31 PM
+scheduling build on Metal builder "builder-cajsxu"
+unpacking archive
+9.4 MB
+90ms
+using build driver railpack-v0.29.0
+uploading snapshot
+5.9 MB
+124ms
+                   
+╭─────────────────╮
+│ Railpack 0.29.0 │
+╰─────────────────╯
+ 
+  ↳ Detected Node
+  ↳ Custom start command detected, skipping Caddy start
+  ↳ Custom start command detected, skipping Caddy start
+  ↳ Custom start command detected, skipping Caddy start
+  ↳ Using pnpm package manager
+  ↳ Found workspace with 10 packages
+  ↳ Custom start command detected, skipping Caddy start
+            
+  Packages  
+  ──────────
+  node  │  22.22.3  │  railpack default (22)
+  pnpm  │  9.15.9   │  pnpm-lock.yaml (9)
+            
+  Steps     
+  ──────────
+  ▸ install
+    $ pnpm add -g node-gyp
+    $ pnpm install --frozen-lockfile --prefer-offline
+         
+  ▸ build
+    $ npm install -g pnpm@10 && pnpm install && pnpm --filter @workspace/api-server run build
+            
+  Deploy    
+  ──────────
+    $ node --enable-source-maps ./artifacts/api-server/dist/index.mjs
+ 
+
+load build definition from ./railpack-plan.json
+0ms
+
+copy /root/.local/state/mise, /etc/mise/config.toml, /usr/local/bin/mise, /mise/shims cached
+2ms
+
+install mise packages: node, pnpm cached
+0ms
+
+copy /mise/installs cached
+0ms
+
+copy / /app
+2s
+
+install apt packages: libatomic1 cached
+320ms
+
+mkdir -p /app/node_modules/.cache
+1s
+
+pnpm add -g node-gyp
+4s
+Done in 1.1s using pnpm v9.15.9
+
+pnpm install --frozen-lockfile --prefer-offline
+1s
+Scope: all 11 workspace projects
+ ERR_PNPM_LOCKFILE_CONFIG_MISMATCH  Cannot proceed with the frozen installation. The current "overrides" configuration doesn't match the value found in the lockfile
+Update your lockfile using "pnpm install --no-frozen-lockfile"
+
+Build Failed: build daemon returned an error < failed to solve: process "pnpm install --frozen-lockfile --prefer-offline" did not complete successfully: exit code: 1 >
+You reached the end of the range
+Jun 20, 2026, 1:42 PM
