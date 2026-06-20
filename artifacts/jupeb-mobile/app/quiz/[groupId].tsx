@@ -57,7 +57,18 @@ export default function QuizSessionScreen() {
   const [score, setScore] = useState(0);
   const [showReview, setShowReview] = useState(false);
 
-  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const fadeAnim  = useRef(new Animated.Value(1)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  function triggerShake() {
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 9,  duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -9, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 6,  duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -6, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0,  duration: 40, useNativeDriver: true }),
+    ]).start();
+  }
 
   useEffect(() => {
     if (!groupId) return;
@@ -89,6 +100,7 @@ export default function QuizSessionScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      triggerShake();
     }
     setAnswers(prev => ({ ...prev, [current.id]: selected }));
   }
@@ -253,54 +265,56 @@ export default function QuizSessionScreen() {
         <Animated.View style={{ opacity: fadeAnim }}>
           <Text style={styles.questionText}>{current.questionText}</Text>
 
-          <View style={styles.options}>
-            {Object.entries(opts).map(([key, val]) => {
-              let bgColor = Colors.card;
-              let borderColor = Colors.border;
-              let keyColor = Colors.mutedForeground;
-              let textColor = Colors.foreground;
+          <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
+            <View style={styles.options}>
+              {Object.entries(opts).map(([key, val]) => {
+                let bgColor = Colors.card;
+                let borderColor = Colors.border;
+                let keyColor = Colors.mutedForeground;
+                let textColor = Colors.foreground;
 
-              if (submitted) {
-                if (key === current.correctOption) {
-                  bgColor = Colors.successDim;
-                  borderColor = Colors.success;
-                  keyColor = Colors.success;
-                  textColor = Colors.success;
-                } else if (key === selected && key !== current.correctOption) {
-                  bgColor = Colors.destructiveDim;
-                  borderColor = Colors.destructive;
-                  keyColor = Colors.destructive;
-                  textColor = Colors.destructive;
+                if (submitted) {
+                  if (key === current.correctOption) {
+                    bgColor = Colors.successDim;
+                    borderColor = Colors.success;
+                    keyColor = Colors.success;
+                    textColor = Colors.success;
+                  } else if (key === selected && key !== current.correctOption) {
+                    bgColor = Colors.destructiveDim;
+                    borderColor = Colors.destructive;
+                    keyColor = Colors.destructive;
+                    textColor = Colors.destructive;
+                  }
+                } else if (key === selected) {
+                  bgColor = Colors.primaryDim;
+                  borderColor = Colors.primary;
+                  keyColor = Colors.primary;
+                  textColor = Colors.primary;
                 }
-              } else if (key === selected) {
-                bgColor = Colors.primaryDim;
-                borderColor = Colors.primary;
-                keyColor = Colors.primary;
-                textColor = Colors.primary;
-              }
 
-              return (
-                <TouchableOpacity
-                  key={key}
-                  style={[styles.option, { backgroundColor: bgColor, borderColor }]}
-                  onPress={() => handleSelect(key)}
-                  disabled={submitted}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.optionKey, { borderColor, backgroundColor: `${keyColor}20` }]}>
-                    <Text style={[styles.optionKeyText, { color: keyColor }]}>{key}</Text>
-                  </View>
-                  <Text style={[styles.optionText, { color: textColor }]}>{val}</Text>
-                  {submitted && key === current.correctOption && (
-                    <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
-                  )}
-                  {submitted && key === selected && key !== current.correctOption && (
-                    <Ionicons name="close-circle" size={20} color={Colors.destructive} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    style={[styles.option, { backgroundColor: bgColor, borderColor }]}
+                    onPress={() => handleSelect(key)}
+                    disabled={submitted}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.optionKey, { borderColor, backgroundColor: `${keyColor}20` }]}>
+                      <Text style={[styles.optionKeyText, { color: keyColor }]}>{key}</Text>
+                    </View>
+                    <Text style={[styles.optionText, { color: textColor }]}>{val}</Text>
+                    {submitted && key === current.correctOption && (
+                      <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
+                    )}
+                    {submitted && key === selected && key !== current.correctOption && (
+                      <Ionicons name="close-circle" size={20} color={Colors.destructive} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </Animated.View>
 
           {submitted && current.explanation ? (
             <View style={styles.explanationCard}>

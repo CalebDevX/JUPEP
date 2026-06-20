@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, Platform, Modal, Pressable,
-  NativeSyntheticEvent, NativeScrollEvent,
+  NativeSyntheticEvent, NativeScrollEvent, Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -90,6 +90,52 @@ function renderContent(
   const paragraphs = text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
   return paragraphs.map((p, i) => {
     const lines = p.split('\n').map(l => l.trim()).filter(Boolean);
+
+    // Subheading: ### or ## prefix
+    if (/^#{1,3}\s/.test(lines[0])) {
+      return (
+        <Text
+          key={i}
+          style={[styles.contentText, {
+            fontFamily: 'Inter_700Bold',
+            color: accent,
+            marginBottom: 8,
+            marginTop: 4,
+            borderBottomWidth: 1,
+            borderBottomColor: `${accent}25`,
+            paddingBottom: 4,
+          }]}
+        >
+          {lines[0].replace(/^#+\s/, '')}
+        </Text>
+      );
+    }
+
+    // Quote / callout block: > prefix
+    if (lines[0].startsWith('> ') || lines[0].startsWith('>')) {
+      return (
+        <View
+          key={i}
+          style={{
+            borderLeftWidth: 3, borderLeftColor: accent,
+            borderRadius: 6, backgroundColor: `${accent}0d`,
+            paddingVertical: 10, paddingHorizontal: 12, marginBottom: 14,
+          }}
+        >
+          {lines.map((line, j) => (
+            <VocabText
+              key={j}
+              text={line.replace(/^>\s?/, '')}
+              baseStyle={[styles.contentText, { fontStyle: 'italic', color: C.foreground, marginBottom: 2 }]}
+              highlightColor={accent}
+              onWordPress={onWordPress}
+            />
+          ))}
+        </View>
+      );
+    }
+
+    // Numbered list
     if (/^\d+\.\s/.test(lines[0])) {
       return (
         <View key={i} style={{ marginBottom: 12 }}>
@@ -98,7 +144,7 @@ function renderContent(
             if (m) {
               return (
                 <View key={j} style={{ flexDirection: 'row', marginBottom: 5 }}>
-                  <Text style={[styles.contentText, { color: C.primary, width: 22, flexShrink: 0 }]}>{m[1]}.</Text>
+                  <Text style={[styles.contentText, { color: accent, width: 22, flexShrink: 0 }]}>{m[1]}.</Text>
                   <VocabText text={m[2]} baseStyle={[styles.contentText, { flex: 1 }]} highlightColor={accent} onWordPress={onWordPress} />
                 </View>
               );
@@ -108,6 +154,8 @@ function renderContent(
         </View>
       );
     }
+
+    // Bullet list
     if (/^[-•]\s/.test(lines[0])) {
       return (
         <View key={i} style={{ marginBottom: 12 }}>
@@ -116,7 +164,7 @@ function renderContent(
             if (m) {
               return (
                 <View key={j} style={{ flexDirection: 'row', marginBottom: 5 }}>
-                  <Text style={[styles.contentText, { color: C.primary, width: 16, flexShrink: 0 }]}>•</Text>
+                  <Text style={[styles.contentText, { color: accent, width: 16, flexShrink: 0 }]}>•</Text>
                   <VocabText text={m[1]} baseStyle={[styles.contentText, { flex: 1 }]} highlightColor={accent} onWordPress={onWordPress} />
                 </View>
               );
@@ -126,7 +174,10 @@ function renderContent(
         </View>
       );
     }
-    return <VocabText key={i} text={p} baseStyle={[styles.contentText, { marginBottom: 14 }]} highlightColor={accent} onWordPress={onWordPress} />;
+
+    return (
+      <VocabText key={i} text={p} baseStyle={[styles.contentText, { marginBottom: 14 }]} highlightColor={accent} onWordPress={onWordPress} />
+    );
   });
 }
 
@@ -239,6 +290,71 @@ function FontSizePicker({
   );
 }
 
+// ── Table of Contents sheet ────────────────────────────────────────────────────
+function TocSheet({
+  visible, sections, accent, onClose, onSelect,
+}: {
+  visible: boolean;
+  sections: Section[];
+  accent: string;
+  onClose: () => void;
+  onSelect: (i: number) => void;
+}) {
+  const C = useTheme();
+  return (
+    <Modal transparent animationType="slide" visible={visible} onRequestClose={onClose}>
+      <Pressable
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}
+        onPress={onClose}
+      >
+        <Pressable onPress={e => e.stopPropagation()}>
+          <View style={{
+            backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+            padding: 20, paddingBottom: 44,
+          }}>
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: C.border, alignSelf: 'center', marginBottom: 16 }} />
+            <Text style={{ color: C.foreground, fontSize: 17, fontFamily: 'Inter_700Bold', marginBottom: 4 }}>
+              Contents
+            </Text>
+            <Text style={{ color: C.mutedForeground, fontSize: 12, fontFamily: 'Inter_400Regular', marginBottom: 16 }}>
+              {sections.length} sections · tap to jump
+            </Text>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 360 }}>
+              {sections.map((sec, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 12,
+                    paddingVertical: 13,
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: C.border,
+                  }}
+                  onPress={() => { Haptics.selectionAsync(); onSelect(i); onClose(); }}
+                  activeOpacity={0.7}
+                >
+                  <View style={{
+                    width: 30, height: 30, borderRadius: 15,
+                    backgroundColor: `${accent}18`,
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Text style={{ color: accent, fontSize: 11, fontFamily: 'Inter_700Bold' }}>
+                      {String(i + 1).padStart(2, '0')}
+                    </Text>
+                  </View>
+                  <Text style={{ flex: 1, color: C.foreground, fontSize: 14, fontFamily: 'Inter_500Medium', lineHeight: 20 }}>
+                    {sec.heading}
+                  </Text>
+                  <Ionicons name="arrow-forward-outline" size={14} color={C.mutedForeground} />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
 // ── Main screen ────────────────────────────────────────────────────────────────
 export default function ChapterScreen() {
   const { chapterId, courseId } = useLocalSearchParams<{ chapterId: string; courseId: string }>();
@@ -256,13 +372,38 @@ export default function ChapterScreen() {
   const [fromCache, setFromCache]           = useState(false);
   const [vocabEntry, setVocabEntry]         = useState<VocabEntry | null>(null);
   const [showFontPicker, setShowFontPicker] = useState(false);
+  const [showTOC, setShowTOC]               = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
+  const [scrolledDown, setScrolledDown]     = useState(false);
+  const [completed, setCompleted]           = useState(false);
 
-  const scrollRef     = useRef<ScrollView>(null);
-  const contentHeight = useRef(0);
-  const viewHeight    = useRef(0);
+  const scrollRef        = useRef<ScrollView>(null);
+  const contentHeight    = useRef(0);
+  const viewHeight       = useRef(0);
+  const hasCompletedRef  = useRef(false);
+  const sectionYRef      = useRef<number[]>([]);
+  const fabAnim          = useRef(new Animated.Value(0)).current;
 
   const accent = getAccentFromChapterId(chapterId ?? '');
+
+  // ── Reading time estimate ──────────────────────────────────────────────────
+  const readingTime = useMemo(() => {
+    if (!chapter) return 0;
+    const words = chapter.sections.reduce(
+      (n, s) => n + (s.heading + ' ' + s.content).split(/\s+/).length, 0
+    ) + (chapter.summary || '').split(/\s+/).length;
+    return Math.max(1, Math.round(words / 200));
+  }, [chapter]);
+
+  // ── FAB animation ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    Animated.spring(fabAnim, {
+      toValue: scrolledDown ? 1 : 0,
+      useNativeDriver: true,
+      tension: 80,
+      friction: 10,
+    }).start();
+  }, [scrolledDown]);
 
   useEffect(() => {
     async function load() {
@@ -277,6 +418,9 @@ export default function ChapterScreen() {
         AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(() => {});
         if (chapterId) {
           await AsyncStorage.setItem(`jupeb_chapter_read_${chapterId}`, Date.now().toString());
+          AsyncStorage.setItem('jupeb_last_chapter', JSON.stringify({
+            chapterId, courseId, title: data.title, number: data.number, timestamp: Date.now(),
+          })).catch(() => {});
         }
       } catch {
         try {
@@ -303,8 +447,22 @@ export default function ChapterScreen() {
   const handleScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetY    = e.nativeEvent.contentOffset.y;
     const scrollable = contentHeight.current - viewHeight.current;
+    setScrolledDown(offsetY > 280);
     if (scrollable > 0) {
-      setReadingProgress(Math.min(100, Math.round((offsetY / scrollable) * 100)));
+      const pct = Math.min(100, Math.round((offsetY / scrollable) * 100));
+      setReadingProgress(pct);
+      if (pct >= 90 && !hasCompletedRef.current) {
+        hasCompletedRef.current = true;
+        setCompleted(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    }
+  }, []);
+
+  const scrollToSection = useCallback((index: number) => {
+    const y = sectionYRef.current[index];
+    if (y !== undefined) {
+      scrollRef.current?.scrollTo({ y: Math.max(0, y - 16), animated: true });
     }
   }, []);
 
@@ -348,46 +506,69 @@ export default function ChapterScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Vocab popup modal */}
+      {/* Modals */}
       <VocabModal
         entry={vocabEntry}
         accent={accent}
         onClose={() => setVocabEntry(null)}
         onFullDictionary={handleFullDictionary}
       />
-
-      {/* Font size picker */}
       <FontSizePicker visible={showFontPicker} onClose={() => setShowFontPicker(false)} C={C} />
+      <TocSheet
+        visible={showTOC}
+        sections={chapter.sections}
+        accent={accent}
+        onClose={() => setShowTOC(false)}
+        onSelect={scrollToSection}
+      />
 
-      {/* Header */}
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
       <View style={[styles.header, { paddingTop: topPad + 10 }]}>
         <View style={styles.headerDecor} />
+        <View style={styles.headerDecor2} />
         <View style={styles.headerTopRow}>
           <TouchableOpacity style={styles.backRow} onPress={() => router.back()} activeOpacity={0.7}>
             <Ionicons name="arrow-back" size={20} color="#fff" />
             <Text style={styles.backLabel}>Back</Text>
           </TouchableOpacity>
-          {/* Font size + progress */}
-          <TouchableOpacity
-            style={styles.fontBtn}
-            onPress={() => { Haptics.selectionAsync(); setShowFontPicker(true); }}
-            activeOpacity={0.75}
-          >
-            <Text style={styles.fontBtnText}>A</Text>
-            <Ionicons name="chevron-down" size={10} color="rgba(255,255,255,0.7)" />
-          </TouchableOpacity>
+
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+            {/* TOC button */}
+            <TouchableOpacity
+              style={styles.headerIconBtn}
+              onPress={() => { Haptics.selectionAsync(); setShowTOC(true); }}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="list-outline" size={17} color="#fff" />
+            </TouchableOpacity>
+            {/* Font size button */}
+            <TouchableOpacity
+              style={styles.fontBtn}
+              onPress={() => { Haptics.selectionAsync(); setShowFontPicker(true); }}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.fontBtnText}>A</Text>
+              <Ionicons name="chevron-down" size={10} color="rgba(255,255,255,0.7)" />
+            </TouchableOpacity>
+          </View>
         </View>
+
         <View style={styles.chapterNumBadge}>
           <Text style={[styles.chapterNumText, { color: accent }]}>Chapter {chapter.number}</Text>
         </View>
         <Text style={styles.chapterTitle}>{chapter.title}</Text>
+
         <View style={styles.chapterMeta}>
+          <Ionicons name="time-outline" size={12} color="rgba(255,255,255,0.45)" />
+          <Text style={styles.chapterMetaText}>~{readingTime} min read</Text>
+          <Text style={styles.chapterMetaDot}>·</Text>
           <Text style={styles.chapterMetaText}>{chapter.sections.length} sections</Text>
           <Text style={styles.chapterMetaDot}>·</Text>
           <Text style={styles.chapterMetaText}>{chapter.keyTerms.length} key terms</Text>
           <Text style={styles.chapterMetaDot}>·</Text>
           <Text style={[styles.vocabHintText, { color: accent }]}>tap coloured words</Text>
         </View>
+
         {fromCache && (
           <View style={styles.offlineBanner}>
             <Ionicons name="cloud-offline-outline" size={12} color="#f97316" />
@@ -396,7 +577,7 @@ export default function ChapterScreen() {
         )}
       </View>
 
-      {/* Reading progress bar */}
+      {/* ── Reading progress bar ─────────────────────────────────────────────── */}
       <View style={styles.progressBarTrack}>
         <View style={[styles.progressBarFill, { width: `${readingProgress}%`, backgroundColor: accent }]} />
         {readingProgress > 0 && (
@@ -404,9 +585,10 @@ export default function ChapterScreen() {
         )}
       </View>
 
+      {/* ── Scroll content ───────────────────────────────────────────────────── */}
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={[styles.scroll, { paddingBottom: (bottom || 0) + 60 }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: (bottom || 0) + 80 }]}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         onScroll={handleScroll}
@@ -415,10 +597,22 @@ export default function ChapterScreen() {
       >
         {/* ── SECTIONS ──────────────────────────────────────────────────────── */}
         {chapter.sections.map((sec, i) => (
-          <View key={i} style={styles.section}>
+          <View
+            key={i}
+            style={styles.section}
+            onLayout={e => { sectionYRef.current[i] = e.nativeEvent.layout.y; }}
+          >
             <View style={[styles.sectionAccentBar, { backgroundColor: accent }]} />
             <View style={styles.sectionContent}>
-              <Text style={styles.sectionHeading}>{sec.heading}</Text>
+              {/* Section number badge + heading */}
+              <View style={styles.sectionHeadingRow}>
+                <View style={[styles.sectionNumBadge, { backgroundColor: `${accent}18` }]}>
+                  <Text style={[styles.sectionNumText, { color: accent }]}>
+                    {String(i + 1).padStart(2, '0')}
+                  </Text>
+                </View>
+                <Text style={[styles.sectionHeading, { flex: 1 }]}>{sec.heading}</Text>
+              </View>
               {renderContent(sec.content, styles, C, accent, handleWordPress)}
             </View>
           </View>
@@ -484,7 +678,65 @@ export default function ChapterScreen() {
             )}
           </View>
         )}
+
+        {/* ── COMPLETION CARD ───────────────────────────────────────────────── */}
+        <View style={[styles.completionCard, {
+          borderColor: completed ? `${accent}45` : C.border,
+          backgroundColor: completed ? `${accent}0a` : C.card,
+        }]}>
+          <Text style={styles.completionEmoji}>{completed ? '🎉' : '📖'}</Text>
+          <Text style={[styles.completionTitle, { color: C.foreground }]}>
+            {completed ? 'Chapter Complete!' : 'Keep Going!'}
+          </Text>
+          <Text style={[styles.completionSub, { color: C.mutedForeground }]}>
+            {completed
+              ? `All ${chapter.sections.length} sections read · ${chapter.keyTerms.length} key terms explored`
+              : `${readingProgress}% complete · ${chapter.sections.length} sections in this chapter`}
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.quizCTABtn, { backgroundColor: accent }]}
+            onPress={() => router.push('/(tabs)/quiz' as any)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="flash-outline" size={16} color="#fff" />
+            <Text style={styles.quizCTAText}>Quiz Yourself on This Topic</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.pastQBtn, { borderColor: `${accent}30` }]}
+            onPress={() => router.push('/past-questions' as any)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="library-outline" size={15} color={accent} />
+            <Text style={[styles.pastQBtnText, { color: accent }]}>Browse Past Questions</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
+
+      {/* ── Scroll-to-top FAB ────────────────────────────────────────────────── */}
+      <Animated.View
+        style={[
+          styles.fab,
+          { backgroundColor: accent },
+          {
+            opacity: fabAnim,
+            transform: [{ scale: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }],
+          },
+        ]}
+        pointerEvents={scrolledDown ? 'auto' : 'none'}
+      >
+        <TouchableOpacity
+          onPress={() => {
+            scrollRef.current?.scrollTo({ y: 0, animated: true });
+            Haptics.selectionAsync();
+          }}
+          activeOpacity={0.85}
+          style={styles.fabInner}
+        >
+          <Ionicons name="arrow-up" size={20} color="#fff" />
+        </TouchableOpacity>
+      </Animated.View>
     </View>
   );
 }
@@ -514,10 +766,19 @@ function makeStyles(C: AppColors, fontSize: number) {
       position: 'absolute', width: 200, height: 200, borderRadius: 100,
       backgroundColor: 'rgba(255,255,255,0.04)', top: -80, right: -50,
     },
+    headerDecor2: {
+      position: 'absolute', width: 120, height: 120, borderRadius: 60,
+      backgroundColor: 'rgba(255,255,255,0.03)', bottom: -40, left: 20,
+    },
     headerTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
     backRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     backLabel: { fontSize: 14, fontFamily: 'Inter_500Medium', color: 'rgba(255,255,255,0.7)' },
 
+    headerIconBtn: {
+      width: 36, height: 36, borderRadius: 10,
+      alignItems: 'center', justifyContent: 'center',
+      backgroundColor: 'rgba(255,255,255,0.15)',
+    },
     fontBtn: {
       flexDirection: 'row', alignItems: 'center', gap: 3,
       paddingHorizontal: 12, paddingVertical: 6,
@@ -528,7 +789,7 @@ function makeStyles(C: AppColors, fontSize: number) {
     chapterNumBadge: { marginBottom: 6 },
     chapterNumText: { fontSize: 12, fontFamily: 'Inter_700Bold', letterSpacing: 0.5 },
     chapterTitle: { fontSize: 20, fontFamily: 'Inter_700Bold', color: '#fff', letterSpacing: -0.3, lineHeight: 26, marginBottom: 10 },
-    chapterMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+    chapterMeta: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' },
     chapterMetaText: { fontSize: 12, color: 'rgba(255,255,255,0.55)', fontFamily: 'Inter_500Medium' },
     chapterMetaDot: { fontSize: 12, color: 'rgba(255,255,255,0.3)' },
     vocabHintText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
@@ -552,9 +813,20 @@ function makeStyles(C: AppColors, fontSize: number) {
     },
     sectionAccentBar: { width: 4, flexShrink: 0 },
     sectionContent: { flex: 1, padding: 14 },
+    sectionHeadingRow: {
+      flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12,
+    },
+    sectionNumBadge: {
+      minWidth: 30, height: 22, borderRadius: 6,
+      alignItems: 'center', justifyContent: 'center',
+      paddingHorizontal: 6, marginTop: 2, flexShrink: 0,
+    },
+    sectionNumText: {
+      fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.5,
+    },
     sectionHeading: {
       fontSize: Math.round(fontSize * 1.1), fontFamily: 'Inter_700Bold', color: C.foreground,
-      marginBottom: 12, lineHeight: Math.round(fontSize * 1.5),
+      lineHeight: Math.round(fontSize * 1.5),
     },
     contentText: { fontSize, fontFamily: 'Inter_400Regular', color: C.foreground, lineHeight: lineH },
 
@@ -589,6 +861,36 @@ function makeStyles(C: AppColors, fontSize: number) {
     questionRow: { flexDirection: 'row', paddingTop: 12 },
     questionNum: { fontSize, fontFamily: 'Inter_700Bold', width: 22, flexShrink: 0 },
     questionText: { flex: 1, fontSize, fontFamily: 'Inter_400Regular', color: C.foreground, lineHeight: lineH },
+
+    // Completion card
+    completionCard: {
+      borderRadius: 16, borderWidth: 1.5,
+      padding: 24, marginBottom: 12, alignItems: 'center', gap: 8,
+    },
+    completionEmoji: { fontSize: 42 },
+    completionTitle: { fontSize: Math.round(fontSize * 1.2), fontFamily: 'Inter_700Bold', textAlign: 'center' },
+    completionSub: { fontSize: Math.round(fontSize * 0.87), fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 20, marginBottom: 4 },
+    quizCTABtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      paddingHorizontal: 22, paddingVertical: 13,
+      borderRadius: 12, width: '100%', justifyContent: 'center',
+    },
+    quizCTAText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+    pastQBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      paddingHorizontal: 22, paddingVertical: 11,
+      borderRadius: 12, borderWidth: 1, width: '100%', justifyContent: 'center',
+    },
+    pastQBtnText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
+
+    // Scroll-to-top FAB
+    fab: {
+      position: 'absolute', right: 18, bottom: 32,
+      width: 46, height: 46, borderRadius: 23,
+      shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.35, shadowRadius: 10, elevation: 10,
+    },
+    fabInner: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 23 },
 
     // Vocab modal
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },

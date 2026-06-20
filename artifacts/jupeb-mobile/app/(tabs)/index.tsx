@@ -114,6 +114,7 @@ export default function HomeScreen() {
   const [focusActive, setFocusActive] = useState(false);
   const [focusSecs, setFocusSecs]     = useState(POMODORO_SECS);
   const [dictQuery, setDictQuery]     = useState('');
+  const [lastChapter, setLastChapter] = useState<{ chapterId: string; courseId: string; title: string; number: number } | null>(null);
 
   // Animations
   const fadeA  = useRef(new Animated.Value(0)).current;
@@ -139,6 +140,9 @@ export default function HomeScreen() {
     });
     AsyncStorage.getAllKeys().then(keys => {
       setReadCount((keys as string[]).filter(k => k.startsWith('jupeb_chapter_read_')).length);
+    }).catch(() => {});
+    AsyncStorage.getItem('jupeb_last_chapter').then(v => {
+      if (v) { try { setLastChapter(JSON.parse(v)); } catch {} }
     }).catch(() => {});
     // Load last 7 days of activity
     const today = new Date();
@@ -419,6 +423,32 @@ export default function HomeScreen() {
             </View>
           );
         })()}
+
+        {/* ── CONTINUE READING ────────────────────────────────────────────── */}
+        {lastChapter && (
+          <View style={S.section}>
+            <Text style={S.sectionTitle}>Continue Reading</Text>
+            <TouchableOpacity
+              style={S.continueCard}
+              onPress={() => router.push({
+                pathname: '/notes/chapter/[chapterId]',
+                params: { chapterId: lastChapter.chapterId, courseId: lastChapter.courseId },
+              } as any)}
+              activeOpacity={0.8}
+            >
+              <View style={S.continueIcon}>
+                <Ionicons name="book-outline" size={22} color="#10b981" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={S.continueTitle} numberOfLines={2}>
+                  Chapter {lastChapter.number}: {lastChapter.title}
+                </Text>
+                <Text style={S.continueSub}>Tap to continue reading</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={C.mutedForeground} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* ── QUICK ACTIONS GRID ─────────────────────────────────────────── */}
         <View style={S.section}>
@@ -755,6 +785,19 @@ function makeStyles(C: AppColors) {
       width: 20, height: 1.5, backgroundColor: `${C.mutedForeground}50`, borderRadius: 1,
     },
     weekGoalHintText: { fontSize: 11, fontFamily: 'Inter_400Regular', color: C.mutedForeground },
+
+    // ── Continue Reading
+    continueCard: {
+      flexDirection: 'row', alignItems: 'center', gap: 14,
+      backgroundColor: C.card, borderRadius: C.radius,
+      borderWidth: 1, borderColor: `${'#10b981'}30`, padding: 14,
+    },
+    continueIcon: {
+      width: 46, height: 46, borderRadius: 12,
+      backgroundColor: '#10b98112', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    },
+    continueTitle: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: C.foreground, marginBottom: 2, lineHeight: 18 },
+    continueSub:   { fontSize: 11, fontFamily: 'Inter_400Regular', color: C.mutedForeground },
 
     // ── Countdown
     countdownCard: {
