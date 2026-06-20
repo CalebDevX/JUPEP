@@ -62,6 +62,35 @@ router.patch("/admin/students/:id", adminAuth, async (req, res) => {
   }
 });
 
+router.post("/admin/students/create", adminAuth, async (req, res) => {
+  try {
+    const { fullName, phone, password, email, subjects, accessCode, targetGrade } = req.body;
+    if (!fullName?.trim()) return res.status(400).json({ error: "Full name is required." });
+    if (!phone?.trim()) return res.status(400).json({ error: "Phone number is required." });
+    if (!password?.trim() || password.trim().length < 6) return res.status(400).json({ error: "Password must be at least 6 characters." });
+    if (!subjects?.length) return res.status(400).json({ error: "At least one subject is required." });
+
+    const existing = await pool.query("SELECT id FROM students WHERE phone=$1", [phone.trim()]);
+    if (existing.rows.length) return res.status(400).json({ error: "A student with this phone number already exists." });
+
+    const hash = crypto.createHash("sha256").update(`pw2:${phone.trim()}:${password.trim()}`).digest("hex");
+    const code = accessCode?.trim().toUpperCase() || "FREE_TRIAL";
+    const grade = targetGrade?.trim() || "aaa1";
+
+    const sessionToken = crypto.randomUUID();
+    await pool.query(
+      `INSERT INTO students(full_name, phone, email, subjects, target_grade, access_code_used, password_hash, session_token, is_active)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,true)`,
+      [fullName.trim(), phone.trim(), email?.trim() || null, JSON.stringify(subjects), grade, code, hash, sessionToken]
+    );
+    const r = await pool.query("SELECT * FROM students WHERE phone=$1", [phone.trim()]);
+    res.json({ success: true, student: r.rows[0] });
+  } catch (err: any) {
+    if (err.code === "23505") return res.status(400).json({ error: "A student with this phone number already exists." });
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post("/admin/students/set-password", adminAuth, async (req, res) => {
   try {
     const { phone, password } = req.body;

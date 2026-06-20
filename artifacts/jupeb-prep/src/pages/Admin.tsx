@@ -129,12 +129,37 @@ function OverviewTab({ pin }: { pin: string }) {
 
 // ─── Students Tab ────────────────────────────────────────────────────────────
 
+const ALL_SUBJECTS_ADMIN = [
+  { code: "LIT", name: "Literature in English" },
+  { code: "GOV", name: "Government" },
+  { code: "ECO", name: "Economics" },
+  { code: "HIS", name: "History" },
+  { code: "GEO", name: "Geography" },
+  { code: "ACC", name: "Accounting" },
+  { code: "COM", name: "Commerce" },
+  { code: "MTH", name: "Mathematics" },
+  { code: "BIO", name: "Biology" },
+  { code: "CHE", name: "Chemistry" },
+  { code: "PHY", name: "Physics" },
+  { code: "CRS", name: "Christian Religious Studies" },
+  { code: "IRS", name: "Islamic Religious Studies" },
+  { code: "FMT", name: "Further Mathematics" },
+  { code: "AGR", name: "Agricultural Science" },
+  { code: "CMP", name: "Computer Science" },
+];
+
 function StudentsTab({ pin }: { pin: string }) {
   const { toast } = useToast();
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [toggling, setToggling] = useState<number | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState({
+    fullName: "", phone: "", password: "", email: "", accessCode: "", targetGrade: "aaa1",
+  });
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
 
   const load = async (q = "") => {
     setLoading(true);
@@ -159,6 +184,29 @@ function StudentsTab({ pin }: { pin: string }) {
     setToggling(null);
   };
 
+  const createStudent = async () => {
+    if (!form.fullName.trim() || !form.phone.trim() || !form.password.trim() || !selectedSubjects.length) {
+      toast({ title: "Fill in all required fields and select at least one subject.", variant: "destructive" });
+      return;
+    }
+    setCreating(true);
+    try {
+      await adminFetch(pin, "/api/admin/students/create", "POST", {
+        fullName: form.fullName, phone: form.phone, password: form.password,
+        email: form.email || undefined, accessCode: form.accessCode || undefined,
+        targetGrade: form.targetGrade, subjects: selectedSubjects,
+      });
+      toast({ title: `✅ Account created for ${form.fullName}` });
+      setShowCreate(false);
+      setForm({ fullName: "", phone: "", password: "", email: "", accessCode: "", targetGrade: "aaa1" });
+      setSelectedSubjects([]);
+      load();
+    } catch (e: any) {
+      toast({ title: e.message, variant: "destructive" });
+    }
+    setCreating(false);
+  };
+
   const filtered = search
     ? students.filter(s =>
         s.full_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -168,6 +216,96 @@ function StudentsTab({ pin }: { pin: string }) {
 
   return (
     <div className="space-y-4">
+      {/* Create Student Modal */}
+      <AnimatePresence>
+        {showCreate && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+            onClick={e => { if (e.target === e.currentTarget) setShowCreate(false); }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#1a1a2e] border border-white/10 rounded-2xl p-6 w-full max-w-md space-y-4 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-white">Create Student Account</h2>
+                  <p className="text-xs text-white/40 mt-0.5">Manually register a student</p>
+                </div>
+                <button onClick={() => setShowCreate(false)} className="text-white/30 hover:text-white/70 transition-colors">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-1.5 block">Full Name *</label>
+                  <Input value={form.fullName} onChange={e => setForm(p => ({ ...p, fullName: e.target.value }))}
+                    placeholder="e.g. Chinaza Okafor" className={inputCls} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-1.5 block">Phone Number *</label>
+                  <Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
+                    placeholder="e.g. 08012345678" className={inputCls} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-1.5 block">Password *</label>
+                  <Input type="password" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+                    placeholder="Min. 6 characters" className={inputCls} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-1.5 block">Email (optional)</label>
+                  <Input value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                    placeholder="student@example.com" className={inputCls} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-1.5 block">Access Code (optional)</label>
+                  <Input value={form.accessCode} onChange={e => setForm(p => ({ ...p, accessCode: e.target.value }))}
+                    placeholder="Leave blank for free trial" className={cn(inputCls, "uppercase")} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-1.5 block">Subjects * (select all that apply)</label>
+                  <div className="flex flex-wrap gap-2">
+                    {ALL_SUBJECTS_ADMIN.map(s => {
+                      const sel = selectedSubjects.includes(s.code);
+                      return (
+                        <button
+                          key={s.code}
+                          onClick={() => setSelectedSubjects(p => sel ? p.filter(c => c !== s.code) : [...p, s.code])}
+                          className={cn(
+                            "px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
+                            sel
+                              ? "bg-violet-500/20 border-violet-500/50 text-violet-200"
+                              : "bg-white/3 border-white/10 text-white/40 hover:border-white/20 hover:text-white/60"
+                          )}
+                        >
+                          {s.code}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedSubjects.length > 0 && (
+                    <p className="text-xs text-violet-400 mt-1.5">{selectedSubjects.length} selected: {selectedSubjects.join(", ")}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <Button variant="ghost" onClick={() => setShowCreate(false)}
+                  className="flex-1 text-white/40 hover:text-white/70 border border-white/10">
+                  Cancel
+                </Button>
+                <Button onClick={createStudent} disabled={creating}
+                  className="flex-1 bg-violet-600 hover:bg-violet-500 text-white">
+                  {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Account"}
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex items-center gap-3">
         <Input
           value={search}
@@ -178,7 +316,13 @@ function StudentsTab({ pin }: { pin: string }) {
         <button onClick={() => load()} className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors px-3 py-2 rounded-xl bg-white/3 border border-white/8">
           <RefreshCw className="h-3 w-3" /> Refresh
         </button>
-        <span className="text-xs text-white/30 ml-auto">{filtered.length} students</span>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="flex items-center gap-1.5 text-xs text-violet-300 hover:text-violet-200 transition-colors px-3 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20 ml-auto"
+        >
+          <Plus className="h-3.5 w-3.5" /> Create Student
+        </button>
+        <span className="text-xs text-white/30">{filtered.length} students</span>
       </div>
 
       {loading ? (
