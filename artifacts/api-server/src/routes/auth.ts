@@ -12,6 +12,7 @@ pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS session_token TEXT`).c
 pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS profile_picture TEXT`).catch(() => {});
 pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS pin_hash TEXT`).catch(() => {});
 pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS password_hash TEXT`).catch(() => {});
+pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS google_id TEXT`).catch(() => {});
 
 // OTP table for password reset
 pool.query(`CREATE TABLE IF NOT EXISTS otp_codes (
@@ -316,6 +317,65 @@ router.post("/auth/google", async (req, res) => {
     });
   } catch (err: any) {
     console.error("Google auth error:", err);
+    res.status(500).json({ error: err.message || "Google authentication failed." });
+  }
+});
+
+// ── Google OAuth — Mobile (access_token from expo-auth-session) ──────────────
+
+router.post("/auth/google/mobile", async (req, res) => {
+  const { accessToken } = req.body;
+  if (!accessToken) return res.status(400).json({ error: "Missing accessToken." });
+
+  try {
+    // Verify token + get user info from Google
+    const infoRes = await fetch(
+      `https://www.googleapis.com/oauth2/v3/userinfo`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    if (!infoRes.ok) return res.status(401).json({ error: "Invalid Google access token." });
+
+    const info: any = await infoRes.json();
+    const { email, name, picture, sub: googleId } = info;
+    if (!email) return res.status(400).json({ error: "Google account has no email." });
+
+    // Ensure google_id column exists
+    await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS google_id TEXT`).catch(() => {});
+
+    // Look up by google_id or email
+    let result = await pool.query(
+      "SELECT * FROM students WHERE google_id=$1 OR email=$2 LIMIT 1",
+      [googleId, email]
+    );
+
+    let student: any;
+    const sessionToken = crypto.randomUUID();
+
+    if (result.rows.length) {
+      // Existing user — update google_id and session
+      student = result.rows[0];
+      await pool.query(
+        "UPDATE students SET google_id=$1, session_token=$2, profile_picture=COALESCE(profile_picture,$3) WHERE phone=$4",
+        [googleId, sessionToken, picture || null, student.phone]
+      );
+    } else {
+      // New user — create account with synthetic phone
+      const syntheticPhone = `g_${googleId}`;
+      const displayName = name || email.split("@")[0];
+      await pool.query(
+        `INSERT INTO students(full_name, phone, email, google_id, subjects, access_code_used, profile_picture, session_token)
+         VALUES($1,$2,$3,$4,$5,'FREE_TRIAL',$6,$7)
+         ON CONFLICT(phone) DO UPDATE SET google_id=$4, session_token=$7`,
+        [displayName, syntheticPhone, email, googleId, JSON.stringify([]), picture || null, sessionToken]
+      );
+      const r2 = await pool.query("SELECT * FROM students WHERE phone=$1", [syntheticPhone]);
+      student = r2.rows[0];
+    }
+
+    const profile = buildProfile({ ...student, session_token: sessionToken }, sessionToken);
+    res.json({ success: true, profile });
+  } catch (err: any) {
+    console.error("Google mobile auth error:", err);
     res.status(500).json({ error: err.message || "Google authentication failed." });
   }
 });

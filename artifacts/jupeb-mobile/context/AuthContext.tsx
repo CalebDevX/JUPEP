@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import * as SecureStore from 'expo-secure-store';
 import {
   loginWithPassword, registerWithPassword, loginStep1, loginWithPin,
-  verifySession, activateWithCode,
+  verifySession, activateWithCode, loginWithGoogleToken,
   type Profile, type LoginResult,
 } from '@/src/utils/api';
 
@@ -28,6 +28,8 @@ interface AuthContextType {
   isActivated: boolean;
   /** Password-based login (new accounts) */
   loginWithPass: (phone: string, password: string) => Promise<void>;
+  /** Google Sign-In via expo-auth-session access token */
+  loginWithGoogle: (accessToken: string) => Promise<void>;
   /** Register with password (creates account + logs in) */
   register: (
     fullName: string,
@@ -100,6 +102,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await saveProfile(p);
   }, []);
 
+  const loginWithGoogle = useCallback(async (accessToken: string) => {
+    const p = await loginWithGoogleToken(accessToken);
+    await saveProfile(p);
+  }, []);
+
   const register = useCallback(async (
     fullName: string,
     phone: string,
@@ -153,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       profile, isLoading, isActivated,
-      loginWithPass, register,
+      loginWithPass, loginWithGoogle, register,
       loginPhone, loginPin,
       activateCode, refreshProfile, logout,
     }}>

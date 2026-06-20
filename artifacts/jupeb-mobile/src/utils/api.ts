@@ -215,6 +215,18 @@ export async function resetPassword(
   return data.profile || null;
 }
 
+// ── Google Sign-In (mobile, via expo-auth-session access token) ───────────────
+export async function loginWithGoogleToken(accessToken: string): Promise<Profile> {
+  const response = await fetch(`${API_BASE_URL}/auth/google/mobile`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accessToken }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Google sign-in failed');
+  return data.profile as Profile;
+}
+
 // ── Push notification token registration ──────────────────────────────────────
 export async function registerPushToken(phone: string, sessionToken: string, pushToken: string): Promise<void> {
   try {

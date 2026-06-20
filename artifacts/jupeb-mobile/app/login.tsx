@@ -1,16 +1,22 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
-  ScrollView, Animated,
+  ScrollView, Animated, Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { requestOTP, verifyOTP, resetPassword } from '@/src/utils/api';
 import type { AppColors } from '@/constants/colors';
+
+WebBrowser.maybeCompleteAuthSession();
+
+const ANDROID_CLIENT_ID = '59809838753-cijfrhs8acspsspmqtji9ve7t45cdj1c.apps.googleusercontent.com';
 
 type Mode = 'login' | 'register' | 'forgot';
 type LoginStep = 'creds' | 'pin';
@@ -42,8 +48,13 @@ export default function LoginScreen() {
   const [subjects, setSubjects]   = useState<string[]>([]);
   const [pin, setPin]             = useState('');
   const [loading, setLoading]     = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [shake]                   = useState(new Animated.Value(0));
   const pinInputRef               = useRef<TextInput>(null);
+
+  const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
+    androidClientId: ANDROID_CLIENT_ID,
+  });
 
   // Forgot password state
   const [forgotStep, setForgotStep]     = useState<ForgotStep>('phone');
@@ -57,7 +68,21 @@ export default function LoginScreen() {
   const [otpSent, setOtpSent]           = useState(false);
   const otpInputRef                     = useRef<TextInput>(null);
 
-  const { loginWithPass, loginPhone, loginPin, register } = useAuth();
+  const { loginWithPass, loginWithGoogle, loginPhone, loginPin, register } = useAuth();
+
+  useEffect(() => {
+    if (googleResponse?.type === 'success') {
+      const token = googleResponse.authentication?.accessToken;
+      if (!token) { Alert.alert('Google Sign-In failed', 'No access token received.'); return; }
+      setGoogleLoading(true);
+      loginWithGoogle(token)
+        .then(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success))
+        .catch((err: any) => Alert.alert('Google Sign-In failed', err.message || 'Please try again.'))
+        .finally(() => setGoogleLoading(false));
+    } else if (googleResponse?.type === 'error') {
+      Alert.alert('Google Sign-In failed', googleResponse.error?.message || 'Please try again.');
+    }
+  }, [googleResponse]);
   const insets = useSafeAreaInsets();
   const C      = useTheme();
   const styles = useMemo(() => makeStyles(C), [C]);
@@ -411,6 +436,28 @@ export default function LoginScreen() {
             >
               <Ionicons name="key-outline" size={14} color={C.primary} />
               <Text style={styles.forgotLink}>Forgot password? Reset account</Text>
+            </TouchableOpacity>
+
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.googleBtn, (googleLoading || !googleRequest) && { opacity: 0.6 }]}
+              onPress={() => googlePromptAsync()}
+              disabled={!googleRequest || googleLoading}
+              activeOpacity={0.85}
+            >
+              {googleLoading ? (
+                <ActivityIndicator color="#444" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.googleLetter}>G</Text>
+                  <Text style={styles.googleBtnText}>Continue with Google</Text>
+                </>
+              )}
             </TouchableOpacity>
 
             <Text style={styles.switchText}>
@@ -899,5 +946,25 @@ function makeStyles(C: AppColors) {
     },
     otpInfoText: { fontSize: 13, fontFamily: 'Inter_500Medium', color: C.foreground, flex: 1 },
     otpInput: { letterSpacing: 8, fontSize: 20, fontFamily: 'Inter_700Bold' },
+
+    dividerRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 4,
+    },
+    dividerLine: { flex: 1, height: 1, backgroundColor: C.border },
+    dividerText: { fontSize: 12, fontFamily: 'Inter_500Medium', color: C.mutedForeground },
+
+    googleBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      borderWidth: 1.5, borderColor: C.border,
+      backgroundColor: C.card, borderRadius: C.radius,
+      height: 54, gap: 10,
+    },
+    googleLetter: {
+      fontSize: 20, fontFamily: 'Inter_700Bold',
+      color: '#4285F4',
+    },
+    googleBtnText: {
+      fontSize: 15, fontFamily: 'Inter_600SemiBold', color: C.foreground,
+    },
   });
 }
