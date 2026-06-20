@@ -10,7 +10,8 @@
       },
       "channel": "preview",
       "env": {
-        "npm_config_legacy_peer_deps": "true"
+        "npm_config_legacy_peer_deps": "true",
+        "EXPO_PUBLIC_API_URL": "https://YOUR_RENDER_OR_RAILWAY_URL/api"
       }
     },
     "production": {
@@ -22,7 +23,8 @@
       },
       "channel": "production",
       "env": {
-        "npm_config_legacy_peer_deps": "true"
+        "npm_config_legacy_peer_deps": "true",
+        "EXPO_PUBLIC_API_URL": "https://YOUR_RENDER_OR_RAILWAY_URL/api"
       }
     }
   },
