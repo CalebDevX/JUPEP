@@ -26,7 +26,7 @@ const GRADE_INFO: Record<string, { label: string; color: string; bg: string; bor
 
 const PAPER_LABELS: Record<string, string> = {
   "001": "1st In-Course", "002": "1st Semester",
-  "003": "2nd In-Course", "004": "2nd Semester",
+  "003": "2nd In-Course", "004": "Mock Exam",
 };
 
 type Phase = "setup" | "exam" | "result";

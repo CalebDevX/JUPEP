@@ -23,7 +23,7 @@ const paperLabels: Record<string, string> = {
   "001": "1st In-Course",
   "002": "1st Semester",
   "003": "2nd In-Course",
-  "004": "2nd Semester",
+  "004": "Mock Exam",
   "mock": "Mock Exam",
   "jupeb": "JUPEB Final",
 };
@@ -171,7 +171,7 @@ export default function Notes() {
                         <SelectItem value="001" className="text-white">1st In-Course Exam</SelectItem>
                         <SelectItem value="002" className="text-white">1st Semester Exam</SelectItem>
                         <SelectItem value="003" className="text-white">2nd In-Course Exam</SelectItem>
-                        <SelectItem value="004" className="text-white">2nd Semester Exam</SelectItem>
+                        <SelectItem value="004" className="text-white">Mock Exam</SelectItem>
                         <SelectItem value="jupeb" className="text-white">JUPEB Final Exam</SelectItem>
                       </SelectContent>
                     </Select>

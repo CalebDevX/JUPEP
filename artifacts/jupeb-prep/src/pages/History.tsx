@@ -16,7 +16,7 @@ const PAPER_LABELS: Record<string, string> = {
   "001": "1st In-Course",
   "002": "1st Semester",
   "003": "2nd In-Course",
-  "004": "2nd Semester",
+  "004": "Mock Exam",
   "mock": "Mock Exam",
   "jupeb": "JUPEB Final",
 };
