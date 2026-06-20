@@ -3,35 +3,38 @@ import { getAI } from "../lib/gemini-keys";
 
 const router = Router();
 
-export const YARNGPT_SPEAKERS = [
-  "idera", "jide", "tolu", "emma", "zainab",
-  "joke", "adaeze", "umar", "chisom", "remi",
-  "amaka", "kemi", "ngozi", "kehinde", "taiwo",
+export const YARNGPT_VOICES = [
+  "Idera", "Emma", "Zainab", "Osagie", "Wura",
+  "Jude", "Chinenye", "Tayo", "Regina", "Femi",
+  "Adaora", "Umar", "Mary", "Nonso", "Remi", "Adam",
 ];
 
 export const YARNGPT_LANGUAGES = ["english", "yoruba", "igbo", "hausa", "pidgin"];
 
-async function callRailwayAPI(
-  text: string,
-  language: string,
-  speaker: string,
-  baseUrl: string,
-): Promise<Buffer> {
-  const url = `${baseUrl.replace(/\/$/, "")}/tts`;
-  const res = await fetch(url, {
+async function callYarnGPTAPI(text: string, voice: string): Promise<{ buffer: Buffer; contentType: string }> {
+  const apiKey = process.env.YARNGPT_API_KEY;
+  if (!apiKey) throw new Error("YARNGPT_API_KEY is not configured");
+
+  const res = await fetch("https://yarngpt.ai/api/v1/tts", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: text.trim(), speaker, language }),
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ text: text.trim(), voice, response_format: "mp3" }),
     signal: AbortSignal.timeout(60000),
   });
+
   if (!res.ok) {
     const msg = await res.text().catch(() => res.statusText);
-    throw new Error(`Voice service error (${res.status}): ${msg}`);
+    throw new Error(`YarnGPT API error (${res.status}): ${msg}`);
   }
-  return Buffer.from(await res.arrayBuffer());
+
+  const buffer = Buffer.from(await res.arrayBuffer());
+  return { buffer, contentType: "audio/mpeg" };
 }
 
-async function callGeminiTTS(text: string): Promise<Buffer> {
+async function callGeminiTTS(text: string): Promise<{ buffer: Buffer; contentType: string }> {
   const ai = getAI();
   const result = await (ai.models as any).generateContent({
     model: "gemini-2.5-flash-preview-tts",
@@ -64,45 +67,46 @@ async function callGeminiTTS(text: string): Promise<Buffer> {
   hdr.writeUInt32LE(byteRate, 28); hdr.writeUInt16LE(blockAlign, 32);
   hdr.writeUInt16LE(bitsPerSample, 34); hdr.write("data", 36);
   hdr.writeUInt32LE(pcmBuf.length, 40);
-  return Buffer.concat([hdr, pcmBuf]);
+  return { buffer: Buffer.concat([hdr, pcmBuf]), contentType: "audio/wav" };
 }
 
 router.get("/tts/speakers", (_req, res) => {
-  res.json({ speakers: YARNGPT_SPEAKERS, languages: YARNGPT_LANGUAGES });
+  res.json({ speakers: YARNGPT_VOICES, languages: YARNGPT_LANGUAGES });
 });
 
 router.post("/tts", async (req, res) => {
   const {
     text,
-    speaker = "idera",
+    speaker,
+    voice,
     language = "english",
-  }: { text?: string; speaker?: string; language?: string } = req.body;
+  }: { text?: string; speaker?: string; voice?: string; language?: string } = req.body;
 
   if (!text?.trim()) return res.status(400).json({ error: "Text is required." });
-  if (text.length > 1500) return res.status(400).json({ error: "Text too long — keep it under 1500 characters." });
+  if (text.length > 2000) return res.status(400).json({ error: "Text too long — keep it under 2000 characters." });
 
-  const spk = YARNGPT_SPEAKERS.includes(speaker) ? speaker : "idera";
-  const lang = YARNGPT_LANGUAGES.includes(language) ? language : "english";
-
-  const railwayUrl = process.env.YARNGPT_URL;
+  const requestedVoice = voice || speaker || "Idera";
+  const resolvedVoice = YARNGPT_VOICES.find(
+    v => v.toLowerCase() === requestedVoice.toLowerCase()
+  ) ?? "Idera";
 
   try {
-    let audioBuffer: Buffer;
+    let result: { buffer: Buffer; contentType: string };
 
-    if (railwayUrl) {
-      console.info(`Using Railway YarnGPT at ${railwayUrl}`);
-      audioBuffer = await callRailwayAPI(text, lang, spk, railwayUrl);
+    if (process.env.YARNGPT_API_KEY) {
+      console.info(`Using YarnGPT API with voice: ${resolvedVoice}`);
+      result = await callYarnGPTAPI(text, resolvedVoice);
     } else {
-      console.info("YARNGPT_URL not set — using built-in AI voice");
-      audioBuffer = await callGeminiTTS(text);
+      console.info("YARNGPT_API_KEY not set — falling back to Gemini TTS");
+      result = await callGeminiTTS(text);
     }
 
     res.set({
-      "Content-Type": "audio/wav",
-      "Content-Length": String(audioBuffer.byteLength),
+      "Content-Type": result.contentType,
+      "Content-Length": String(result.buffer.byteLength),
       "Cache-Control": "no-store",
     });
-    res.send(audioBuffer);
+    res.send(result.buffer);
   } catch (err: any) {
     console.error("TTS error:", err.message);
     res.status(500).json({
