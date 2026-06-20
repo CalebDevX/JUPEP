@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "Hnr-0TPCDjVIsnwSKvPYQ"
@@ -24,3 +23,9 @@ id = "3CcoWNTrSjwGKtxP5pKwX"
 uri = "file://attached_assets/generated_images/app_icon_for_a_7588.png"
 type = "image"
 title = "generated_image"
+
+[[outputs]]
+id = "fdCmVTgZLnTn3qT8o00TO"
+uri = "file://README.md"
+type = "text"
+title = "JUPEB Prep — README"
