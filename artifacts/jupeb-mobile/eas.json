@@ -11,7 +11,7 @@
       "channel": "preview",
       "env": {
         "npm_config_legacy_peer_deps": "true",
-        "EXPO_PUBLIC_API_URL": "https://YOUR_RENDER_OR_RAILWAY_URL/api"
+        "EXPO_PUBLIC_API_URL": "https://workspaceapi-server-production-1300.up.railway.app/api"
       }
     },
     "production": {
@@ -24,7 +24,7 @@
       "channel": "production",
       "env": {
         "npm_config_legacy_peer_deps": "true",
-        "EXPO_PUBLIC_API_URL": "https://YOUR_RENDER_OR_RAILWAY_URL/api"
+        "EXPO_PUBLIC_API_URL": "https://workspaceapi-server-production-1300.up.railway.app/api"
       }
     }
   },

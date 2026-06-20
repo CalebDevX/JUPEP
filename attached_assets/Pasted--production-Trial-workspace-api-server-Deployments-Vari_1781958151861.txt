@@ -1,0 +1,138 @@
+
+
+production
+
+
+Trial
+
+
+
+@workspace/api-server
+Deployments
+Variables
+Metrics
+Console
+Settings
+Service offline
+US West
+1 Replica
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+History
+
+Hide Skipped
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@workspace/api-server
+
+Failed
+Jun 20, 2026, 1:20 PM
+Get Help
+DetailsBuildDeployHTTPNetwork Flow
+Diagnosis › Try running a diagnosis to understand why this deployment failed.
+
+Diagnose
+You reached the start of the range
+Jun 20, 2026, 1:15 PM
+scheduling build on Metal builder "production-builderv3-us-west1-44n7"
+unpacking archive
+9.2 MB
+30ms
+using build driver railpack-v0.29.0
+uploading snapshot
+5.8 MB
+87ms
+ INFO No package manager inferred, using npm default
+                   
+╭─────────────────╮
+│ Railpack 0.29.0 │
+╰─────────────────╯
+ 
+  ↳ Detected Node
+  ↳ Custom start command detected, skipping Caddy start
+  ↳ Custom start command detected, skipping Caddy start
+  ↳ Custom start command detected, skipping Caddy start
+  ↳ Using npm package manager
+  ↳ Custom start command detected, skipping Caddy start
+            
+  Packages  
+  ──────────
+  node  │  22.22.3  │  railpack default (22)
+            
+  Steps     
+  ──────────
+  ▸ install
+    $ npm install
+         
+  ▸ build
+    $ npm install -g pnpm && pnpm install && pnpm run build
+            
+  Deploy    
+  ──────────
+    $ node --enable-source-maps ./dist/index.mjs
+ 
+
+load build definition from ./railpack-plan.json
+0ms
+
+install apt packages: libatomic1
+1s
+Processing triggers for libc-bin (2.36-9+deb12u14) ...
+
+install mise packages: node
+1s
+mise node@22.22.3 ✓ installed
+
+mkdir -p /app/node_modules/.cache
+228ms
+
+copy package.json
+72ms
+
+npm install
+494ms
+npm warn config production Use `--omit=dev` instead.
+npm error code EUNSUPPORTEDPROTOCOL
+npm error Unsupported URL Type "workspace:": workspace:*
+npm error A complete log of this run can be found in: /root/.npm/_logs/2026-06-20T12_20_40_250Z-debug-0.log
+
+copy /root/.local/state/mise, /etc/mise/config.toml, /usr/local/bin/mise, /mise/installs, /mise/shims cached
+0ms
+Build Failed: build daemon returned an error < failed to solve: process "npm install" did not complete successfully: exit code: 1 >
+You reached the end of the range
+Jun 20, 2026, 1:25 PM
