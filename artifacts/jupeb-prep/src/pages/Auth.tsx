@@ -5,7 +5,7 @@ import {
   User, Phone, Mail, GraduationCap, BookOpen,
   ChevronRight, ArrowLeft, Loader2, CheckCircle2,
   MessageCircle, ChevronDown, Search, Check, Zap, Trophy, Brain,
-  Building2, Users, Star, Lock, RefreshCw, ShieldCheck, KeyRound,
+  Building2, Users, Star, Lock, RefreshCw, ShieldCheck, KeyRound, Eye, EyeOff,
 } from "lucide-react";
 import { LogoMark } from "@/components/Logo";
 import { cn } from "@/lib/utils";
@@ -657,6 +657,10 @@ function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
   const [fullName, setFullName]       = useState(googlePreFill?.name || "");
   const [phone, setPhone]             = useState("");
   const [email, setEmail]             = useState(googlePreFill?.email || "");
+  const [password, setPassword]       = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
+  const [showPass, setShowPass]       = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [targetUniversity, setTargetUniversity] = useState("");
   const [course, setCourse]           = useState("");
   const [subjects, setSubjects]       = useState<string[]>([]);
@@ -677,6 +681,10 @@ function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
   const goStep2 = () => {
     if (!fullName.trim()) return setError("Please enter your full name.");
     if (!phone.trim() || phone.replace(/\D/g, "").length < 10) return setError("Please enter a valid phone number.");
+    if (!googlePreFill) {
+      if (!password.trim() || password.trim().length < 6) return setError("Password must be at least 6 characters.");
+      if (password.trim() !== confirmPass.trim()) return setError("Passwords do not match.");
+    }
     setError(""); setStep(2);
   };
   const goStep3 = () => {
@@ -695,6 +703,7 @@ function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
           email: email.trim() || null, subjects,
           targetUniversity: targetUniversity.trim(),
           course: course.trim(), accessCode: "",
+          password: googlePreFill ? `google_${Date.now()}` : password.trim(),
         }),
       });
       const data = await res.json();
@@ -779,6 +788,34 @@ function RegisterForm({ onGoogleClick, googleLoading, googlePreFill }: {
                     onChange={e => setEmail(e.target.value)} className={cn(inputCls, "pl-10")} />
                 </div>
               </div>
+              {!googlePreFill && (
+                <>
+                  <div>
+                    <Label>Password <span className="text-red-400">*</span></Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+                      <input type={showPass ? "text" : "password"} placeholder="Min. 6 characters" value={password}
+                        onChange={e => setPassword(e.target.value)} className={cn(inputCls, "pl-10 pr-10")} />
+                      <button type="button" onClick={() => setShowPass(v => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Confirm Password <span className="text-red-400">*</span></Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+                      <input type={showConfirm ? "text" : "password"} placeholder="Repeat password" value={confirmPass}
+                        onChange={e => setConfirmPass(e.target.value)} className={cn(inputCls, "pl-10 pr-10")} />
+                      <button type="button" onClick={() => setShowConfirm(v => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           )}
 
@@ -887,6 +924,7 @@ export default function Auth() {
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading]   = useState(false);
   const [googlePreFill, setGooglePreFill]   = useState<GoogleData>(null);
+  const tokenClientRef = useRef<any>(null);
 
   useEffect(() => {
     fetch(`${BASE}/api/auth/google/config`)
@@ -895,18 +933,29 @@ export default function Auth() {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (!googleClientId) return;
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.onload = () => {
-      window.google?.accounts.id.initialize({ client_id: googleClientId, callback: handleGoogleResponse });
-    };
-    document.head.appendChild(script);
-    return () => { try { document.head.removeChild(script); } catch {} };
-  }, [googleClientId]);
+  // Handle Google access token (popup flow via oauth2.initTokenClient)
+  const handleGoogleAccessToken = useCallback(async (accessToken: string) => {
+    setGoogleLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/auth/google/mobile`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accessToken }),
+      });
+      const data = await res.json();
+      if (data.profile) {
+        localStorage.setItem("jupeb_profile", JSON.stringify(data.profile));
+        localStorage.setItem("jupeb_display_name", data.profile.fullName);
+        if (data.profile.sessionToken) localStorage.setItem("jupeb_session_token", data.profile.sessionToken);
+        navigate("/");
+      } else if (data.needsRegistration) {
+        setGooglePreFill(data.googleData);
+        setTab("register");
+      }
+    } catch {}
+    finally { setGoogleLoading(false); }
+  }, [navigate]);
 
+  // Handle Google ID token (One Tap callback flow)
   const handleGoogleResponse = useCallback(async (response: any) => {
     setGoogleLoading(true);
     try {
@@ -928,7 +977,35 @@ export default function Auth() {
     finally { setGoogleLoading(false); }
   }, [navigate]);
 
-  const handleGoogleClick = () => { if (googleClientId) window.google?.accounts.id.prompt(); };
+  useEffect(() => {
+    if (!googleClientId) return;
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.onload = () => {
+      window.google?.accounts.id.initialize({ client_id: googleClientId, callback: handleGoogleResponse });
+      // Set up OAuth2 popup client — always opens a real popup when clicked
+      // (accounts.id.prompt() is One Tap which browsers suppress if recently dismissed)
+      tokenClientRef.current = window.google?.accounts.oauth2?.initTokenClient({
+        client_id: googleClientId,
+        scope: "email profile openid",
+        callback: (tokenResponse: any) => {
+          if (tokenResponse?.access_token) handleGoogleAccessToken(tokenResponse.access_token);
+        },
+      });
+    };
+    document.head.appendChild(script);
+    return () => { try { document.head.removeChild(script); } catch {} };
+  }, [googleClientId]);
+
+  // Button click: prefer popup flow (reliable), fall back to One Tap
+  const handleGoogleClick = useCallback(() => {
+    if (tokenClientRef.current) {
+      tokenClientRef.current.requestAccessToken({ prompt: "select_account" });
+    } else if (googleClientId) {
+      window.google?.accounts.id.prompt();
+    }
+  }, [googleClientId]);
 
   return (
     <div className="min-h-screen flex bg-white">
