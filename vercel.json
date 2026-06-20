@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm --filter @workspace/jupeb-prep run build && mkdir -p dist && cp -r artifacts/jupeb-prep/dist/public/. dist/",
+  "buildCommand": "pnpm --filter @workspace/jupeb-prep run build",
   "outputDirectory": "dist",
   "installCommand": "pnpm install",
   "framework": null,
