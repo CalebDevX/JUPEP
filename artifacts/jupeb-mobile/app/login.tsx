@@ -18,6 +18,8 @@ WebBrowser.maybeCompleteAuthSession();
 
 const ANDROID_CLIENT_ID = '59809838753-cijfrhs8acspsspmqtji9ve7t45cdj1c.apps.googleusercontent.com';
 
+const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://edu.achek.com.ng';
+
 type Mode = 'login' | 'register' | 'forgot';
 type LoginStep = 'creds' | 'pin';
 type ForgotStep = 'phone' | 'otp' | 'newpass';
@@ -51,9 +53,19 @@ export default function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [shake]                   = useState(new Animated.Value(0));
   const pinInputRef               = useRef<TextInput>(null);
+  const [webClientId, setWebClientId] = useState<string | null>(null);
+
+  // Fetch the web client ID from the server — needed for Google Sign-In in Expo Go / dev builds
+  useEffect(() => {
+    fetch(`${API_BASE}/api/auth/google/config`)
+      .then(r => r.json())
+      .then(d => { if (d.clientId) setWebClientId(d.clientId); })
+      .catch(() => {});
+  }, []);
 
   const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
     androidClientId: ANDROID_CLIENT_ID,
+    ...(webClientId ? { webClientId } : {}),
   });
 
   // Forgot password state
