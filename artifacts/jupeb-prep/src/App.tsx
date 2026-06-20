@@ -151,7 +151,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.VITE_API_URL || ""}>
+        <WouterRouter base="/">
           <Router />
         </WouterRouter>
         <Toaster />
