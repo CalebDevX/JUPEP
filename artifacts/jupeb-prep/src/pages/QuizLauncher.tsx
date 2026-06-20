@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { isActivated, getTrialRemaining, TRIAL_QUESTION_LIMIT } from "@/lib/access";
 import { Link } from "wouter";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_URL || "";
 
 function fmtMinutes(min: number) {
   if (min >= 60 && min % 60 === 0) return `${min / 60} Hour${min / 60 > 1 ? "s" : ""}`;

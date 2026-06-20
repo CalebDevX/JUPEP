@@ -6,7 +6,7 @@ import { BarChart3, TrendingDown, Loader2, Target, BookOpen, AlertTriangle } fro
 import { useListSubjects } from "@workspace/api-client-react";
 import { Link } from "wouter";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_URL || "";
 
 function getProfile() {
   try { return JSON.parse(localStorage.getItem("jupeb_profile") || "null"); } catch { return null; }

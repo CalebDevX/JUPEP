@@ -49,7 +49,7 @@ export default function Notes() {
   const { data: subjectsRaw } = useListSubjects();
   const subjects = Array.isArray(subjectsRaw) ? subjectsRaw : [];
   const queryClient = useQueryClient();
-  const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const BASE = import.meta.env.VITE_API_URL || "";
 
   const queryParams = useMemo(() => ({
     ...(subjectId !== "all" ? { subjectId: Number(subjectId) } : {}),

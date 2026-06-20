@@ -300,7 +300,7 @@ export default function Chat() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const BASE = import.meta.env.VITE_API_URL || "";
 
   const scrollToBottom = useCallback((smooth = true) => {
     bottomRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });

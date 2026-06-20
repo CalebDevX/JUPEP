@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { KeyRound, GraduationCap, CheckCircle2, Loader2, Lock, Star, Zap, BookOpen, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_URL || "";
 
 const PERKS = [
   { icon: Zap, label: "Unlimited quiz practice — all papers" },

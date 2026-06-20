@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Bookmark, BookOpen, FileText, Loader2, XCircle, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
 import { Link } from "wouter";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_URL || "";
 
 function getProfile() {
   try { return JSON.parse(localStorage.getItem("jupeb_profile") || "null"); } catch { return null; }

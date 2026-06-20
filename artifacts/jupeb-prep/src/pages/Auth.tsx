@@ -10,7 +10,7 @@ import {
 import { LogoMark } from "@/components/Logo";
 import { cn } from "@/lib/utils";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_URL || "";
 
 declare global { interface Window { google: any; } }
 

@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, formatDistanceToNow } from "date-fns";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_URL || "";
 const ADMIN_PIN_KEY = "JUPEB2024";
 
 type AdminTab = "overview" | "students" | "codes" | "revenue" | "questions" | "anticheat" | "announcements" | "notes" | "settings" | "branding" | "whatsapp" | "communities" | "pushnotify";

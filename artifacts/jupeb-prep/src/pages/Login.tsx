@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Phone, Loader2, ArrowRight, BookOpen, Trophy, Users, Star, CheckCircle } from "lucide-react";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_URL || "";
 
 const STATS = [
   { icon: Users, value: "2,400+", label: "Active Students" },

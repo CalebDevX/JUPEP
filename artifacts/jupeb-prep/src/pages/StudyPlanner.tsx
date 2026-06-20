@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Calendar, Sparkles, RotateCcw, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_URL || "";
 
 function getProfile() {
   try { return JSON.parse(localStorage.getItem("jupeb_profile") || "{}"); } catch { return {}; }

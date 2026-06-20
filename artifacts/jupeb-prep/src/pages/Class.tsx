@@ -15,7 +15,7 @@ import { isActivated } from "@/lib/access";
 import { PaywallGate } from "@/components/PaywallGate";
 import { useReadAloud } from "@/hooks/useReadAloud";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_URL || "";
 const WORDS_PER_MIN = 180;
 
 function countWords(text: string) {

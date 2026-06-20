@@ -135,7 +135,7 @@ export default function LearnFromSource() {
   const subjects = Array.isArray(subjectsRaw) ? subjectsRaw : [];
   const { state: ttsState, engine: ttsEngine, speak, pause, resume, stop } = useReadAloud();
   const queryClient = useQueryClient();
-  const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const BASE = import.meta.env.VITE_API_URL || "";
 
   const currentSource = SOURCE_TABS.find(t => t.id === activeSource)!;
 

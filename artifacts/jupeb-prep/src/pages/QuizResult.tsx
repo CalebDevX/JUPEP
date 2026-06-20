@@ -14,7 +14,7 @@ import { Confetti, StarBurst } from "@/components/Confetti";
 import { recordQuizComplete, getGamificationState } from "@/lib/gamification";
 import { isActivated, recordTrialQuestionsUsed } from "@/lib/access";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_URL || "";
 
 async function syncProgressToServer(opts: {
   phone: string; xp: number; streak: number;

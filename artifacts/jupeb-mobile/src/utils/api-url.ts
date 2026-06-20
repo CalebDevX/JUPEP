@@ -5,8 +5,7 @@ const STORAGE_KEY = 'jupeb_api_url_v1';
 
 function defaultBase(): string {
   if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
-  if (Platform.OS === 'android') return 'http://10.0.2.2:3000';
-  return 'http://localhost:3000';
+  return 'https://edu.achek.com.ng';
 }
 
 let _baseUrl: string = defaultBase();

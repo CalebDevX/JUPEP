@@ -42,7 +42,7 @@ function AnimatedCounter({ to, suffix = "", duration = 1.5 }: { to: number; suff
   return <>{count}{suffix}</>;
 }
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const BASE = import.meta.env.VITE_API_URL || "";
 
 interface Announcement {
   id: number; title: string; content: string; type: string;

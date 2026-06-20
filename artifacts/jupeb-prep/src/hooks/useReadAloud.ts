@@ -9,7 +9,7 @@ export function useReadAloud() {
   const [voicesReady, setVoicesReady] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const BASE = import.meta.env.VITE_API_URL || "";
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.speechSynthesis) return () => {};

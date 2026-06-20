@@ -25,7 +25,23 @@ app.use(
     },
   }),
 );
-app.use(cors());
+const allowedOrigins = [
+  'https://prep.achek.com.ng',
+  'https://edu.achek.com.ng',
+  /\.replit\.dev$/,
+  /localhost/,
+];
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // server-to-server / mobile
+    const ok = allowedOrigins.some(o =>
+      typeof o === 'string' ? o === origin : o.test(origin)
+    );
+    cb(ok ? null : new Error('Not allowed by CORS'), ok);
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
