@@ -6,7 +6,9 @@ description: How to trigger an Android APK build using EAS CLI from within Repli
 # EAS APK Build
 
 ## Key facts
-- EAS CLI installed as devDependency in `artifacts/jupeb-mobile/node_modules/.bin/eas`
+- EAS CLI available at system path via Nix: `eas` (v14.7.1); set `"version": ">= 14.7.1"` in eas.json cli block
+- jupeb-mobile is NOT in pnpm-workspace.yaml — its deps are never installed in Replit; DO NOT try `npm install` (times out)
+- **`app.config.js`** wraps `app.json` and conditionally skips plugins that can't be resolved locally — fixes "Failed to resolve plugin for expo-router" without needing node_modules installed
 - Project: `achek-team/jupeb-mobile`, projectId `098db203-360d-4059-af9a-2769bebd0e64`
 - Package name: `com.jupeb.prep`
 - `eas.json` at `artifacts/jupeb-mobile/eas.json` — `preview` profile = APK, `production` = AAB
