@@ -28,6 +28,7 @@ import VoiceTeacher from "@/pages/VoiceTeacher";
 import Subscribe from "@/pages/Subscribe";
 import PaymentCallback from "@/pages/PaymentCallback";
 import StudyPlanner from "@/pages/StudyPlanner";
+import PastQuestions from "@/pages/PastQuestions";
 import Achievements from "@/pages/Achievements";
 import WrongAnswers from "@/pages/WrongAnswers";
 import MockExam from "@/pages/MockExam";
@@ -117,6 +118,7 @@ function ProtectedRoutes() {
       <Route path="/settings" component={Settings} />
       <Route path="/planner" component={StudyPlanner} />
       <Route path="/achievements" component={Achievements} />
+      <Route path="/past-questions" component={PastQuestions} />
       <Route path="/wrong-answers" component={WrongAnswers} />
       <Route path="/mock" component={MockExam} />
       <Route path="/bookmarks" component={Bookmarks} />

@@ -18,6 +18,8 @@ import { ThemeProvider, useThemeContext } from '@/context/ThemeContext';
 import { queryClient, getApiBase } from '@/lib/query-client';
 import { registerPushToken } from '@/src/utils/api';
 import { initApiUrl } from '@/src/utils/api-url';
+import { useAppUpdate } from '@/hooks/useAppUpdate';
+import UpdateModal from '@/components/UpdateModal';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -202,6 +204,12 @@ function PushTokenRegistrar() {
   return null;
 }
 
+function UpdateChecker() {
+  const { updateInfo, dismiss } = useAppUpdate();
+  if (!updateInfo) return null;
+  return <UpdateModal info={updateInfo} onDismiss={dismiss} />;
+}
+
 function ThemedStatusBar() {
   const { mode, colors } = useThemeContext();
   const isDark = mode === 'dark' || (mode === 'auto' && colors.background === '#09090b');
@@ -216,6 +224,7 @@ function AppShell() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <PushTokenRegistrar />
+            <UpdateChecker />
             <ThemedStatusBar />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="index" />
@@ -224,6 +233,7 @@ function AppShell() {
               <Stack.Screen name="quiz/[groupId]" />
               <Stack.Screen name="notes/[courseId]" />
               <Stack.Screen name="notes/chapter/[chapterId]" />
+              <Stack.Screen name="past-questions" />
             </Stack>
           </AuthProvider>
         </QueryClientProvider>

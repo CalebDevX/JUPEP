@@ -163,6 +163,17 @@ export default function PracticeScreen() {
         </View>
       ) : null}
 
+      {/* Past Questions shortcut */}
+      <TouchableOpacity
+        style={styles.pastQBtn}
+        onPress={() => router.push('/past-questions' as any)}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="library-outline" size={16} color={Colors.primary} />
+        <Text style={styles.pastQBtnText}>Browse Past Questions</Text>
+        <Ionicons name="chevron-forward-outline" size={14} color={Colors.mutedForeground} />
+      </TouchableOpacity>
+
       {/* Exam type pills */}
       <ScrollView
         horizontal
@@ -386,6 +397,18 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.warningDim, paddingHorizontal: 16, paddingVertical: 8,
   },
   errorBannerText: { fontSize: 13, fontFamily: 'Inter_500Medium', color: Colors.warning },
+
+  // Past Questions shortcut button
+  pastQBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: 16, marginBottom: 8,
+    backgroundColor: `${Colors.primary}18`,
+    borderWidth: 1, borderColor: `${Colors.primary}35`,
+    borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10,
+  },
+  pastQBtnText: {
+    flex: 1, color: Colors.primary, fontSize: 13, fontFamily: 'Inter_500Medium',
+  },
 
   // Exam type chips
   examTypeRow: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },

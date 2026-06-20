@@ -11,6 +11,10 @@ const DEFAULTS: Record<string, string> = {
   obj_timer_minutes: "60",
   theory_timer_minutes: "120",
   mock_timer_minutes: "120",
+  latest_apk_version: "1.0.0",
+  latest_apk_build: "1",
+  latest_apk_url: "",
+  latest_apk_notes: "",
 };
 
 // Keys that are stored in the app_settings DB table instead of the JSON file
@@ -56,6 +60,17 @@ async function saveDbSetting(key: string, value: string) {
     [key, value]
   );
 }
+
+// Public — no auth required
+router.get("/app/version", (_req, res) => {
+  const s = loadFileSettings();
+  res.json({
+    version: s.latest_apk_version || "1.0.0",
+    buildNumber: parseInt(s.latest_apk_build || "1"),
+    downloadUrl: s.latest_apk_url || "",
+    notes: s.latest_apk_notes || "",
+  });
+});
 
 router.get("/settings", async (_req, res) => {
   const file = loadFileSettings();

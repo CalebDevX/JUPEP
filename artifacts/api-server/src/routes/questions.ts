@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
+import { db, pool } from "@workspace/db";
 import { questionsTable, subjectsTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -60,6 +60,40 @@ router.post("/questions", async (req, res) => {
     res.status(201).json({ ...question, subjectName: subject?.name ?? null, createdAt: question.createdAt.toISOString() });
   } catch (err) {
     res.status(500).json({ error: "Failed to create question" });
+  }
+});
+
+// GET /api/questions/past-papers — distinct year/paper combinations with counts
+router.get("/questions/past-papers", async (req, res) => {
+  try {
+    const { subjectId } = req.query;
+    const params: any[] = [];
+    let whereClause = "WHERE q.year IS NOT NULL";
+    if (subjectId) {
+      params.push(parseInt(subjectId as string));
+      whereClause += ` AND q.subject_id = $${params.length}`;
+    }
+    const result = await pool.query(
+      `SELECT
+         q.subject_id        AS "subjectId",
+         s.name              AS "subjectName",
+         s.code              AS "subjectCode",
+         s.color             AS "subjectColor",
+         q.paper,
+         q.year,
+         COUNT(*)::int       AS count,
+         SUM(CASE WHEN q.question_type = 'objective' THEN 1 ELSE 0 END)::int AS "objectiveCount",
+         SUM(CASE WHEN q.question_type = 'theory'    THEN 1 ELSE 0 END)::int AS "theoryCount"
+       FROM questions q
+       LEFT JOIN subjects s ON s.id = q.subject_id
+       ${whereClause}
+       GROUP BY q.subject_id, s.name, s.code, s.color, q.paper, q.year
+       ORDER BY q.year DESC, q.paper`,
+      params
+    );
+    res.json(result.rows);
+  } catch {
+    res.status(500).json({ error: "Failed to fetch past papers" });
   }
 });
 
