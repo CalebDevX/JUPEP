@@ -3,6 +3,7 @@ modules = ["nodejs-20", "web", "python-3.12"]
 [deployment]
 router = "application"
 deploymentTarget = "autoscale"
+run = ["bash", "-c", "cd artifacts/api-server && pnpm run build && PORT=3000 node --enable-source-maps ./dist/index.mjs"]
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
