@@ -12,6 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemeContext, type ThemeMode } from '@/context/ThemeContext';
 import { setPin, removePin } from '@/src/utils/api';
+import { setCustomApiUrl, clearCustomApiUrl, getCurrentApiUrlDisplay } from '@/src/utils/api-url';
 import type { AppColors } from '@/constants/colors';
 
 const PROFILE_KEY = 'jupeb_profile_v1';
@@ -254,6 +255,156 @@ function ThemeSelector({ C, S }: { C: AppColors; S: any }) {
   );
 }
 
+// ── Server URL modal ─────────────────────────────────────────────────────────
+function ServerUrlModal({
+  visible, onClose, C,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  C: AppColors;
+}) {
+  const [url, setUrl]         = useState(getCurrentApiUrlDisplay);
+  const [saving, setSaving]   = useState(false);
+  const [error, setError]     = useState('');
+  const [saved, setSaved]     = useState(false);
+  const inputRef              = useRef<TextInput>(null);
+
+  const handleSave = async () => {
+    setError(''); setSaved(false);
+    const trimmed = url.trim();
+    if (!trimmed) {
+      setError('Please enter a server URL.');
+      return;
+    }
+    if (!/^https?:\/\/.+/.test(trimmed)) {
+      setError('URL must start with http:// or https://');
+      return;
+    }
+    setSaving(true);
+    try {
+      await setCustomApiUrl(trimmed);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setSaved(true);
+      setTimeout(() => { setSaved(false); onClose(); }, 1200);
+    } catch {
+      setError('Failed to save. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReset = async () => {
+    setSaving(true); setError('');
+    try {
+      await clearCustomApiUrl();
+      setUrl(getCurrentApiUrlDisplay());
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setSaved(true);
+      setTimeout(() => { setSaved(false); onClose(); }, 1200);
+    } catch {
+      setError('Failed to reset.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}
+          activeOpacity={1} onPress={onClose}
+        >
+          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+            <View style={{
+              backgroundColor: C.card,
+              borderTopLeftRadius: 24, borderTopRightRadius: 24,
+              padding: 24, paddingBottom: 40,
+            }}>
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: C.border, alignSelf: 'center', marginBottom: 20 }} />
+              <View style={{
+                width: 52, height: 52, borderRadius: 16,
+                backgroundColor: `${C.primary}15`, borderWidth: 1, borderColor: `${C.primary}25`,
+                alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 12,
+              }}>
+                <Ionicons name="server-outline" size={22} color={C.primary} />
+              </View>
+              <Text style={{ fontSize: 17, fontFamily: 'Inter_700Bold', color: C.foreground, textAlign: 'center', marginBottom: 4 }}>
+                API Server URL
+              </Text>
+              <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', color: C.mutedForeground, textAlign: 'center', marginBottom: 20 }}>
+                Set the backend server your app connects to.
+              </Text>
+
+              <TextInput
+                ref={inputRef}
+                value={url}
+                onChangeText={v => { setUrl(v); setError(''); setSaved(false); }}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                placeholder="https://api.example.com"
+                placeholderTextColor={C.mutedForeground}
+                autoFocus
+                style={{
+                  borderWidth: 1.5, borderColor: error ? C.destructive : C.border,
+                  borderRadius: 12, padding: 14,
+                  fontSize: 14, fontFamily: 'Inter_400Regular', color: C.foreground,
+                  backgroundColor: C.muted, marginBottom: 12,
+                }}
+              />
+
+              {error ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: `${C.destructive}12`, borderRadius: 10, borderWidth: 1, borderColor: `${C.destructive}25`, padding: 12, marginBottom: 12 }}>
+                  <Ionicons name="alert-circle-outline" size={15} color={C.destructive} />
+                  <Text style={{ flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium', color: C.destructive }}>{error}</Text>
+                </View>
+              ) : null}
+
+              {saved ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#dcfce7', borderRadius: 10, borderWidth: 1, borderColor: '#bbf7d0', padding: 12, marginBottom: 12 }}>
+                  <Ionicons name="checkmark-circle-outline" size={15} color="#16a34a" />
+                  <Text style={{ flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium', color: '#15803d' }}>Saved! Restart the app to connect to the new server.</Text>
+                </View>
+              ) : null}
+
+              <TouchableOpacity
+                onPress={handleSave}
+                disabled={saving}
+                style={{
+                  backgroundColor: C.primary, borderRadius: 12,
+                  paddingVertical: 14, alignItems: 'center', marginBottom: 10,
+                  opacity: saving ? 0.6 : 1,
+                }}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={{ fontSize: 15, fontFamily: 'Inter_700Bold', color: '#fff' }}>Save URL</Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleReset}
+                disabled={saving}
+                style={{ alignItems: 'center', paddingVertical: 10, marginBottom: 4 }}
+              >
+                <Text style={{ fontSize: 13, fontFamily: 'Inter_500Medium', color: C.mutedForeground }}>
+                  Reset to default
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={onClose} style={{ alignItems: 'center', paddingVertical: 8 }}>
+                <Text style={{ fontSize: 14, fontFamily: 'Inter_600SemiBold', color: C.mutedForeground }}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
 // ── Main profile screen ───────────────────────────────────────────────────────
 export default function ProfileScreen() {
   const { profile, logout } = useAuth();
@@ -264,9 +415,10 @@ export default function ProfileScreen() {
   const { autoSync, setAutoSync } = useThemeContext();
   const S = useMemo(() => makeStyles(C), [C]);
 
-  const [pinModal, setPinModal]     = useState<PinModalMode | null>(null);
-  const [hasPin, setHasPin]         = useState<boolean>(profile?.hasPin ?? false);
-  const [pinSuccess, setPinSuccess] = useState<string | null>(null);
+  const [pinModal, setPinModal]         = useState<PinModalMode | null>(null);
+  const [hasPin, setHasPin]             = useState<boolean>(profile?.hasPin ?? false);
+  const [pinSuccess, setPinSuccess]     = useState<string | null>(null);
+  const [serverUrlModal, setServerUrlModal] = useState(false);
 
   const statusColor = profile?.paymentStatus === 'active' || profile?.paymentStatus === 'paid'
     ? C.success : profile?.paymentStatus === 'expired' ? C.destructive : C.mutedForeground;
@@ -368,6 +520,14 @@ export default function ProfileScreen() {
             thumbColor={autoSync ? C.primary : C.mutedForeground}
           />
         </View>
+        <InfoRow
+          icon="server-outline"
+          label="API Server URL"
+          actionLabel="Configure →"
+          actionColor={C.primary}
+          onPress={() => { Haptics.selectionAsync(); setServerUrlModal(true); }}
+          C={C} S={S}
+        />
       </View>
 
       {/* Security */}
@@ -439,6 +599,12 @@ export default function ProfileScreen() {
           C={C}
         />
       )}
+
+      <ServerUrlModal
+        visible={serverUrlModal}
+        onClose={() => setServerUrlModal(false)}
+        C={C}
+      />
     </ScrollView>
   );
 }

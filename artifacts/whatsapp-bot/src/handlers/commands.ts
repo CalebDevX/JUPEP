@@ -82,7 +82,7 @@ export async function handleMessage(
         `🏫 University: ${p.targetUniversity ?? "Not set"}\n` +
         `📚 Subjects: ${Array.isArray(p.subjects) ? p.subjects.join(", ") : p.subjects}\n` +
         `🎯 Target Grade: ${p.targetGrade.toUpperCase()}\n\n` +
-        `Visit the platform: ${process.env.APP_URL ?? "https://your-app.replit.app"}`
+        `Visit the platform: ${process.env.APP_URL ?? ""}`
       );
     } catch {
       await safeSend(sock, jid,
@@ -125,7 +125,7 @@ export async function handleMessage(
         await safeSend(sock, jid,
           `✅ You've joined *${communities[idx].name}*!\n\n` +
           `You'll receive updates and discussions from this community.\n\n` +
-          `Visit the platform to interact: ${process.env.APP_URL ?? "https://your-app.replit.app"}`
+          `Visit the platform to interact: ${process.env.APP_URL ?? ""}`
         );
       } catch {
         await safeSend(sock, jid, "Couldn't join that community. Please try again.");
@@ -214,7 +214,7 @@ async function handleRegistrationStep(
         `🏫 University: ${data.targetUniversity}\n` +
         `${result.freeTrial ? "🆓 Free trial: 5 practice questions\n" : ""}\n` +
         `👉 Login to the platform:\n` +
-        `${process.env.APP_URL ?? "https://your-app.replit.app"}\n\n` +
+        `${process.env.APP_URL ?? ""}\n\n` +
         `Type *!community* to join a study community!`
       );
     } catch (err: any) {

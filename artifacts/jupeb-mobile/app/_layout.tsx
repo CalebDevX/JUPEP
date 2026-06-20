@@ -17,6 +17,7 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ThemeProvider, useThemeContext } from '@/context/ThemeContext';
 import { queryClient, getApiBase } from '@/lib/query-client';
 import { registerPushToken } from '@/src/utils/api';
+import { initApiUrl } from '@/src/utils/api-url';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -238,6 +239,10 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+
+  useEffect(() => {
+    initApiUrl();
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {

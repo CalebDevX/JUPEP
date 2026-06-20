@@ -176,7 +176,7 @@ async function activateStudent(phone: string, reference: string, amount: number,
       "INSERT INTO wa_notifications(phone, message, status) VALUES($1,$2,'pending')",
       [
         phone.trim(),
-        `✅ *Payment Confirmed!*\n\nWelcome to JUPEB Prep 🎓\n\nYour access is now active until *${new Date(sessionEnd).toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" })}*.\n\nVisit the platform to start studying:\n${process.env.APP_URL || "https://your-app.replit.app"}\n\n_Good luck with your exams! 💪_`,
+        `✅ *Payment Confirmed!*\n\nWelcome to JUPEB Prep 🎓\n\nYour access is now active until *${new Date(sessionEnd).toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" })}*.\n\nVisit the platform to start studying:\n${process.env.APP_URL || ""}\n\n_Good luck with your exams! 💪_`,
       ]
     );
   } catch { /* non-fatal */ }

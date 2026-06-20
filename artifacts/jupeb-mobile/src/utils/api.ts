@@ -1,12 +1,10 @@
-import { Platform } from 'react-native';
+import { getBaseUrl } from './api-url';
 
-function resolveBase(): string {
-  if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
-  if (Platform.OS === 'android') return 'http://10.0.2.2:3000';
-  return 'http://localhost:3000';
+export const API_BASE_URL = '';
+
+function base(): string {
+  return getBaseUrl();
 }
-
-export const API_BASE_URL = resolveBase();
 
 export interface Profile {
   fullName: string;
@@ -34,7 +32,7 @@ export interface LoginResult {
 
 // ── New password-based login ──────────────────────────────────────────────────
 export async function loginWithPassword(phone: string, password: string): Promise<Profile> {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+  const response = await fetch(`${base()}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone, password }),
@@ -54,7 +52,7 @@ export async function registerWithPassword(
   accessCode?: string,
   email?: string,
 ): Promise<Profile> {
-  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+  const response = await fetch(`${base()}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -71,7 +69,7 @@ export async function registerWithPassword(
 
 // ── Legacy PIN-based login (kept for backward compat) ─────────────────────────
 export async function loginStep1(phone: string, deviceId?: string): Promise<LoginResult> {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+  const response = await fetch(`${base()}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone, deviceId }),
@@ -84,7 +82,7 @@ export async function loginStep1(phone: string, deviceId?: string): Promise<Logi
 }
 
 export async function loginWithPin(phone: string, pin: string, deviceId?: string): Promise<Profile> {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+  const response = await fetch(`${base()}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone, pin, deviceId }),
@@ -104,7 +102,7 @@ export async function login(phone: string, deviceId?: string): Promise<Profile> 
 }
 
 export async function setPin(phone: string, token: string, pin: string, currentPin?: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/auth/set-pin`, {
+  const response = await fetch(`${base()}/auth/set-pin`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone, token, pin, currentPin }),
@@ -116,7 +114,7 @@ export async function setPin(phone: string, token: string, pin: string, currentP
 }
 
 export async function removePin(phone: string, token: string, currentPin: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/auth/remove-pin`, {
+  const response = await fetch(`${base()}/auth/remove-pin`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone, token, currentPin }),
@@ -130,7 +128,7 @@ export async function removePin(phone: string, token: string, currentPin: string
 export async function verifySession(phone: string, token: string): Promise<boolean> {
   try {
     const response = await fetch(
-      `${API_BASE_URL}/auth/verify-session?phone=${encodeURIComponent(phone)}`,
+      `${base()}/auth/verify-session?phone=${encodeURIComponent(phone)}`,
       { method: 'GET', headers: { 'x-session-token': token } }
     );
     if (!response.ok) return false;
@@ -143,7 +141,7 @@ export async function verifySession(phone: string, token: string): Promise<boole
 
 // ── Activation via access code ─────────────────────────────────────────────────
 export async function activateWithCode(phone: string, accessCode: string): Promise<Profile> {
-  const response = await fetch(`${API_BASE_URL}/auth/activate`, {
+  const response = await fetch(`${base()}/auth/activate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone, accessCode }),
@@ -155,7 +153,7 @@ export async function activateWithCode(phone: string, accessCode: string): Promi
 
 // ── Paystack payment ───────────────────────────────────────────────────────────
 export async function initiatePayment(phone: string, email?: string): Promise<{ authorizationUrl: string; reference: string }> {
-  const response = await fetch(`${API_BASE_URL}/payment/initialize`, {
+  const response = await fetch(`${base()}/payment/initialize`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone, email }),
@@ -166,21 +164,21 @@ export async function initiatePayment(phone: string, email?: string): Promise<{ 
 }
 
 export async function verifyPayment(reference: string): Promise<{ success: boolean; expiresAt?: string }> {
-  const response = await fetch(`${API_BASE_URL}/payment/verify/${encodeURIComponent(reference)}`);
+  const response = await fetch(`${base()}/payment/verify/${encodeURIComponent(reference)}`);
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || 'Payment verification failed');
   return { success: true, expiresAt: data.expiresAt };
 }
 
 export async function getPaymentConfig(): Promise<{ price: number; currency: string; configured: boolean; sessionEnd: string }> {
-  const response = await fetch(`${API_BASE_URL}/payment/config`);
+  const response = await fetch(`${base()}/payment/config`);
   const data = await response.json();
   return data;
 }
 
 // ── OTP / Password Reset ───────────────────────────────────────────────────────
 export async function requestOTP(phone: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/auth/request-otp`, {
+  const response = await fetch(`${base()}/auth/request-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone }),
@@ -190,7 +188,7 @@ export async function requestOTP(phone: string): Promise<void> {
 }
 
 export async function verifyOTP(phone: string, code: string): Promise<string> {
-  const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+  const response = await fetch(`${base()}/auth/verify-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone, code }),
@@ -205,7 +203,7 @@ export async function resetPassword(
   resetToken: string,
   newPassword: string,
 ): Promise<Profile | null> {
-  const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+  const response = await fetch(`${base()}/auth/reset-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone, resetToken, newPassword }),
@@ -217,7 +215,7 @@ export async function resetPassword(
 
 // ── Google Sign-In (mobile, via expo-auth-session access token) ───────────────
 export async function loginWithGoogleToken(accessToken: string): Promise<Profile> {
-  const response = await fetch(`${API_BASE_URL}/auth/google/mobile`, {
+  const response = await fetch(`${base()}/auth/google/mobile`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ accessToken }),
@@ -230,7 +228,7 @@ export async function loginWithGoogleToken(accessToken: string): Promise<Profile
 // ── Push notification token registration ──────────────────────────────────────
 export async function registerPushToken(phone: string, sessionToken: string, pushToken: string): Promise<void> {
   try {
-    await fetch(`${API_BASE_URL}/notifications/register-token`, {
+    await fetch(`${base()}/notifications/register-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, token: sessionToken, pushToken }),
