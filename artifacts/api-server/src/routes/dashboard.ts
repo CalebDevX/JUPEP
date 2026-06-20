@@ -9,7 +9,7 @@ const PAPER_LABELS: Record<string, string> = {
   "001": "1st Incourse",
   "002": "1st Semester Exam",
   "003": "2nd Incourse",
-  "004": "Mock Exam",
+  "004": "2nd Semester",
 };
 
 router.get("/dashboard/summary", async (req, res) => {

@@ -27,7 +27,7 @@ const PAPER_OPTS = [
   { value: "001", label: "001 — 1st Incourse" },
   { value: "002", label: "002 — 1st Semester" },
   { value: "003", label: "003 — 2nd Incourse" },
-  { value: "004", label: "004 — Mock Exam" },
+  { value: "004", label: "004 — 2nd Semester" },
 ];
 
 function shuffle<T>(arr: T[]): T[] {

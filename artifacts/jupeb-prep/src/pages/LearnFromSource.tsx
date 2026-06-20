@@ -71,7 +71,7 @@ const PAPER_LABELS: Record<string, string> = {
   "001": "Paper 001 — 1st Incourse",
   "002": "Paper 002 — 1st Semester",
   "003": "Paper 003 — 2nd Incourse",
-  "004": "Paper 004 — Mock Exam",
+  "004": "Paper 004 — 2nd Semester",
 };
 
 const VOICES = [

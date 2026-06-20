@@ -87,6 +87,7 @@ const navGroups: { label: string | null; items: NavItem[] }[] = [
   {
     label: "My Library",
     items: [
+      { href: "/past-questions",label: "Past Questions", icon: BookOpen,     color: "text-teal-500"    },
       { href: "/bookmarks",    label: "Bookmarks",     icon: Bookmark,      color: "text-amber-500"   },
       { href: "/wrong-answers",label: "Wrong Answers", icon: XCircle,       color: "text-red-500"     },
       { href: "/mock",         label: "Mock Exam",     icon: ClipboardList, color: "text-violet-500"  },

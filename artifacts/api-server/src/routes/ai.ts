@@ -23,7 +23,7 @@ JUPEB Exam Structure (always use these labels):
 - Paper 001 → First In-Course Test
 - Paper 002 → First Semester Exam
 - Paper 003 → Second In-Course Test
-- Paper 004 → Pre-Final Mock Exam
+- Paper 004 → 2nd Semester Exam
 - Final JUPEB → The main JUPEB examination
 
 Grading & Points:
@@ -118,7 +118,7 @@ router.post("/ai/generate-notes", async (req, res) => {
       "001": "1st Incourse",
       "002": "1st Semester Exam",
       "003": "2nd Incourse",
-      "004": "Mock Exam",
+      "004": "2nd Semester",
     };
 
     const ai = getAI();

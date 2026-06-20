@@ -304,7 +304,7 @@ const TOPICS: TopicEntry[] = [
 async function generateNote(topic: TopicEntry, subjectId: number, subjectName: string): Promise<string> {
   const paperLabels: Record<string, string> = {
     "001": "1st Incourse", "002": "1st Semester Exam",
-    "003": "2nd Incourse", "004": "Mock Exam",
+    "003": "2nd Incourse", "004": "2nd Semester",
   };
 
   const prompt = `Generate comprehensive, academically detailed JUPEB lecture notes for the following:

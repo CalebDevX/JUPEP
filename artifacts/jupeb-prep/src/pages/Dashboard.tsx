@@ -118,7 +118,7 @@ const PAPERS = [
   { code: "001", label: "1st Incourse",       short: "Incourse 1", color: "text-violet-400", bg: "bg-violet-500/10", dot: "bg-violet-500" },
   { code: "002", label: "1st Semester Exam",  short: "Semester 1", color: "text-blue-400",   bg: "bg-blue-500/10",   dot: "bg-blue-500"   },
   { code: "003", label: "2nd Incourse",        short: "Incourse 2", color: "text-teal-400",   bg: "bg-teal-500/10",   dot: "bg-teal-500"   },
-  { code: "004", label: "Mock Exam",           short: "Mock",       color: "text-amber-400",  bg: "bg-amber-500/10",  dot: "bg-amber-500"  },
+  { code: "004", label: "2nd Semester",         short: "2nd Sem",       color: "text-amber-400",  bg: "bg-amber-500/10",  dot: "bg-amber-500"  },
 ];
 
 const SUBJECT_COLORS = [
