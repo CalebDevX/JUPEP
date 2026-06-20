@@ -1,5 +1,4 @@
 [build]
-builder = "nixpacks"
 buildCommand = "npm install -g pnpm@10 && pnpm install && pnpm --filter @workspace/api-server run build"
 
 [deploy]
