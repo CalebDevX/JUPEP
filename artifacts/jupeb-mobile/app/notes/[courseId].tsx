@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { useAuth } from '@/context/AuthContext';
 import { useBulkDownload, COURSES_CACHE_KEY } from '@/hooks/useOfflineCache';
 import { getApiBase } from '@/lib/query-client';
 import type { AppColors } from '@/constants/colors';
@@ -52,6 +53,7 @@ export default function CourseScreen() {
   const styles = useMemo(() => makeStyles(C), [C]);
   const [showObjectives, setShowObjectives] = useState(false);
   const { isOnline } = useNetworkStatus();
+  const { isActivated } = useAuth();
 
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -251,7 +253,7 @@ export default function CourseScreen() {
               <TouchableOpacity onPress={clearAll} style={styles.clearBtn} activeOpacity={0.75}>
                 <Ionicons name="trash-outline" size={15} color={C.mutedForeground} />
               </TouchableOpacity>
-            ) : (
+            ) : isActivated ? (
               <TouchableOpacity
                 onPress={downloadAll}
                 disabled={downloading || !isOnline}
@@ -262,6 +264,10 @@ export default function CourseScreen() {
                   ? <ActivityIndicator size="small" color="#fff" />
                   : <Text style={styles.dlBtnText}>{isOnline ? 'Download all' : 'Offline'}</Text>}
               </TouchableOpacity>
+            ) : (
+              <View style={[styles.dlBtn, styles.dlBtnDisabled]}>
+                <Ionicons name="lock-closed-outline" size={12} color="rgba(255,255,255,0.4)" />
+              </View>
             )}
           </View>
 

@@ -74,13 +74,14 @@ router.get("/admin/access-codes", adminAuth, async (_req, res) => {
 
 router.post("/admin/access-codes", adminAuth, async (req, res) => {
   try {
-    const { code, label, maxActivations = 100, price = 0 } = req.body;
+    const { code, label, maxActivations = 100, price = 0, expiresAt } = req.body;
     if (!code?.trim() || !label?.trim()) {
       return res.status(400).json({ error: "Code and label are required." });
     }
+    const expiresAtVal = expiresAt ? new Date(expiresAt) : null;
     await pool.query(
-      "INSERT INTO access_codes(code,label,max_activations,price,is_active) VALUES($1,$2,$3,$4,true)",
-      [code.trim().toUpperCase(), label.trim(), maxActivations, price]
+      "INSERT INTO access_codes(code,label,max_activations,price,is_active,expires_at) VALUES($1,$2,$3,$4,true,$5)",
+      [code.trim().toUpperCase(), label.trim(), maxActivations, price, expiresAtVal]
     );
     res.json({ success: true });
   } catch (err: any) {

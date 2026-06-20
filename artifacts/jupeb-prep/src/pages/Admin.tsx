@@ -253,7 +253,7 @@ function CodesTab({ pin }: { pin: string }) {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ code: "", label: "", maxActivations: "100", price: "0" });
+  const [form, setForm] = useState({ code: "", label: "", maxActivations: "10", price: "0", expiresAt: "" });
   const [toggling, setToggling] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
 
@@ -274,9 +274,10 @@ function CodesTab({ pin }: { pin: string }) {
         label: form.label,
         maxActivations: parseInt(form.maxActivations),
         price: parseInt(form.price),
+        expiresAt: form.expiresAt || null,
       });
       toast({ title: `✅ Code "${form.code.toUpperCase()}" created!` });
-      setForm({ code: "", label: "", maxActivations: "100", price: "0" });
+      setForm({ code: "", label: "", maxActivations: "10", price: "0", expiresAt: "" });
       setShowForm(false);
       load();
     } catch (e: any) {
@@ -382,6 +383,15 @@ function CodesTab({ pin }: { pin: string }) {
                     min="0"
                   />
                 </Field>
+                <Field label="Expires On (optional)">
+                  <Input
+                    type="date"
+                    value={form.expiresAt}
+                    onChange={e => setForm(p => ({ ...p, expiresAt: e.target.value }))}
+                    className={inputCls}
+                    min={new Date().toISOString().split("T")[0]}
+                  />
+                </Field>
                 <div className="col-span-2 md:col-span-4 flex gap-3">
                   <Button type="submit" disabled={creating} className="bg-violet-600 hover:bg-violet-500 h-9 text-sm">
                     {creating ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />Creating…</> : "Create Code"}
@@ -405,7 +415,7 @@ function CodesTab({ pin }: { pin: string }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/8 bg-white/3">
-                {["Code", "Label", "Price", "Used / Max", "Revenue", "Status", "Actions"].map(h => (
+                {["Code", "Label", "Price", "Used / Max", "Expires", "Revenue", "Status", "Actions"].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold text-white/40 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -428,6 +438,13 @@ function CodesTab({ pin }: { pin: string }) {
                             style={{ width: `${pct}%` }} />
                         </div>
                       </div>
+                    </td>
+                    <td className="px-4 py-3 text-xs whitespace-nowrap">
+                      {c.expires_at ? (
+                        new Date(c.expires_at) < new Date()
+                          ? <span className="text-red-400 font-semibold">Expired</span>
+                          : <span className="text-amber-300">{new Date(c.expires_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}</span>
+                      ) : <span className="text-white/20">Never</span>}
                     </td>
                     <td className="px-4 py-3 font-bold text-amber-400">
                       {parseInt(c.revenue_generated) > 0 ? `₦${parseInt(c.revenue_generated).toLocaleString()}` : <span className="text-white/20">—</span>}

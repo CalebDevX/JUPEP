@@ -37,7 +37,7 @@ function buildProfile(s: any, sessionToken: string) {
   const rawCode = s.access_code_used;
   const expiresAt = s.expires_at ? new Date(s.expires_at) : null;
   const sessionActive = expiresAt ? expiresAt > new Date() : false;
-  const isActivated = (rawCode && rawCode !== "FREE_TRIAL") || (s.payment_status === "paid" && sessionActive);
+  const isActivated = (rawCode && rawCode !== "FREE_TRIAL" && (!expiresAt || sessionActive)) || (s.payment_status === "paid" && sessionActive);
   return {
     fullName: s.full_name,
     firstName: s.full_name.split(" ")[0],
@@ -94,6 +94,9 @@ router.post("/auth/register", async (req, res) => {
       if (codeRecord.activationCount >= codeRecord.maxActivations) {
         return res.status(400).json({ error: "This access code has reached its maximum number of uses." });
       }
+      if (codeRecord.expiresAt && new Date(codeRecord.expiresAt) < new Date()) {
+        return res.status(400).json({ error: "This access code has expired." });
+      }
       await db.update(accessCodesTable)
         .set({ activationCount: codeRecord.activationCount + 1 })
         .where(eq(accessCodesTable.code, code));
@@ -102,15 +105,22 @@ router.post("/auth/register", async (req, res) => {
     const pwHash = hashPassword(phone.trim(), password.trim());
     const pinHash = (pin && /^\d{6}$/.test(pin)) ? hashPin(phone.trim(), pin) : null;
 
+    // Retrieve code's expires_at to propagate to the student record
+    let codeExpiresAt: Date | null = null;
+    if (!isFreeTrialRegistration) {
+      const [cr] = await db.select().from(accessCodesTable).where(eq(accessCodesTable.code, code));
+      if (cr?.expiresAt) codeExpiresAt = new Date(cr.expiresAt);
+    }
+
     await pool.query(
-      `INSERT INTO students(full_name, phone, email, subjects, target_university, target_grade, access_code_used, password_hash)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+      `INSERT INTO students(full_name, phone, email, subjects, target_university, target_grade, access_code_used, password_hash, expires_at)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
        ON CONFLICT(phone) DO UPDATE SET
-         full_name=$1, subjects=$4, target_university=$5, target_grade=$6, password_hash=$8`,
+         full_name=$1, subjects=$4, target_university=$5, target_grade=$6, password_hash=$8, expires_at=COALESCE($9, students.expires_at)`,
       [
         fullName.trim(), phone.trim(), email?.trim() || null,
         JSON.stringify(subjects), targetUniversity?.trim() || null,
-        targetGrade || "aaa1", code, pwHash,
+        targetGrade || "aaa1", code, pwHash, codeExpiresAt,
       ]
     );
 
@@ -144,10 +154,14 @@ router.post("/auth/activate", async (req, res) => {
     if (codeRecord.activationCount >= codeRecord.maxActivations) {
       return res.status(400).json({ error: "This access code has reached its maximum number of uses." });
     }
+    if (codeRecord.expiresAt && new Date(codeRecord.expiresAt) < new Date()) {
+      return res.status(400).json({ error: "This access code has expired." });
+    }
 
+    const codeExpiresAt = codeRecord.expiresAt ? new Date(codeRecord.expiresAt) : null;
     const result = await pool.query(
-      "UPDATE students SET access_code_used=$1 WHERE phone=$2 RETURNING *",
-      [code, phone.trim()]
+      "UPDATE students SET access_code_used=$1, expires_at=COALESCE($3, expires_at) WHERE phone=$2 RETURNING *",
+      [code, phone.trim(), codeExpiresAt]
     );
     if (!result.rows.length) return res.status(404).json({ error: "Account not found." });
 
