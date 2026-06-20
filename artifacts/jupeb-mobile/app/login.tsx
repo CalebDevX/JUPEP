@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
   ScrollView, Animated, Image,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -80,6 +81,7 @@ export default function LoginScreen() {
   const [otpSent, setOtpSent]           = useState(false);
   const otpInputRef                     = useRef<TextInput>(null);
 
+  const router = useRouter();
   const { loginWithPass, loginWithGoogle, loginPhone, loginPin, register } = useAuth();
 
   useEffect(() => {
@@ -88,7 +90,10 @@ export default function LoginScreen() {
       if (!token) { Alert.alert('Google Sign-In failed', 'No access token received.'); return; }
       setGoogleLoading(true);
       loginWithGoogle(token)
-        .then(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success))
+        .then(() => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          router.replace('/(tabs)');
+        })
         .catch((err: any) => Alert.alert('Google Sign-In failed', err.message || 'Please try again.'))
         .finally(() => setGoogleLoading(false));
     } else if (googleResponse?.type === 'error') {
@@ -132,6 +137,7 @@ export default function LoginScreen() {
         try {
           await loginWithPass(cleanPhone, password.trim());
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          router.replace('/(tabs)');
           return;
         } catch (err: any) {
           if (err.message?.includes('Incorrect password') || err.message?.includes('No account')) {
@@ -149,6 +155,7 @@ export default function LoginScreen() {
         setTimeout(() => pinInputRef.current?.focus(), 100);
       } else {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        router.replace('/(tabs)');
       }
     } catch (err: any) {
       if (err.requiresPassword === true || err.message === 'PASSWORD_REQUIRED') {
@@ -174,6 +181,7 @@ export default function LoginScreen() {
       setLoading(true);
       await loginPin(phone.replace(/\s/g, ''), digits);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace('/(tabs)');
     } catch (err: any) {
       setPin('');
       triggerShake();
@@ -215,6 +223,7 @@ export default function LoginScreen() {
         subjects, accessCode.trim() || undefined,
       );
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace('/(tabs)');
     } catch (err: any) {
       triggerShake();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

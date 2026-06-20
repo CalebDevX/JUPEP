@@ -26,6 +26,16 @@ pool.query(`CREATE TABLE IF NOT EXISTS otp_codes (
   created_at TIMESTAMP DEFAULT NOW()
 )`).catch(() => {});
 
+// WhatsApp notification queue
+pool.query(`CREATE TABLE IF NOT EXISTS wa_notifications (
+  id SERIAL PRIMARY KEY,
+  phone TEXT NOT NULL,
+  message TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  sent_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW()
+)`).catch(() => {});
+
 function hashPin(phone: string, pin: string): string {
   return crypto.createHash("sha256").update(`${phone.trim()}:${pin}`).digest("hex");
 }
