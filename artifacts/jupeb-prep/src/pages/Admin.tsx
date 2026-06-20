@@ -621,7 +621,7 @@ function AntiCheatTab({ pin }: { pin: string }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/8 bg-white/3">
-                {["Student", "Subject", "Paper", "Score", "Time / Q", "Total Time", "Date", "Status"].map(h => (
+                {["Student", "Subject", "Exam Type", "Score", "Time / Q", "Total Time", "Date", "Status"].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold text-white/40 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -633,7 +633,17 @@ function AntiCheatTab({ pin }: { pin: string }) {
                   <tr key={a.id} className={cn("border-b border-white/5 transition-colors", a.is_flagged ? "bg-red-500/5 hover:bg-red-500/8" : "hover:bg-white/2")}>
                     <td className="px-4 py-3 font-medium text-white/90 whitespace-nowrap">{a.student_name || a.student_phone}</td>
                     <td className="px-4 py-3 text-white/60 text-xs">{a.subject_name || "—"}</td>
-                    <td className="px-4 py-3 text-white/50 font-mono text-xs">{a.paper_code || "—"}</td>
+                    <td className="px-4 py-3 text-white/50 text-xs">
+                      {(() => {
+                        const code = a.paper_code || "";
+                        const LABELS: Record<string,string> = {
+                          first_incourse: "1st In-Course", first_semester: "1st Semester",
+                          second_incourse: "2nd In-Course", mock: "Mock Exam", final_jupeb: "Final JUPEB",
+                          "001":"Paper 001","002":"Paper 002","003":"Paper 003","004":"Paper 004",
+                        };
+                        return LABELS[code] ?? (code || "—");
+                      })()}
+                    </td>
                     <td className="px-4 py-3">
                       <span className={cn("font-bold text-xs",
                         a.percentage >= 70 ? "text-emerald-400" :
@@ -1065,7 +1075,16 @@ function QuestionsTab() {
                 <div className="flex-1 min-w-0 space-y-1.5">
                   <div className="flex gap-2 flex-wrap">
                     <span className="text-[10px] bg-violet-500/15 text-violet-300 border border-violet-500/20 px-2 py-0.5 rounded-lg">{q.subjectName}</span>
-                    <span className="text-[10px] bg-white/8 text-white/50 border border-white/10 px-2 py-0.5 rounded-lg">{q.paper}</span>
+                    <span className="text-[10px] bg-blue-500/15 text-blue-300 border border-blue-500/20 px-2 py-0.5 rounded-lg">
+                      {(() => {
+                        const ETLABELS: Record<string,string> = {
+                          first_incourse:"1st In-Course",first_semester:"1st Semester",
+                          second_incourse:"2nd In-Course",mock:"Mock",final_jupeb:"Final JUPEB",
+                        };
+                        return q.examType ? (ETLABELS[q.examType] ?? q.examType) : `Paper ${q.paper}`;
+                      })()}
+                    </span>
+                    <span className="text-[10px] bg-white/8 text-white/50 border border-white/10 px-2 py-0.5 rounded-lg">{q.year}</span>
                     <span className="text-[10px] bg-white/8 text-white/50 border border-white/10 px-2 py-0.5 rounded-lg capitalize">{q.questionType}</span>
                   </div>
                   <p className="text-sm text-white/75 line-clamp-2 leading-snug">{q.questionText}</p>
