@@ -3,6 +3,7 @@ import { db, pool } from "@workspace/db";
 import { notesTable, subjectsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { getAI } from "../lib/gemini-keys";
+import { requireAuth } from "../lib/session-auth";
 
 const router = Router();
 
@@ -19,7 +20,7 @@ pool.query(`CREATE TABLE IF NOT EXISTS chat_messages (
 pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_messages_phone ON chat_messages(phone)`).catch(() => {});
 
 // ── GET chat history ──────────────────────────────────────────────────────────
-router.get("/ai/chat-history", async (req, res) => {
+router.get("/ai/chat-history", requireAuth, async (req, res) => {
   try {
     const { phone, limit = "60" } = req.query as Record<string, string>;
     if (!phone?.trim()) return res.status(400).json({ error: "phone is required" });
@@ -34,7 +35,7 @@ router.get("/ai/chat-history", async (req, res) => {
 });
 
 // ── DELETE chat history ───────────────────────────────────────────────────────
-router.delete("/ai/chat-history", async (req, res) => {
+router.delete("/ai/chat-history", requireAuth, async (req, res) => {
   try {
     const { phone } = req.body;
     if (!phone?.trim()) return res.status(400).json({ error: "phone is required" });

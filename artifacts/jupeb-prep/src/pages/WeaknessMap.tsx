@@ -43,7 +43,10 @@ export default function WeaknessMap() {
       setLoading(true);
       try {
         // Get wrong answer stats
-        const r = await fetch(`${BASE}/api/student/wrong-answers/stats?phone=${encodeURIComponent(profile.phone)}`);
+        const token = localStorage.getItem("jupeb_session_token") || "";
+        const r = await fetch(`${BASE}/api/student/wrong-answers/stats?phone=${encodeURIComponent(profile.phone)}`, {
+          headers: { "x-session-token": token },
+        });
         if (!r.ok) { setLoading(false); return; }
         const stats = await r.json();
 

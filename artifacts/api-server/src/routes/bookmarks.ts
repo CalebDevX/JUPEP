@@ -2,11 +2,12 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { bookmarksTable, questionsTable, notesTable, subjectsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
+import { requireAuth } from "../lib/session-auth";
 
 const router = Router();
 
 // GET /api/bookmarks?phone=...&type=question|note
-router.get("/bookmarks", async (req, res) => {
+router.get("/bookmarks", requireAuth, async (req, res) => {
   const { phone, type } = req.query as Record<string, string>;
   if (!phone) return res.status(400).json({ error: "phone required" });
 
@@ -20,7 +21,6 @@ router.get("/bookmarks", async (req, res) => {
       .where(and(...conditions))
       .orderBy(desc(bookmarksTable.createdAt));
 
-    // Enrich with actual item data
     const enriched = await Promise.all(
       bookmarks.map(async (bm) => {
         if (bm.itemType === "question") {
@@ -55,7 +55,7 @@ router.get("/bookmarks", async (req, res) => {
 });
 
 // POST /api/bookmarks/toggle
-router.post("/bookmarks/toggle", async (req, res) => {
+router.post("/bookmarks/toggle", requireAuth, async (req, res) => {
   const { phone, itemType, itemId } = req.body as { phone: string; itemType: string; itemId: string };
   if (!phone || !itemType || !itemId) return res.status(400).json({ error: "phone, itemType, itemId required" });
 
@@ -84,7 +84,7 @@ router.post("/bookmarks/toggle", async (req, res) => {
 });
 
 // GET /api/bookmarks/check?phone=...&itemType=...&itemId=...
-router.get("/bookmarks/check", async (req, res) => {
+router.get("/bookmarks/check", requireAuth, async (req, res) => {
   const { phone, itemType, itemId } = req.query as Record<string, string>;
   if (!phone || !itemType || !itemId) return res.status(400).json({ error: "params required" });
 

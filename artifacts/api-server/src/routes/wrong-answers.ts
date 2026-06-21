@@ -2,11 +2,12 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { wrongAnswersTable, questionsTable, subjectsTable } from "@workspace/db";
 import { eq, and, isNull, desc } from "drizzle-orm";
+import { requireAuth } from "../lib/session-auth";
 
 const router = Router();
 
 // GET /api/student/wrong-answers?phone=...&subjectId=...&paper=...&limit=...&offset=...
-router.get("/student/wrong-answers", async (req, res) => {
+router.get("/student/wrong-answers", requireAuth, async (req, res) => {
   const { phone, subjectId, paper } = req.query as Record<string, string>;
   const limit = Math.min(parseInt(req.query.limit as string || "30"), 100);
   const offset = Math.max(0, parseInt(req.query.offset as string || "0"));
@@ -51,7 +52,7 @@ router.get("/student/wrong-answers", async (req, res) => {
 });
 
 // POST /api/student/wrong-answers/:questionId/mark-revised
-router.post("/student/wrong-answers/:questionId/mark-revised", async (req, res) => {
+router.post("/student/wrong-answers/:questionId/mark-revised", requireAuth, async (req, res) => {
   const { phone } = req.body as { phone: string };
   const questionId = parseInt(req.params.questionId);
   if (!phone) return res.status(400).json({ error: "phone required" });
@@ -74,7 +75,7 @@ router.post("/student/wrong-answers/:questionId/mark-revised", async (req, res) 
 });
 
 // GET /api/student/wrong-answers/stats?phone=...
-router.get("/student/wrong-answers/stats", async (req, res) => {
+router.get("/student/wrong-answers/stats", requireAuth, async (req, res) => {
   const { phone } = req.query as { phone: string };
   if (!phone) return res.status(400).json({ error: "phone required" });
 

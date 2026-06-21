@@ -18,7 +18,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format, formatDistanceToNow } from "date-fns";
 
 const BASE = import.meta.env.VITE_API_URL || "";
-const ADMIN_PIN_KEY = "JUPEB2024";
 
 type AdminTab = "overview" | "students" | "codes" | "revenue" | "questions" | "anticheat" | "announcements" | "notes" | "settings" | "branding" | "whatsapp" | "communities" | "pushnotify";
 
@@ -934,7 +933,7 @@ function QuestionsTab() {
       const r = await fetch(`${BASE}/api/questions/bulk`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminPin: ADMIN_PIN_KEY, autoExplain, questions: parsed }),
+        body: JSON.stringify({ adminPin: pin, autoExplain, questions: parsed }),
       });
       const data = await r.json();
       if (!r.ok) { setError(data.error ?? "Upload failed"); return; }
@@ -1308,7 +1307,7 @@ function AnnouncementsTab() {
     try {
       const r = await fetch(`${BASE}/api/announcements`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, adminPin: ADMIN_PIN_KEY }),
+        body: JSON.stringify({ ...form, adminPin: pin }),
       });
       if (r.ok) {
         const ann = await r.json();
@@ -1323,7 +1322,7 @@ function AnnouncementsTab() {
     if (!confirm("Delete this announcement?")) return;
     setDeleting(id);
     try {
-      const r = await fetch(`${BASE}/api/announcements/${id}`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ adminPin: ADMIN_PIN_KEY }) });
+      const r = await fetch(`${BASE}/api/announcements/${id}`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ adminPin: pin }) });
       if (r.ok) { setAnnouncements(p => p.filter(a => a.id !== id)); toast({ title: "Deleted" }); }
     } finally { setDeleting(null); }
   };
@@ -1574,7 +1573,7 @@ function SettingsTab() {
     try {
       const r = await fetch(`${BASE}/api/settings`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key, value, adminPin: ADMIN_PIN_KEY }),
+        body: JSON.stringify({ key, value, adminPin: pin }),
       });
       if (r.ok) { setSettings(p => ({ ...p, [key]: value })); toast({ title: "Setting saved" }); }
       else toast({ title: "Failed to save", variant: "destructive" });
@@ -1589,7 +1588,7 @@ function SettingsTab() {
     try {
       const r = await fetch(`${BASE}/api/settings`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "gemini_api_keys", value: JSON.stringify(keys), adminPin: ADMIN_PIN_KEY }),
+        body: JSON.stringify({ key: "gemini_api_keys", value: JSON.stringify(keys), adminPin: pin }),
       });
       if (r.ok) {
         setSettings(p => ({ ...p, gemini_api_keys: JSON.stringify(keys) }));
@@ -2639,21 +2638,34 @@ function CommunitiesTab({ pin }: { pin: string }) {
 
 export default function AdminPanel() {
   const [isAuthenticated, setIsAuthenticated] = useState(localStorage.getItem("admin_auth") === "true");
-  const [pin, setPin] = useState(isAuthenticated ? ADMIN_PIN_KEY : "");
+  const [pin, setPin] = useState(isAuthenticated ? (localStorage.getItem("admin_pin") || "") : "");
   const [inputPin, setInputPin] = useState("");
+  const [verifying, setVerifying] = useState(false);
   const { toast } = useToast();
   const [tab, setTab] = useState<AdminTab>("overview");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputPin === ADMIN_PIN_KEY) {
-      setIsAuthenticated(true);
-      setPin(ADMIN_PIN_KEY);
-      localStorage.setItem("admin_auth", "true");
-      toast({ title: "Admin access granted" });
-    } else {
-      toast({ title: "Wrong PIN", variant: "destructive" });
-      setInputPin("");
+    if (!inputPin.trim()) return;
+    setVerifying(true);
+    try {
+      const r = await fetch(`${BASE}/api/admin/overview`, {
+        headers: { "x-admin-pin": inputPin.trim() },
+      });
+      if (r.ok) {
+        setIsAuthenticated(true);
+        setPin(inputPin.trim());
+        localStorage.setItem("admin_auth", "true");
+        localStorage.setItem("admin_pin", inputPin.trim());
+        toast({ title: "Admin access granted" });
+      } else {
+        toast({ title: "Wrong PIN", variant: "destructive" });
+        setInputPin("");
+      }
+    } catch {
+      toast({ title: "Connection error. Try again.", variant: "destructive" });
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -2661,6 +2673,7 @@ export default function AdminPanel() {
     setIsAuthenticated(false);
     setPin("");
     localStorage.removeItem("admin_auth");
+    localStorage.removeItem("admin_pin");
   };
 
   if (!isAuthenticated) {
@@ -2678,8 +2691,8 @@ export default function AdminPanel() {
             <form onSubmit={handleLogin} className="space-y-4">
               <Input type="password" value={inputPin} onChange={e => setInputPin(e.target.value)}
                 placeholder="Enter PIN" className={cn(inputCls, "text-center text-lg tracking-widest h-12")} autoFocus />
-              <Button type="submit" className="w-full h-12 bg-violet-600 hover:bg-violet-500 font-bold">
-                Verify Access
+              <Button type="submit" disabled={verifying} className="w-full h-12 bg-violet-600 hover:bg-violet-500 font-bold">
+                {verifying ? "Verifying…" : "Verify Access"}
               </Button>
             </form>
           </div>

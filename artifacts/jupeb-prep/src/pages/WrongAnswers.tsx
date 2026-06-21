@@ -11,6 +11,10 @@ function getProfile() {
   try { return JSON.parse(localStorage.getItem("jupeb_profile") || "null"); } catch { return null; }
 }
 
+function getToken() {
+  return localStorage.getItem("jupeb_session_token") || "";
+}
+
 const PAPER_LABELS: Record<string, string> = {
   "001": "1st In-Course", "002": "1st Semester",
   "003": "2nd In-Course", "004": "2nd Semester", "mock": "Mock",
@@ -41,7 +45,9 @@ export default function WrongAnswers() {
     const params = new URLSearchParams({ phone: profile.phone });
     if (subjectFilter !== "all") params.set("subjectId", subjectFilter);
     if (paperFilter !== "all") params.set("paper", paperFilter);
-    const r = await fetch(`${BASE}/api/student/wrong-answers?${params}`);
+    const r = await fetch(`${BASE}/api/student/wrong-answers?${params}`, {
+      headers: { "x-session-token": getToken() },
+    });
     if (r.ok) setItems(await r.json());
     setLoading(false);
   }
@@ -52,7 +58,7 @@ export default function WrongAnswers() {
     if (!profile?.phone) return;
     setMarking(questionId);
     await fetch(`${BASE}/api/student/wrong-answers/${questionId}/mark-revised`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", "x-session-token": getToken() },
       body: JSON.stringify({ phone: profile.phone }),
     });
     setItems(prev => prev.filter(i => i.questionId !== questionId));

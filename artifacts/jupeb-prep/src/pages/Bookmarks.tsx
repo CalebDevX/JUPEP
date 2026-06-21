@@ -11,6 +11,10 @@ function getProfile() {
   try { return JSON.parse(localStorage.getItem("jupeb_profile") || "null"); } catch { return null; }
 }
 
+function getToken() {
+  return localStorage.getItem("jupeb_session_token") || "";
+}
+
 const PAPER_LABELS: Record<string, string> = {
   "001": "1st In-Course", "002": "1st Semester",
   "003": "2nd In-Course", "004": "2nd Semester", "mock": "Mock",
@@ -33,7 +37,9 @@ export default function Bookmarks() {
   async function loadBookmarks() {
     if (!profile?.phone) return;
     setLoading(true);
-    const r = await fetch(`${BASE}/api/bookmarks?phone=${encodeURIComponent(profile.phone)}&type=${tab}`);
+    const r = await fetch(`${BASE}/api/bookmarks?phone=${encodeURIComponent(profile.phone)}&type=${tab}`, {
+      headers: { "x-session-token": getToken() },
+    });
     if (r.ok) setItems(await r.json());
     setLoading(false);
   }
@@ -44,7 +50,7 @@ export default function Bookmarks() {
     if (!profile?.phone) return;
     setRemoving(item.id);
     await fetch(`${BASE}/api/bookmarks/toggle`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", "x-session-token": getToken() },
       body: JSON.stringify({ phone: profile.phone, itemType: item.itemType, itemId: item.itemId }),
     });
     setItems(prev => prev.filter(i => i.id !== item.id));
