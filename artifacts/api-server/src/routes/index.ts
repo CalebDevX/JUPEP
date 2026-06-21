@@ -22,6 +22,7 @@ import notificationsRouter from "./notifications";
 import wrongAnswersRouter from "./wrong-answers";
 import bookmarksRouter from "./bookmarks";
 import referralsRouter from "./referrals";
+import bugReportsRouter from "./bug-reports";
 
 const router: IRouter = Router();
 
@@ -48,5 +49,6 @@ router.use(notificationsRouter);
 router.use(wrongAnswersRouter);
 router.use(bookmarksRouter);
 router.use(referralsRouter);
+router.use(bugReportsRouter);
 
 export default router;

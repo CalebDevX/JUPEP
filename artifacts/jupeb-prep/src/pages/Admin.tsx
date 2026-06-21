@@ -9,7 +9,7 @@ import {
   CheckCircle, Loader2, Timer, Brain,
   LayoutDashboard, Users, KeyRound, TrendingUp, BookOpen,
   ShieldAlert, RefreshCw, ToggleLeft, ToggleRight, DollarSign,
-  BadgeAlert, Clock, Target, Activity,
+  BadgeAlert, Clock, Target, Activity, Bug,
 } from "lucide-react";
 import { useListSubjects, useCreateQuestion, useDeleteQuestion, useListQuestions } from "@workspace/api-client-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,7 +19,7 @@ import { format, formatDistanceToNow } from "date-fns";
 
 const BASE = import.meta.env.VITE_API_URL || "";
 
-type AdminTab = "overview" | "students" | "codes" | "revenue" | "questions" | "anticheat" | "announcements" | "notes" | "settings" | "branding" | "whatsapp" | "communities" | "pushnotify";
+type AdminTab = "overview" | "students" | "codes" | "revenue" | "questions" | "anticheat" | "announcements" | "notes" | "settings" | "branding" | "whatsapp" | "communities" | "pushnotify" | "bugreports";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -2514,6 +2514,144 @@ function PushNotifyTab({ pin }: { pin: string }) {
   );
 }
 
+// ─── Bug Reports Tab ──────────────────────────────────────────────────────────
+
+function BugReportsTab({ pin }: { pin: string }) {
+  const { toast } = useToast();
+  const [reports, setReports] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "open" | "resolved" | "wont-fix">("all");
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
+
+  const fetchReports = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`${BASE}/api/bug-reports?status=${filter}`, { headers: { "x-admin-pin": pin } });
+      const data = await r.json();
+      setReports(Array.isArray(data) ? data : []);
+    } catch { setReports([]); } finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchReports(); }, [filter]);
+
+  const updateStatus = async (id: number, status: string) => {
+    await fetch(`${BASE}/api/bug-reports/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "x-admin-pin": pin },
+      body: JSON.stringify({ status }),
+    });
+    toast({ title: "Status updated" });
+    fetchReports();
+  };
+
+  const deleteReport = async (id: number) => {
+    if (!confirm("Delete this bug report?")) return;
+    await fetch(`${BASE}/api/bug-reports/${id}`, { method: "DELETE", headers: { "x-admin-pin": pin } });
+    toast({ title: "Report deleted" });
+    fetchReports();
+  };
+
+  const statusBadge: Record<string, string> = {
+    open: "bg-amber-500/15 text-amber-400 border-amber-500/20",
+    resolved: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20",
+    "wont-fix": "bg-white/8 text-white/40 border-white/10",
+  };
+
+  return (
+    <div className="space-y-5">
+      <Section title="Bug Reports">
+        <div className="flex items-center gap-2 flex-wrap">
+          {(["all", "open", "resolved", "wont-fix"] as const).map(s => (
+            <button key={s} onClick={() => setFilter(s)}
+              className={cn("px-3 py-1.5 rounded-lg text-xs font-semibold capitalize border transition-all",
+                filter === s ? "bg-violet-500/20 border-violet-500/30 text-violet-300" : "bg-white/5 border-white/10 text-white/40 hover:text-white/60"
+              )}>
+              {s === "wont-fix" ? "Won't Fix" : s.charAt(0).toUpperCase() + s.slice(1)}
+            </button>
+          ))}
+          <button onClick={fetchReports} className="ml-auto p-1.5 rounded-lg text-white/40 hover:text-white/70 hover:bg-white/8 transition-all">
+            <RefreshCw className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12 gap-2 text-white/30">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+          </div>
+        ) : reports.length === 0 ? (
+          <div className="text-center py-12 text-white/25 text-sm">No bug reports yet.</div>
+        ) : (
+          <div className="space-y-3">
+            {reports.map((r: any) => (
+              <div key={r.id} className="rounded-xl border border-white/8 bg-white/3 p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white leading-relaxed">{r.description}</p>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-white/40">
+                      {r.phone && <span>📱 {r.phone}</span>}
+                      {r.full_name && <span>👤 {r.full_name}</span>}
+                      {r.page && <span>📄 {r.page}</span>}
+                      <span>{formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}</span>
+                    </div>
+                  </div>
+                  <span className={cn("shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full border capitalize", statusBadge[r.status] || statusBadge.open)}>
+                    {r.status === "wont-fix" ? "Won't Fix" : r.status}
+                  </span>
+                </div>
+
+                {r.image && (
+                  <button onClick={() => setExpandedImage(r.image)} className="block">
+                    <img src={r.image} alt="Screenshot" className="max-h-32 rounded-lg border border-white/10 object-cover hover:opacity-80 transition-opacity" />
+                  </button>
+                )}
+
+                <div className="flex items-center gap-2 pt-1">
+                  {r.status !== "resolved" && (
+                    <button onClick={() => updateStatus(r.id, "resolved")}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all">
+                      <CheckCircle className="h-3 w-3" /> Resolve
+                    </button>
+                  )}
+                  {r.status !== "wont-fix" && (
+                    <button onClick={() => updateStatus(r.id, "wont-fix")}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-white/5 border border-white/10 text-white/40 hover:text-white/60 hover:bg-white/8 transition-all">
+                      Won't Fix
+                    </button>
+                  )}
+                  {r.status !== "open" && (
+                    <button onClick={() => updateStatus(r.id, "open")}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 transition-all">
+                      Reopen
+                    </button>
+                  )}
+                  <button onClick={() => deleteReport(r.id)}
+                    className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-red-500/8 border border-red-500/15 text-red-400/70 hover:bg-red-500/15 hover:text-red-400 transition-all">
+                    <Trash2 className="h-3 w-3" /> Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+
+      {/* Expanded image lightbox */}
+      <AnimatePresence>
+        {expandedImage && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setExpandedImage(null)}
+              className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+              <motion.img initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+                src={expandedImage} alt="Screenshot" className="max-h-full max-w-full rounded-xl shadow-2xl" />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ─── Tab Navigation ───────────────────────────────────────────────────────────
 
 const ADMIN_TABS: { id: AdminTab; label: string; icon: any; desc: string }[] = [
@@ -2530,6 +2668,7 @@ const ADMIN_TABS: { id: AdminTab; label: string; icon: any; desc: string }[] = [
   { id: "whatsapp",      label: "WhatsApp",      icon: Megaphone,       desc: "Bot & notifications" },
   { id: "settings",      label: "Settings",      icon: Timer,           desc: "Timers & config" },
   { id: "branding",      label: "Branding",      icon: ImagePlus,       desc: "Bot image" },
+  { id: "bugreports",   label: "Bug Reports",   icon: Bug,             desc: "User-submitted bugs" },
 ];
 
 // ─── Communities Tab ──────────────────────────────────────────────────────────
@@ -2762,6 +2901,7 @@ export default function AdminPanel() {
               {tab === "whatsapp"      && <WhatsAppTab pin={pin} />}
               {tab === "settings"      && <SettingsTab />}
               {tab === "branding"      && <BrandingTab />}
+              {tab === "bugreports"   && <BugReportsTab pin={pin} />}
             </motion.div>
           </AnimatePresence>
         </div>

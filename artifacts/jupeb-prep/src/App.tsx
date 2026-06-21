@@ -35,6 +35,7 @@ import MockExam from "@/pages/MockExam";
 import Bookmarks from "@/pages/Bookmarks";
 import WeaknessMap from "@/pages/WeaknessMap";
 import { SessionExpiredGate } from "@/components/SessionExpiredGate";
+import { BugReportModal } from "@/components/BugReportModal";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -91,7 +92,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
     return <SessionExpiredGate />;
   }
 
-  return <>{children}</>;
+  return <>{children}<BugReportModal /></>;
 }
 
 function ProtectedRoutes() {
