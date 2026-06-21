@@ -1,8 +1,7 @@
 {
   "name": "jupeb-mobile",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "expo-router/entry",
-  "packageManager": "npm@10.9.2",
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo/ngrok": "^4.1.3",
