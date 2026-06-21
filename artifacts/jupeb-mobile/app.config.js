@@ -74,6 +74,6 @@ module.exports = {
         projectId: '098db203-360d-4059-af9a-2769bebd0e64',
       },
     },
-    owner: 'achek-team',
+    owner: 'achek',
   },
 };
