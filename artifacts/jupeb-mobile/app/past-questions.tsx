@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useTheme } from '@/context/ThemeContext';
 import { getApiBase } from '@/lib/query-client';
+import { ErrorCard } from '@/components/ErrorCard';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PAPER_LABELS: Record<string, string> = {
@@ -174,24 +175,30 @@ export default function PastQuestionsScreen() {
 
   const [papers, setPapers] = useState<PastPaper[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [selected, setSelected] = useState<PastPaper | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loadingQ, setLoadingQ] = useState(false);
+  const [loadQError, setLoadQError] = useState(false);
   const [search, setSearch] = useState('');
 
-  // ── Load past papers list ──────────────────────────────────────────────────
-  useEffect(() => {
+  const loadPapers = useCallback(() => {
     setLoading(true);
+    setLoadError(false);
     fetch(`${getApiBase()}/questions/past-papers`)
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
       .then(data => { setPapers(Array.isArray(data) ? data : []); setLoading(false); })
-      .catch(() => setLoading(false));
+      .catch(() => { setLoadError(true); setLoading(false); });
   }, []);
+
+  // ── Load past papers list ──────────────────────────────────────────────────
+  useEffect(() => { loadPapers(); }, [loadPapers]);
 
   // ── Load questions when a paper is selected ────────────────────────────────
   useEffect(() => {
     if (!selected) { setQuestions([]); return; }
     setLoadingQ(true);
+    setLoadQError(false);
     const params = new URLSearchParams({
       subjectId: String(selected.subjectId),
       year: String(selected.year),
@@ -200,9 +207,9 @@ export default function PastQuestionsScreen() {
     if (selected.examType) params.set('examType', selected.examType);
     else params.set('paper', selected.paper);
     fetch(`${getApiBase()}/questions?${params}`)
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
       .then(data => { setQuestions(Array.isArray(data) ? data : []); setLoadingQ(false); })
-      .catch(() => setLoadingQ(false));
+      .catch(() => { setLoadQError(true); setLoadingQ(false); });
   }, [selected]);
 
   // ── Group papers by subject ────────────────────────────────────────────────
@@ -248,6 +255,13 @@ export default function PastQuestionsScreen() {
             <ActivityIndicator color="#8b5cf6" size="large" />
             <Text style={[styles.loadingText, { color: C.mutedForeground }]}>Loading questions…</Text>
           </View>
+        ) : loadQError ? (
+          <ErrorCard
+            title="Couldn't load questions"
+            message="Check your internet connection and try again."
+            icon="wifi-outline"
+            onRetry={() => setSelected({ ...selected! })}
+          />
         ) : (
           <FlatList
             data={questions}
@@ -300,6 +314,13 @@ export default function PastQuestionsScreen() {
         <View style={styles.centered}>
           <ActivityIndicator color="#8b5cf6" size="large" />
         </View>
+      ) : loadError ? (
+        <ErrorCard
+          title="Couldn't load past papers"
+          message="Check your internet connection and try again."
+          icon="wifi-outline"
+          onRetry={loadPapers}
+        />
       ) : grouped.length === 0 ? (
         <View style={styles.centered}>
           <Ionicons name="library-outline" size={40} color={C.mutedForeground} />

@@ -9,6 +9,7 @@ import { router } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
 import { getApiBase } from '@/lib/query-client';
+import { ErrorCard } from '@/components/ErrorCard';
 import type { AppColors } from '@/constants/colors';
 
 type SubjectProgress = {
@@ -89,9 +90,11 @@ export default function ProgressScreen() {
   const [activity, setActivity] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(false);
 
   const fetchProgress = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
+    else { setLoading(true); setError(false); }
     try {
       const base = getApiBase();
       const phone = profile?.phone;
@@ -99,9 +102,12 @@ export default function ProgressScreen() {
         fetch(`${base}/progress${phone ? `?phone=${encodeURIComponent(phone)}` : ''}`),
         fetch(`${base}/dashboard/recent-activity${phone ? `?phone=${encodeURIComponent(phone)}` : ''}`),
       ]);
+      if (!progressRes.ok && !activityRes.ok) throw new Error('Failed');
       if (progressRes.ok) setData(await progressRes.json());
       if (activityRes.ok) setActivity(await activityRes.json());
+      setError(false);
     } catch {
+      setError(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -117,6 +123,23 @@ export default function ProgressScreen() {
       <View style={[styles.centered, { paddingTop: topPad }]}>
         <ActivityIndicator size="large" color={C.primary} />
         <Text style={{ marginTop: 12, color: C.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>Loading progress…</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.background }}>
+        <View style={[styles.header, { paddingTop: topPad + 10 }]}>
+          <Text style={styles.headerTitle}>My Progress</Text>
+          <Text style={styles.headerSub}>Score analytics & trends</Text>
+        </View>
+        <ErrorCard
+          title="Couldn't load progress"
+          message="Check your internet connection and try again. Your quiz data is safely saved."
+          icon="wifi-outline"
+          onRetry={() => fetchProgress()}
+        />
       </View>
     );
   }

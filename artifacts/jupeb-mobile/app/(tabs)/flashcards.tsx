@@ -8,6 +8,9 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/hooks/useTheme';
+import { useActivation } from '@/hooks/useActivation';
+import ActivationGate from '@/components/ActivationGate';
+import { ErrorCard, LockedCard } from '@/components/ErrorCard';
 import { getApiBase } from '@/lib/query-client';
 import type { AppColors } from '@/constants/colors';
 
@@ -171,9 +174,12 @@ export default function FlashcardsScreen() {
   const C = useTheme();
   const styles = useMemo(() => makeStyles(C), [C]);
 
+  const { isActivated, gateVisible, showGate, hideGate } = useActivation();
+
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
   const [mastery, setMastery] = useState<Record<string, MasteryState>>({});
   const [activeFilter, setActiveFilter] = useState<string>('ALL');
   const [showMastered, setShowMastered] = useState(true);
@@ -199,18 +205,26 @@ export default function FlashcardsScreen() {
 
   const fetchCards = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
+    else { setLoading(true); setFetchError(false); }
     try {
       const base = getApiBase();
       const res = await fetch(`${base}/textbook/flashcards`);
       if (!res.ok) throw new Error(`${res.status}`);
       const data: Flashcard[] = await res.json();
       setCards(data);
+      setFetchError(false);
       AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(() => {});
     } catch {
       try {
         const cached = await AsyncStorage.getItem(CACHE_KEY);
-        if (cached) setCards(JSON.parse(cached));
-      } catch {}
+        if (cached) {
+          setCards(JSON.parse(cached));
+        } else {
+          setFetchError(true);
+        }
+      } catch {
+        setFetchError(true);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -246,6 +260,40 @@ export default function FlashcardsScreen() {
       <View style={[styles.centered, { backgroundColor: C.background }]}>
         <ActivityIndicator size="large" color={C.primary} />
         <Text style={{ marginTop: 12, color: C.mutedForeground, fontFamily: 'Inter_400Regular', fontSize: 14 }}>Loading flashcards…</Text>
+      </View>
+    );
+  }
+
+  if (!isActivated) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.background }}>
+        <View style={[styles.header, { paddingTop: topPad + 10 }]}>
+          <Text style={styles.headerTitle}>Flashcards</Text>
+          <Text style={styles.headerSub}>Key terms & definitions</Text>
+        </View>
+        <LockedCard
+          featureName="Flashcards"
+          description="Activate your account to access all flashcards, track mastery, and study key terms for CRS, GOV and LIT."
+          onUnlock={showGate}
+        />
+        <ActivationGate visible={gateVisible} onClose={hideGate} featureName="Flashcards" />
+      </View>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.background }}>
+        <View style={[styles.header, { paddingTop: topPad + 10 }]}>
+          <Text style={styles.headerTitle}>Flashcards</Text>
+          <Text style={styles.headerSub}>Key terms & definitions</Text>
+        </View>
+        <ErrorCard
+          title="Couldn't load flashcards"
+          message="No internet connection and no cached cards found. Connect once to download your flashcards."
+          icon="cloud-offline-outline"
+          onRetry={() => fetchCards()}
+        />
       </View>
     );
   }

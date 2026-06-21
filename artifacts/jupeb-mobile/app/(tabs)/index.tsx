@@ -259,6 +259,20 @@ export default function HomeScreen() {
         </View>
       )}
 
+      {/* ── Activation banner ───────────────────────────────────────────── */}
+      {!isActivated && (
+        <TouchableOpacity style={S.activationBanner} onPress={showGate} activeOpacity={0.85}>
+          <View style={S.activationBannerLeft}>
+            <Ionicons name="lock-closed" size={16} color="#f97316" />
+            <View>
+              <Text style={S.activationBannerTitle}>Account not activated</Text>
+              <Text style={S.activationBannerSub}>Tap to unlock AI Tutor, Flashcards & Wrong Answers</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#f97316" />
+        </TouchableOpacity>
+      )}
+
       <Animated.View style={{ opacity: fadeA, transform: [{ translateY: slideA }] }}>
 
         {/* ── FOCUS MODE CARD ─────────────────────────────────────────────── */}
@@ -457,7 +471,7 @@ export default function HomeScreen() {
             {[
               { icon: 'help-circle' as const, label: 'Practice Quiz',  sub: 'Past questions',  color: '#f97316', route: '/(tabs)/quiz',    locked: false },
               { icon: 'book' as const,         label: 'Study Notes',   sub: 'CRS · GOV · LIT', color: '#10b981', route: '/(tabs)/notes',   locked: false },
-              { icon: 'close-circle' as const, label: 'Wrong Answers', sub: 'Fix weak spots',  color: '#ef4444', route: '/wrong-answers',  locked: false },
+              { icon: 'close-circle' as const, label: 'Wrong Answers', sub: 'Fix weak spots',  color: '#ef4444', route: '/wrong-answers',  locked: true  },
               { icon: 'chatbubble-ellipses' as const, label: 'AI Tutor', sub: 'Ask anything',  color: '#8b5cf6', route: '/(tabs)/chat',     locked: true  },
               { icon: 'library' as const,      label: 'Dictionary',    sub: 'Word meanings',   color: '#0ea5e9', route: '/dictionary',      locked: false },
               { icon: 'trophy' as const,       label: 'Leaderboard',   sub: 'Top students',    color: '#f59e0b', route: '/(tabs)/social',   locked: false },
@@ -624,6 +638,17 @@ function makeStyles(C: AppColors) {
       borderBottomWidth: 1, borderBottomColor: '#dc262618',
     },
     offlineBannerText: { flex: 1, fontSize: 12, fontFamily: 'Inter_500Medium', color: '#ef4444' },
+
+    activationBanner: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      backgroundColor: '#fff7ed', borderRadius: 0,
+      paddingHorizontal: 16, paddingVertical: 12,
+      borderBottomWidth: 1, borderBottomColor: '#fed7aa',
+      borderTopWidth: 1, borderTopColor: '#fed7aa',
+    },
+    activationBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+    activationBannerTitle: { fontSize: 13, fontFamily: 'Inter_700Bold', color: '#9a3412' },
+    activationBannerSub: { fontSize: 11, fontFamily: 'Inter_400Regular', color: '#c2410c', marginTop: 1 },
 
     // ── Focus Mode
     focusCard: {

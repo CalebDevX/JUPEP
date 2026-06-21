@@ -9,6 +9,9 @@ import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
+import { useActivation } from '@/hooks/useActivation';
+import ActivationGate from '@/components/ActivationGate';
+import { LockedCard, ErrorCard } from '@/components/ErrorCard';
 import { getApiUrl } from '@/lib/query-client';
 import type { AppColors } from '@/constants/colors';
 
@@ -62,11 +65,13 @@ export default function WrongAnswersScreen() {
   const insets = useSafeAreaInsets();
   const C = useTheme();
   const { profile } = useAuth();
+  const { isActivated, gateVisible, showGate, hideGate } = useActivation();
   const S = makeStyles(C);
 
   const [items, setItems] = useState<WrongAnswer[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -102,7 +107,7 @@ export default function WrongAnswersScreen() {
       }
       if (statsRes.ok) setStats(await statsRes.json());
     } catch {
-      if (!silent) Alert.alert('Error', 'Failed to load wrong answers. Check your connection.');
+      if (!silent) setLoadError(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -172,6 +177,26 @@ export default function WrongAnswersScreen() {
     ? items
     : items.filter(w => String(w.subjectId) === activeSubject);
 
+  if (!isActivated) {
+    return (
+      <View style={[S.container, { paddingTop: topPad }]}>
+        <View style={S.header}>
+          <TouchableOpacity style={S.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={22} color={C.foreground} />
+          </TouchableOpacity>
+          <Text style={S.headerTitle}>Wrong Answers</Text>
+          <View style={{ width: 36 }} />
+        </View>
+        <LockedCard
+          featureName="Wrong Answers"
+          description="Activate your account to track the questions you got wrong and revise your weak spots."
+          onUnlock={showGate}
+        />
+        <ActivationGate visible={gateVisible} onClose={hideGate} featureName="Wrong Answers" />
+      </View>
+    );
+  }
+
   if (loading) {
     return (
       <View style={[S.container, { paddingTop: topPad }]}>
@@ -186,6 +211,26 @@ export default function WrongAnswersScreen() {
           <ActivityIndicator size="large" color={C.primary} />
           <Text style={[S.emptyText, { marginTop: 12 }]}>Loading your mistakes...</Text>
         </View>
+      </View>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <View style={[S.container, { paddingTop: topPad }]}>
+        <View style={S.header}>
+          <TouchableOpacity style={S.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={22} color={C.foreground} />
+          </TouchableOpacity>
+          <Text style={S.headerTitle}>Wrong Answers</Text>
+          <View style={{ width: 36 }} />
+        </View>
+        <ErrorCard
+          title="Couldn't load wrong answers"
+          message="Check your internet connection and try again."
+          icon="wifi-outline"
+          onRetry={() => { setLoadError(false); load(); }}
+        />
       </View>
     );
   }
