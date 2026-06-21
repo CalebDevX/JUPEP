@@ -3,10 +3,18 @@ const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
-// ── Force gesture-handler and reanimated to use compiled output ─────────────
-//    Their package.json "react-native" fields point to TypeScript source
-//    which requires Babel plugins that aren't hoisted in our node_modules.
+// ── Platform-aware module resolution ────────────────────────────────────────
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // react-native-web uses private class fields (#x, #y etc.) in its DOMRect
+  // implementation which Hermes cannot compile on native platforms. Map it to
+  // react-native itself so native builds never bundle the web-only code.
+  if (platform !== 'web' && moduleName === 'react-native-web') {
+    return context.resolveRequest(context, 'react-native', platform);
+  }
+
+  // Force gesture-handler and reanimated to use pre-compiled CommonJS output.
+  // Their package.json "react-native" fields point to TypeScript source which
+  // requires Babel plugins that aren't hoisted in this monorepo layout.
   if (moduleName === 'react-native-gesture-handler') {
     return {
       type: 'sourceFile',
@@ -21,17 +29,15 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       type: 'sourceFile',
       filePath: path.resolve(
         __dirname,
-        'node_modules/react-native-reanimated/lib/module/index.js',
+        'node_modules/react-native-reanimated/lib/commonjs/index.js',
       ),
     };
   }
+
   return context.resolveRequest(context, moduleName, platform);
 };
 
 // ── Do NOT run Babel on pre-compiled gesture-handler / reanimated ───────────
-//    Expo's transform pipeline re-processes node_modules that match the
-//    allowlist. We exclude these two packages so their compiled JS is used
-//    as-is without triggering missing @babel/plugin-proposal-* errors.
 config.transformer.transformIgnorePatterns = [
   'node_modules/(?!' +
     '(jest-)?react-native' +
@@ -48,7 +54,6 @@ config.transformer.transformIgnorePatterns = [
     '|native-base' +
     '|react-native-svg' +
     '|nativewind' +
-    '|react-native-worklets' +
     ').*',
 ];
 
