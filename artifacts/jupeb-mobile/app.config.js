@@ -44,7 +44,7 @@ module.exports = {
   expo: {
     name: 'JUPEB Prep',
     slug: 'jupeb-mobile',
-    version: '1.0.1',
+    version: '1.0.2',
     scheme: 'jupeb',
     orientation: 'portrait',
     icon: './assets/icon.png',
