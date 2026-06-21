@@ -197,24 +197,110 @@ router.post("/ai/generate-notes", async (req, res) => {
 
     const ai = getAI();
 
-    const prompt = `Generate comprehensive, academically detailed JUPEB lecture notes for the following:
+    const subjectGuidance: Record<string, string> = {
+      "LIT": `For Literature topics:
+  - Name ALL major authors, playwrights, poets, novelists relevant to this topic with birth/death years
+  - For drama/theatre: trace from Ancient Greece (Thespis, Aeschylus, Sophocles, Euripides, Aristophanes) through Shakespeare, Ibsen, Chekhov, Brecht, Soyinka, Osofisan etc.
+  - For any text: give plot summary, all major characters with roles, ALL themes, literary devices used, critical interpretations
+  - Quote exact lines or passages where possible
+  - Include Aristotle's Poetics definitions (catharsis, mimesis, hamartia, hubris, peripeteia, anagnorisis) where relevant
+  - Cover Nigerian/African literature: Chinua Achebe, Wole Soyinka, Ngugi wa Thiong'o, J.P. Clark, Ola Rotimi, Ben Okri
+  - Include at least one critical/scholarly perspective per major point`,
+
+      "GOV": `For Government topics:
+  - Cite specific sections/chapters of the Nigerian 1999 Constitution where relevant
+  - Include key dates: colonial period (1914 Amalgamation, 1960 Independence, 1963 Republic, 1966 coup, 1979/1999 constitutions)
+  - Name specific politicians, military leaders, and their roles
+  - Compare Nigeria's system to at least one other country's (UK, USA, etc.)
+  - Include landmark Supreme Court cases or constitutional crises where applicable
+  - Define political science terms with precision`,
+
+      "CRS": `For CRS topics:
+  - Cite specific Bible passages (book, chapter:verse) for every major claim
+  - Include Old Testament historical context AND New Testament fulfillment where relevant
+  - Name specific biblical figures, prophets, apostles, their roles and key actions
+  - Include Church history: early Church fathers, Councils (Nicaea 325AD, Chalcedon 451AD), Reformation figures (Luther, Calvin, Zwingli)
+  - Cover Christian ethics, moral theology, and their application to Nigerian/African society
+  - Distinguish between Catholic, Protestant, and Pentecostal perspectives where relevant`,
+    };
+
+    const subCode = subject.code.replace(/[0-9]/g, '').toUpperCase();
+    const specificGuidance = subjectGuidance[subCode] || "";
+
+    const prompt = `Generate ENCYCLOPEDIC, deeply scholarly JUPEB lecture notes for the following:
 
 Subject: ${subject.name} (${subject.code})
 Paper: ${paper} — ${paperLabels[paper] || paper}
 Topic: ${topic}
 ${syllabus ? `Syllabus/Content Outline:\n${syllabus}` : ""}
 
-Requirements for the notes:
-1. Write at university foundation level (JUPEB standard)
-2. Include: Introduction, Key Definitions, Main Content with sub-sections, Examples, Analysis, Summary, Exam Focus Points
-3. Use Nigerian/West African context and examples where relevant
-4. Reference scholarly concepts, theories, and notable works/figures
-5. Include potential exam questions and model answers at the end
-6. Format with markdown: ## for sections, ### for sub-sections, **bold** for key terms, bullet points for lists
-7. Minimum 800 words — be thorough and academically rigorous
-8. End with "🎯 Exam Tips" section with 3-5 specific tips for scoring in this area
+${specificGuidance}
 
-Make these notes so comprehensive that a student reading them would be fully prepared for any JUPEB question on this topic.`;
+MANDATORY REQUIREMENTS — every single one must be met:
+
+**LENGTH & DEPTH:**
+- Minimum 2,000 words — closer to 2,500 is better
+- Cover ALL aspects of this topic, not just the basics
+- If writing about any historical topic, include specific dates, names, and events
+- If writing about any concept, include origins, development, key thinkers, and modern relevance
+- Do NOT summarise — explain everything in detail
+
+**REQUIRED STRUCTURE (include ALL sections):**
+## Introduction
+- Historical/contextual background with specific dates
+- Why this topic matters for JUPEB
+
+## Key Definitions
+- Minimum 8 key terms, each with a full paragraph explanation
+- **Bold** every key term
+
+## Historical Development & Origins
+- Chronological timeline of how this topic evolved
+- Specific dates, names, events — NO vague statements like "ancient times"
+
+## Key Figures & Their Contributions
+- Name at minimum 5 specific people (scholars, writers, leaders, biblical figures, etc.)
+- For each: who they were, when they lived, what they contributed, why it matters
+
+## Main Content
+### [Sub-section 1 — specific heading]
+### [Sub-section 2 — specific heading]
+### [Sub-section 3 — specific heading]
+(Use at least 4 sub-sections with detailed content in each)
+
+## Analysis & Critical Perspectives
+- At least 2 different schools of thought or interpretations
+- Compare and contrast these perspectives
+
+## Nigerian/African Context
+- How this topic connects to Nigeria, West Africa, or African experience
+- Local examples, Nigerian figures, or Nigerian case studies
+
+## Summary
+- Comprehensive bullet-point recap of ALL major points
+
+## Practice Examination Questions
+**Short Answer (5 marks each):**
+1. [Question with model answer — minimum 3 sentences]
+2. [Question with model answer — minimum 3 sentences]
+3. [Question with model answer — minimum 3 sentences]
+
+**Essay Questions (20–25 marks each):**
+1. [Essay question with outline of key points to include]
+2. [Essay question with outline of key points to include]
+
+## 🎯 Exam Tips
+- 5 specific, actionable tips for this exact topic
+- Include common mistakes students make on this topic
+- Note any specific facts examiners frequently test
+
+**FORMATTING:**
+- **Bold** ALL key terms, names, dates, and important concepts throughout
+- Use numbered lists for processes or sequences
+- Use bullet points for features, characteristics, or lists
+- Use > blockquotes for important quotes or definitions
+
+Write these notes as if you are the most knowledgeable professor of this subject teaching the brightest students. Leave nothing out. A student who reads these notes thoroughly should be able to answer ANY JUPEB question on this topic with confidence.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
@@ -408,6 +494,70 @@ router.post("/ai/tts", async (req, res) => {
     res.json({ audio: wavBase64, mimeType: "audio/wav" });
   } catch (err: any) {
     console.error("TTS error:", err);
+    res.status(500).json({ error: err?.message || "TTS generation failed" });
+  }
+});
+
+// ── YarnGPT TTS (Nigerian voice) ──────────────────────────────────────────────
+router.post("/ai/yarngpt-tts", async (req, res) => {
+  try {
+    const { text, voice = "idera" } = req.body;
+    if (!text?.trim()) return res.status(400).json({ error: "text is required" });
+
+    const apiKey = process.env.YARNGPT_API_KEY;
+    if (!apiKey) return res.status(503).json({ error: "YarnGPT not configured" });
+
+    // YarnGPT via HuggingFace Inference API
+    const hfRes = await fetch(
+      "https://api-inference.huggingface.co/models/ylacombe/YarnGPT",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "Accept": "audio/wav",
+        },
+        body: JSON.stringify({ inputs: text.trim().slice(0, 1000), parameters: { voice } }),
+      }
+    );
+
+    if (!hfRes.ok) {
+      const errText = await hfRes.text().catch(() => "");
+      // Fall back to Gemini TTS on failure
+      console.warn("YarnGPT failed, falling back to Gemini TTS:", errText.slice(0, 200));
+
+      const ai = getAI();
+      const ttsRes = await ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-tts",
+        config: {
+          responseModalities: ["AUDIO"],
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } },
+        },
+        contents: [{ role: "user", parts: [{ text: text.trim().slice(0, 800) }] }],
+      });
+
+      const audioData = ttsRes.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+      if (!audioData?.data) return res.status(500).json({ error: "TTS generation failed" });
+
+      const pcmBuf = Buffer.from(audioData.data, "base64");
+      const sampleRate = 24000; const numChannels = 1; const bitsPerSample = 16;
+      const wavHeader = Buffer.alloc(44);
+      wavHeader.write("RIFF", 0); wavHeader.writeUInt32LE(36 + pcmBuf.length, 4);
+      wavHeader.write("WAVE", 8); wavHeader.write("fmt ", 12);
+      wavHeader.writeUInt32LE(16, 16); wavHeader.writeUInt16LE(1, 20);
+      wavHeader.writeUInt16LE(numChannels, 22); wavHeader.writeUInt32LE(sampleRate, 24);
+      wavHeader.writeUInt32LE(sampleRate * numChannels * bitsPerSample / 8, 28);
+      wavHeader.writeUInt16LE(numChannels * bitsPerSample / 8, 32);
+      wavHeader.writeUInt16LE(bitsPerSample, 34); wavHeader.write("data", 36);
+      wavHeader.writeUInt32LE(pcmBuf.length, 40);
+      return res.json({ audio: Buffer.concat([wavHeader, pcmBuf]).toString("base64"), mimeType: "audio/wav", voice: "gemini-fallback" });
+    }
+
+    // YarnGPT returned audio — forward it as base64
+    const audioBuf = Buffer.from(await hfRes.arrayBuffer());
+    res.json({ audio: audioBuf.toString("base64"), mimeType: "audio/wav", voice });
+  } catch (err: any) {
+    console.error("YarnGPT TTS error:", err);
     res.status(500).json({ error: err?.message || "TTS generation failed" });
   }
 });

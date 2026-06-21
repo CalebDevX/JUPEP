@@ -419,6 +419,8 @@ export default function ProfileScreen() {
   const [hasPin, setHasPin]             = useState<boolean>(profile?.hasPin ?? false);
   const [pinSuccess, setPinSuccess]     = useState<string | null>(null);
   const [serverUrlModal, setServerUrlModal] = useState(false);
+  const [clearing, setClearing]         = useState(false);
+  const [clearMsg, setClearMsg]         = useState<string | null>(null);
 
   const statusColor = profile?.paymentStatus === 'active' || profile?.paymentStatus === 'paid'
     ? C.success : profile?.paymentStatus === 'expired' ? C.destructive : C.mutedForeground;
@@ -433,6 +435,36 @@ export default function ProfileScreen() {
         await logout();
       }},
     ]);
+  }
+
+  async function handleClearLocalData() {
+    Alert.alert(
+      'Clear Local Data',
+      'This will delete all offline quiz data and chapter caches from this device. Your account and progress on the server are NOT affected. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear', style: 'destructive', onPress: async () => {
+          setClearing(true);
+          try {
+            const keys = await AsyncStorage.getAllKeys();
+            const quizKeys = keys.filter(k =>
+              k.startsWith('jupeb_quiz_') ||
+              k.startsWith('jupeb_chapter_cache_') ||
+              k.startsWith('jupeb_chapter_read_') ||
+              k.startsWith('jupeb_subjects') ||
+              k.startsWith('jupeb_last_chapter')
+            );
+            await AsyncStorage.multiRemove(quizKeys);
+            setClearMsg(`Cleared ${quizKeys.length} cached items.`);
+            setTimeout(() => setClearMsg(null), 3000);
+          } catch (e) {
+            setClearMsg('Failed to clear data.');
+          } finally {
+            setClearing(false);
+          }
+        }},
+      ]
+    );
   }
 
   async function handlePinSuccess(wasRemoving: boolean) {
@@ -561,16 +593,6 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* Academic Goals */}
-      {(profile.targetUniversity || profile.targetGrade) && (
-        <View style={S.card}>
-          <Text style={S.cardTitle}>Academic Goals</Text>
-          {profile.targetUniversity && (
-            <InfoRow icon="school-outline" label="Target University" value={profile.targetUniversity} C={C} S={S} />
-          )}
-          <InfoRow icon="trophy-outline" label="Target Grade" value={profile.targetGrade || 'Not set'} C={C} S={S} />
-        </View>
-      )}
 
       {/* Subscription */}
       <View style={S.card}>
@@ -581,12 +603,48 @@ export default function ProfileScreen() {
         )}
       </View>
 
+      {/* Data & Storage */}
+      <View style={S.card}>
+        <Text style={S.cardTitle}>Data &amp; Storage</Text>
+        <InfoRow
+          icon="trash-outline"
+          label="Clear Local Quiz & Note Cache"
+          actionLabel={clearing ? 'Clearing…' : 'Clear →'}
+          actionColor={C.destructive}
+          onPress={handleClearLocalData}
+          C={C} S={S}
+        />
+        {clearMsg && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: C.border }}>
+            <Ionicons name="checkmark-circle-outline" size={13} color={C.success} />
+            <Text style={{ fontSize: 12, fontFamily: 'Inter_400Regular', color: C.success, flex: 1 }}>{clearMsg}</Text>
+          </View>
+        )}
+        <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: C.border }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="information-circle-outline" size={13} color={C.mutedForeground} />
+            <Text style={{ fontSize: 11, fontFamily: 'Inter_400Regular', color: C.mutedForeground, flex: 1 }}>
+              Quiz data is stored locally for offline use. Clearing only removes the cache — your XP and progress are saved on the server.
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* About */}
+      <View style={S.card}>
+        <Text style={S.cardTitle}>About</Text>
+        <InfoRow icon="school-outline" label="App" value="JUPEB Prep" C={C} S={S} />
+        <InfoRow icon="layers-outline" label="Version" value="1.0.0" C={C} S={S} />
+        <InfoRow icon="globe-outline" label="Website" value="prep.achek.com.ng" C={C} S={S} />
+        <InfoRow icon="mail-outline" label="Support" value="support@achek.com.ng" C={C} S={S} />
+      </View>
+
       <TouchableOpacity style={S.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
         <Ionicons name="log-out-outline" size={18} color={C.destructive} />
         <Text style={S.logoutText}>Sign Out</Text>
       </TouchableOpacity>
 
-      <Text style={S.version}>JUPEB Prep v1.0.0</Text>
+      <Text style={S.version}>JUPEB Prep · v1.0.0</Text>
 
       {pinModal && (
         <PinModal

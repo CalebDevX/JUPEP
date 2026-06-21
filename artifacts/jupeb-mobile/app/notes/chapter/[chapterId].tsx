@@ -373,6 +373,9 @@ export default function ChapterScreen() {
   const [vocabEntry, setVocabEntry]         = useState<VocabEntry | null>(null);
   const [showFontPicker, setShowFontPicker] = useState(false);
   const [showTOC, setShowTOC]               = useState(false);
+  const [ttsLoading, setTtsLoading]         = useState(false);
+  const [ttsSound, setTtsSound]             = useState<any>(null);
+  const [ttsPlaying, setTtsPlaying]         = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
   const [scrolledDown, setScrolledDown]     = useState(false);
   const [completed, setCompleted]           = useState(false);
@@ -385,6 +388,45 @@ export default function ChapterScreen() {
   const fabAnim          = useRef(new Animated.Value(0)).current;
 
   const accent = getAccentFromChapterId(chapterId ?? '');
+
+  // ── YarnGPT / TTS listen ───────────────────────────────────────────────────
+  const handleListen = useCallback(async () => {
+    if (!chapter) return;
+    Haptics.selectionAsync();
+
+    if (ttsPlaying && ttsSound) {
+      await ttsSound.stopAsync();
+      setTtsPlaying(false);
+      return;
+    }
+
+    setTtsLoading(true);
+    try {
+      const text = chapter.sections.map(s => `${s.heading}. ${s.content}`).join(' ').slice(0, 900);
+      const base = getApiBase();
+      const res = await fetch(`${base}/ai/yarngpt-tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) throw new Error('TTS unavailable');
+      const { audio, mimeType } = await res.json();
+      const { Sound } = await import('expo-av').then(m => ({ Sound: m.Audio.Sound }));
+      const { sound } = await Sound.createAsync(
+        { uri: `data:${mimeType};base64,${audio}` },
+        { shouldPlay: true }
+      );
+      setTtsSound(sound);
+      setTtsPlaying(true);
+      sound.setOnPlaybackStatusUpdate((status: any) => {
+        if (status.didJustFinish) { setTtsPlaying(false); setTtsSound(null); }
+      });
+    } catch (e) {
+      console.warn('TTS error', e);
+    } finally {
+      setTtsLoading(false);
+    }
+  }, [chapter, ttsPlaying, ttsSound]);
 
   // ── Reading time estimate ──────────────────────────────────────────────────
   const readingTime = useMemo(() => {
@@ -533,6 +575,18 @@ export default function ChapterScreen() {
           </TouchableOpacity>
 
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+            {/* Listen (TTS) button */}
+            <TouchableOpacity
+              style={[styles.headerIconBtn, ttsPlaying && { backgroundColor: 'rgba(249,115,22,0.35)' }]}
+              onPress={handleListen}
+              disabled={ttsLoading}
+              activeOpacity={0.75}
+            >
+              {ttsLoading
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Ionicons name={ttsPlaying ? 'stop-outline' : 'headset-outline'} size={17} color="#fff" />
+              }
+            </TouchableOpacity>
             {/* TOC button */}
             <TouchableOpacity
               style={styles.headerIconBtn}

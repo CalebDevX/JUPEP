@@ -7,18 +7,16 @@ router.get("/leaderboard", async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit as string || "20"), 50);
     const offset = Math.max(0, parseInt(req.query.offset as string || "0"));
-    // Get total count for hasMore
-    const countResult = await pool.query(`SELECT COUNT(*) FROM students WHERE is_active=true`);
-    const total = parseInt(countResult.rows[0].count);
     const result = await pool.query(
-      `SELECT full_name, subjects, target_grade, target_university, xp, streak, last_active,
+      `SELECT full_name, xp, streak, last_active,
               ROW_NUMBER() OVER (ORDER BY xp DESC, streak DESC) AS rank
        FROM students WHERE is_active=true
        ORDER BY xp DESC, streak DESC
        LIMIT $1 OFFSET $2`,
       [limit, offset]
     );
-    res.json({ entries: result.rows, total, hasMore: offset + limit < total });
+    // Return as plain array — both old and new clients can handle this
+    res.json(result.rows);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

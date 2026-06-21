@@ -61,10 +61,10 @@ function LeaderboardPanel({ C, S }: { C: AppColors; S: ReturnType<typeof makeSty
       const res = await fetch(`${getApiBase()}/leaderboard?limit=${PAGE_SIZE}&offset=0`);
       if (!res.ok) throw new Error(`Server error ${res.status}`);
       const data = await res.json();
-      // Support both old array shape and new paginated shape
+      // API always returns an array
       const list: LeaderboardEntry[] = Array.isArray(data) ? data : (data.entries ?? []);
       setEntries(list);
-      setHasMore(data.hasMore ?? false);
+      setHasMore(list.length === PAGE_SIZE); // if we got a full page, there may be more
       setOffset(list.length);
     } catch (e: any) {
       setError(isOnline ? e.message : "You're offline. Connect to view the leaderboard.");
@@ -83,7 +83,7 @@ function LeaderboardPanel({ C, S }: { C: AppColors; S: ReturnType<typeof makeSty
       const data = await res.json();
       const list: LeaderboardEntry[] = Array.isArray(data) ? data : (data.entries ?? []);
       setEntries(prev => [...prev, ...list]);
-      setHasMore(data.hasMore ?? false);
+      setHasMore(list.length === PAGE_SIZE);
       setOffset(prev => prev + list.length);
     } catch { /* silently fail */ }
     finally { setLoadingMore(false); }

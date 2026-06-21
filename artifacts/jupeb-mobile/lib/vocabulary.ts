@@ -431,6 +431,126 @@ export const VOCABULARY: VocabEntry[] = [
 
   { term: 'sovereignty', pos: 'noun', subject: 'GOV',
     definition: 'The supreme political authority of a state to govern itself.' },
+
+  // ═══ LITERATURE ════════════════════════════════════════════════════════════
+
+  { term: 'tragedy', pos: 'noun', subject: 'LIT',
+    definition: 'A dramatic genre originating in Ancient Greece in which the protagonist suffers a downfall, usually caused by a fatal character flaw (hamartia). Aristotle defined it in his Poetics as an imitation of an action that is serious and complete, arousing pity and fear in the audience.',
+    example: 'Sophocles\' Oedipus Rex is the archetypal Greek tragedy — Oedipus\'s downfall results from his pride and determination to know the truth.' },
+
+  { term: 'comedy', pos: 'noun', subject: 'LIT',
+    definition: 'A dramatic genre that uses humour, light-hearted situations, and often ends happily. In Ancient Greece, comedy was developed by Aristophanes. It contrasts with tragedy in tone and resolution.',
+    example: 'Aristophanes\' Lysistrata (411 BC) is a classic Greek comedy in which women refuse to sleep with their husbands until they stop making war.' },
+
+  { term: 'catharsis', pos: 'noun', subject: 'LIT',
+    definition: 'The emotional release or purification experienced by the audience after watching a tragedy. Coined by Aristotle in his Poetics (c. 335 BC) to describe how watching dramatic suffering purges the emotions of pity and fear from the spectators.',
+    example: 'Aristotle argued that audiences leave a tragedy feeling emotionally cleansed — this purging of emotions is catharsis.' },
+
+  { term: 'mimesis', pos: 'noun', subject: 'LIT',
+    definition: 'The Greek word for imitation, used by Aristotle to describe how art, drama, and literature imitate or represent reality. Plato first used the term critically; Aristotle saw mimesis as natural and pleasurable.',
+    example: 'According to Aristotle\'s Poetics, drama is mimesis — an imitation of life — and humans naturally enjoy imitating and seeing imitations.' },
+
+  { term: 'hamartia', pos: 'noun', subject: 'LIT',
+    definition: 'A fatal flaw or error of judgement in the hero of a tragedy that leads to their downfall. From the Greek for "error" or "missing the mark". Aristotle defined it in his Poetics as the key cause of the tragic hero\'s catastrophe.',
+    example: 'Oedipus\'s hamartia is his pride (hubris) and his relentless pursuit of truth even when warned to stop.' },
+
+  { term: 'hubris', pos: 'noun', subject: 'LIT',
+    definition: 'Excessive pride or arrogance that leads a tragic hero to challenge the gods or natural order, inevitably resulting in punishment or downfall. A key concept in Ancient Greek tragedy.',
+    example: 'Creon\'s hubris in Sophocles\' Antigone — his refusal to bury Polynices — leads to the deaths of Antigone, Haemon, and Eurydice.' },
+
+  { term: 'protagonist', pos: 'noun', subject: 'LIT',
+    definition: 'The main character or hero of a literary work, who drives the action and faces the central conflict. The term comes from the Greek "protos" (first) and "agonist" (contestant).',
+    example: 'Hamlet is the protagonist of Shakespeare\'s play — all major events revolve around his quest to avenge his father\'s murder.' },
+
+  { term: 'antagonist', pos: 'noun', subject: 'LIT',
+    definition: 'The character, force, or society that opposes the protagonist. The antagonist creates the central conflict that drives the narrative.',
+    example: 'In Chinua Achebe\'s Things Fall Apart, the colonial British government and missionaries serve as the antagonist to Okonkwo.' },
+
+  { term: 'soliloquy', pos: 'noun', subject: 'LIT',
+    definition: 'A dramatic device in which a character speaks their thoughts aloud, alone on stage, revealing inner feelings and motivations directly to the audience. Different from a monologue, which can be addressed to others.',
+    example: 'Hamlet\'s "To be, or not to be" speech is the most famous soliloquy in English literature, revealing his contemplation of suicide.' },
+
+  { term: 'Thespis', pos: 'noun', subject: 'LIT',
+    definition: 'An Ancient Greek performer from Athens (c. 6th century BC) regarded as the "Father of Drama." He is credited with being the first actor — the first to step out of the chorus and speak as an individual character in dramatic performances at the Festival of Dionysus around 534 BC.',
+    example: 'When Thespis first spoke as a separate character from the chorus in 534 BC, he invented what we now call acting — which is why actors are still called "Thespians."' },
+
+  { term: 'Sophocles', pos: 'noun', subject: 'LIT',
+    definition: 'One of the three great Ancient Greek tragedians (c. 496–406 BC), alongside Aeschylus and Euripides. He wrote 123 plays, of which 7 survive, including Oedipus Rex, Antigone, and Oedipus at Colonus. He introduced the third actor to drama, allowing for more complex plots.',
+    example: 'Sophocles\' Oedipus Rex, written around 429 BC, is considered the greatest Greek tragedy — Aristotle used it as his primary example in his Poetics.' },
+
+  { term: 'Aeschylus', pos: 'noun', subject: 'LIT',
+    definition: 'Ancient Greek playwright (c. 525–456 BC), the "Father of Tragedy" and the earliest of the three great Greek tragedians. He introduced the second actor, creating the possibility of true dramatic conflict. His surviving plays include the Oresteia trilogy and Prometheus Bound.',
+    example: 'Aeschylus\' Oresteia (458 BC) — comprising Agamemnon, The Libation Bearers, and The Eumenides — is the only complete trilogy to survive from Ancient Greece.' },
+
+  { term: 'Euripides', pos: 'noun', subject: 'LIT',
+    definition: 'Ancient Greek playwright (c. 484–406 BC), the youngest of the three great tragedians. He wrote 92 plays, of which 19 survive, including Medea, The Trojan Women, and Bacchae. He was more realistic and psychologically complex than his predecessors, giving women stronger roles.',
+    example: 'In Euripides\' Medea (431 BC), the heroine kills her own children to punish her unfaithful husband Jason — a shocking and psychologically realistic portrait of feminine rage.' },
+
+  { term: 'allegory', pos: 'noun', subject: 'LIT',
+    definition: 'A narrative in which characters, events, and settings represent abstract ideas or moral qualities, conveying a deeper symbolic meaning beyond the literal story. The entire work functions as an extended metaphor.',
+    example: 'George Orwell\'s Animal Farm is an allegory of the Russian Revolution — the pigs represent the Communist leaders, and the farm represents the Soviet Union.' },
+
+  { term: 'satire', pos: 'noun', subject: 'LIT',
+    definition: 'A literary genre that uses irony, sarcasm, exaggeration, and humour to criticise and expose human folly, vice, or social institutions. Satire aims to provoke change or reform.',
+    example: 'Wole Soyinka\'s play The Trials of Brother Jero satirises fake prophets and religious hypocrisy in Nigerian society.' },
+
+  { term: 'denouement', pos: 'noun', subject: 'LIT',
+    definition: 'The final resolution or unravelling of a plot, following the climax. In this section, loose ends are tied up and the consequences of the main conflict become clear. From the French word meaning "to untie."',
+    example: 'The denouement of Ola Rotimi\'s The Gods Are Not to Blame occurs after Odewale discovers he has killed his father and married his mother.' },
+
+  { term: 'motif', pos: 'noun', subject: 'LIT',
+    definition: 'A recurring element — image, symbol, theme, or idea — that appears multiple times throughout a literary work and contributes to its overall meaning or atmosphere.',
+    example: 'The recurring motif of yam in Chinua Achebe\'s Things Fall Apart symbolises Igbo masculinity, wealth, and cultural identity.' },
+
+  { term: 'naturalism', pos: 'noun', subject: 'LIT',
+    definition: 'A literary movement (late 19th century) that extended realism by portraying the influence of heredity, environment, and social conditions on human behaviour. Naturalists, like Émile Zola, argued that humans are determined by forces beyond their control.',
+    example: 'Henrik Ibsen\'s A Doll\'s House (1879) shows naturalistic concerns — Nora\'s character is shaped by the society and marriage that constrain her.' },
+
+  { term: 'irony', pos: 'noun', subject: 'LIT',
+    definition: 'A literary device where what is said or expected is the opposite of what is meant or happens. Types include: verbal irony (saying the opposite of what is meant), situational irony (events contrary to expectations), and dramatic irony (audience knows more than the characters).',
+    example: 'In Oedipus Rex, there is powerful dramatic irony — the audience knows Oedipus is seeking the murderer of his own father, but Oedipus himself does not.' },
+
+  // ═══ CRS ═══════════════════════════════════════════════════════════════════
+
+  { term: 'covenant', pos: 'noun', subject: 'CRS',
+    definition: 'A formal, solemn agreement or contract between God and human beings. The Bible records several key covenants: with Noah (Genesis 9), Abraham (Genesis 15, 17), Moses/Israel at Sinai (Exodus 19–24), David (2 Samuel 7), and the New Covenant through Jesus Christ (Jeremiah 31:31–34; Luke 22:20).',
+    example: 'The Abrahamic Covenant (Genesis 15) promised Abraham land, descendants, and that all nations would be blessed through him — fulfilled ultimately in Jesus Christ.' },
+
+  { term: 'redemption', pos: 'noun', subject: 'CRS',
+    definition: 'The act of God rescuing humanity from the power and penalty of sin through the sacrifice of Jesus Christ. From the Latin "redemptio" meaning "buying back." In the Old Testament, a "kinsman-redeemer" (go\'el) would buy back a relative from slavery.',
+    example: 'Ephesians 1:7 states: "In him we have redemption through his blood, the forgiveness of sins, in accordance with the riches of God\'s grace."' },
+
+  { term: 'atonement', pos: 'noun', subject: 'CRS',
+    definition: 'The reconciliation between God and humanity achieved through sacrifice. In the Old Testament, the Day of Atonement (Yom Kippur, Leviticus 16) involved the high priest sacrificing animals and symbolically transferring Israel\'s sins to a scapegoat. In Christianity, Jesus is seen as the final atoning sacrifice.',
+    example: 'The Day of Atonement (Leviticus 16:29–34) required Israel to fast and confess sins, with the High Priest entering the Holy of Holies to offer blood sacrifice — a practice Christians see fulfilled in Christ\'s death.' },
+
+  { term: 'prophecy', pos: 'noun', subject: 'CRS',
+    definition: 'A divinely inspired message or prediction delivered by a prophet. Biblical prophecy includes foretelling (predicting future events) and forthtelling (proclaiming God\'s message to the present). Major Old Testament prophets include Isaiah, Jeremiah, Ezekiel, and Daniel; Minor prophets include Hosea, Amos, and Micah.',
+    example: 'Isaiah 53 contains one of the most detailed Old Testament prophecies about the suffering of the Messiah, written about 700 years before Jesus\' crucifixion.' },
+
+  { term: 'sanctification', pos: 'noun', subject: 'CRS',
+    definition: 'The ongoing process by which a Christian is made holy through the work of the Holy Spirit. Distinct from justification (being declared righteous) which is instantaneous; sanctification is a lifelong journey towards conformity with Christ\'s character.',
+    example: '1 Thessalonians 4:3 states "It is God\'s will that you should be sanctified" — meaning God desires believers to become increasingly holy in character and conduct.' },
+
+  { term: 'eschatology', pos: 'noun', subject: 'CRS',
+    definition: 'The branch of theology concerned with the "last things" or end times — death, judgement, heaven, hell, the Second Coming of Christ, the resurrection of the dead, and the final state of all things. From the Greek "eschatos" (last) and "logos" (study).',
+    example: 'The Book of Revelation is the primary New Testament eschatological text, describing in highly symbolic language the end of history and the establishment of God\'s eternal kingdom.' },
+
+  { term: 'incarnation', pos: 'noun', subject: 'CRS',
+    definition: 'The Christian doctrine that God the Son, the second person of the Trinity, took on human flesh and became fully human in the person of Jesus Christ while remaining fully divine. Expressed in John 1:14: "The Word became flesh and made his dwelling among us."',
+    example: 'The Council of Nicaea (325 AD) affirmed the incarnation by declaring Jesus "of the same substance" (homoousios) as the Father, combating Arianism which denied the full divinity of Christ.' },
+
+  { term: 'Trinity', pos: 'noun', subject: 'CRS',
+    definition: 'The central Christian doctrine that God exists as three distinct persons — Father, Son, and Holy Spirit — who are co-equal, co-eternal, and of the same divine substance (homoousios). Formulated at the Councils of Nicaea (325 AD) and Constantinople (381 AD).',
+    example: 'The Nicene Creed (325 AD), still recited in churches today, articulates the doctrine of the Trinity: God the Father, Jesus Christ as "God of God, Light of Light," and the Holy Spirit "who proceeds from the Father."' },
+
+  { term: 'heresy', pos: 'noun', subject: 'CRS',
+    definition: 'A belief or teaching that contradicts the established doctrines of the Christian Church. Major early heresies include Arianism (denying Christ\'s full divinity), Gnosticism (matter is evil, salvation through secret knowledge), Pelagianism (humans can achieve salvation without divine grace), and Docetism (Christ only appeared human).',
+    example: 'Arianism, the belief that Jesus was a created being inferior to God the Father, was condemned as heresy at the Council of Nicaea in 325 AD after heated debate led by Athanasius of Alexandria.' },
+
+  { term: 'Pentecost', pos: 'noun', subject: 'CRS',
+    definition: 'In Judaism, Pentecost (Shavuot) is the Feast of Weeks celebrated 50 days after Passover. In Christianity, it refers to the outpouring of the Holy Spirit upon the 120 disciples in Jerusalem (Acts 2), 50 days after the resurrection of Jesus. Often called "the birthday of the Church."',
+    example: 'Acts 2:1–4 describes how on the day of Pentecost, the disciples were filled with the Holy Spirit and began speaking in other tongues, leading to the conversion of about 3,000 people (Acts 2:41).' },
 ];
 
 // ── Fast lookup map ────────────────────────────────────────────────────────────

@@ -60,9 +60,14 @@ export async function syncQuizData(
     const allSubjects = await fetchJSON<ApiSubject[]>('/subjects');
     await saveSubjects(allSubjects);
 
-    const upper = enrolledCodes.map(c => c.toUpperCase());
-    let targetSubjects = allSubjects.filter(s => upper.includes(s.code.toUpperCase()));
-    if (targetSubjects.length === 0) targetSubjects = allSubjects.slice(0, 3);
+    const upper = enrolledCodes.map(c => c.toUpperCase().trim());
+    // Match flexibly: "CRS" matches "CRS001", "GOV" matches "GOV001", etc.
+    let targetSubjects = allSubjects.filter(s => {
+      const sc = s.code.toUpperCase();
+      return upper.some(code => sc === code || sc.startsWith(code) || code.startsWith(sc));
+    });
+    // Only fall back to first 3 if enrolled list is genuinely empty
+    if (targetSubjects.length === 0 && upper.length === 0) targetSubjects = allSubjects.slice(0, 3);
 
     let totalSynced = 0;
 
