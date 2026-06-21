@@ -73,9 +73,7 @@ module.exports = {
       fallbackToCacheTimeout: 0,
       checkAutomatically: 'ON_LOAD',
     },
-    runtimeVersion: {
-      policy: 'appVersion',
-    },
+    runtimeVersion: "1.0.0",
     plugins: safePlugins(plugins),
     experiments: {
       typedRoutes: false,

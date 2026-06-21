@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import { makeRedirectUri } from 'expo-auth-session';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { requestOTP, verifyOTP, resetPassword } from '@/src/utils/api';
@@ -64,9 +65,12 @@ export default function LoginScreen() {
       .catch(() => {});
   }, []);
 
+  const redirectUri = makeRedirectUri({ scheme: 'jupeb', path: 'oauth2redirect/google' });
+
   const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
     androidClientId: ANDROID_CLIENT_ID,
     ...(webClientId ? { webClientId } : {}),
+    redirectUri,
   });
 
   // Forgot password state
