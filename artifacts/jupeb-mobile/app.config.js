@@ -11,6 +11,8 @@ function safePlugins(plugins) {
   });
 }
 
+const NEW_PROJECT_ID = '88c415e3-b466-44f9-9018-50a1230331a8';
+
 const plugins = [
   'expo-router',
   'expo-secure-store',
@@ -23,6 +25,18 @@ const plugins = [
       backgroundColor: '#0f0f14',
     },
   ],
+  [
+    'expo-notifications',
+    {
+      sounds: [
+        './assets/sounds/notification.wav',
+        './assets/sounds/streak.wav',
+      ],
+      androidMode: 'default',
+      androidCollapsedTitle: 'JUPEB Prep',
+      iosDisplayInForeground: true,
+    },
+  ],
   'expo-web-browser',
 ];
 
@@ -30,7 +44,7 @@ module.exports = {
   expo: {
     name: 'JUPEB Prep',
     slug: 'jupeb-mobile',
-    version: '1.0.0',
+    version: '1.0.1',
     scheme: 'jupeb',
     orientation: 'portrait',
     icon: './assets/icon.png',
@@ -54,7 +68,7 @@ module.exports = {
       favicon: './assets/favicon.png',
     },
     updates: {
-      url: 'https://u.expo.dev/098db203-360d-4059-af9a-2769bebd0e64',
+      url: `https://u.expo.dev/${NEW_PROJECT_ID}`,
       enabled: true,
       fallbackToCacheTimeout: 0,
       checkAutomatically: 'ON_LOAD',
@@ -71,7 +85,7 @@ module.exports = {
         origin: false,
       },
       eas: {
-        projectId: '098db203-360d-4059-af9a-2769bebd0e64',
+        projectId: NEW_PROJECT_ID,
       },
     },
     owner: 'achek',

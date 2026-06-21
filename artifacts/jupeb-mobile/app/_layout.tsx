@@ -71,6 +71,34 @@ function buildPersonalizedMessage(rankData: {
   };
 }
 
+// ── Notification channel IDs ────────────────────────────────────────────────
+const CHANNEL_DAILY   = 'jupeb-daily';
+const CHANNEL_STREAK  = 'jupeb-streak';
+
+async function ensureNotificationChannels(Notifications: any) {
+  if (Platform.OS !== 'android') return;
+  await Notifications.setNotificationChannelAsync(CHANNEL_DAILY, {
+    name: 'Daily Study Reminders',
+    importance: Notifications.AndroidImportance.HIGH,
+    sound: 'notification.wav',
+    vibrationPattern: [0, 200, 100, 200],
+    lightColor: '#f97316',
+    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    bypassDnd: false,
+    description: 'Morning study challenge and daily practice reminders',
+  });
+  await Notifications.setNotificationChannelAsync(CHANNEL_STREAK, {
+    name: 'Streak Protection',
+    importance: Notifications.AndroidImportance.HIGH,
+    sound: 'streak.wav',
+    vibrationPattern: [0, 300, 100, 300, 100, 300],
+    lightColor: '#ef4444',
+    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    bypassDnd: false,
+    description: 'Alerts to protect your study streak',
+  });
+}
+
 // ── Request permissions + get Expo push token ─────────────────────────────────
 async function setupNotifications(): Promise<string | null> {
   if (Platform.OS === 'web') return null;
@@ -80,11 +108,15 @@ async function setupNotifications(): Promise<string | null> {
       handleNotification: async () => ({
         shouldShowAlert: true,
         shouldPlaySound: true,
-        shouldSetBadge: false,
+        shouldSetBadge: true,
         shouldShowBanner: true,
         shouldShowList: true,
       }),
     });
+
+    // Create Android notification channels with custom sounds first
+    await ensureNotificationChannels(Notifications);
+
     const { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') {
       const { status: asked } = await Notifications.requestPermissionsAsync();
@@ -97,6 +129,8 @@ async function setupNotifications(): Promise<string | null> {
       content: {
         title: '📚 Time to study!',
         body: "Your daily JUPEB practice session is waiting. Keep your streak alive 🔥",
+        sound: 'notification.wav',
+        ...(Platform.OS === 'android' ? { channelId: CHANNEL_DAILY } : {}),
       },
       trigger: { hour: 9, minute: 0, repeats: true } as any,
     });
@@ -104,6 +138,8 @@ async function setupNotifications(): Promise<string | null> {
       content: {
         title: "Don't break your streak! 🔥",
         body: "You haven't practiced today. Just 10 minutes of JUPEB prep makes a big difference.",
+        sound: 'streak.wav',
+        ...(Platform.OS === 'android' ? { channelId: CHANNEL_STREAK } : {}),
       },
       trigger: { hour: 20, minute: 0, repeats: true } as any,
     });
@@ -148,10 +184,17 @@ async function reschedulePersonalizedNotification(phone: string, sessionToken: s
       }
     }
 
+    // Ensure channels exist before scheduling
+    await ensureNotificationChannels(Notifications);
+
     // ── 9 AM: personalised daily challenge ────────────────────────────────────
     const { title, body } = buildPersonalizedMessage(rankData);
     await Notifications.scheduleNotificationAsync({
-      content: { title, body, sound: 'default' },
+      content: {
+        title, body,
+        sound: 'notification.wav',
+        ...(Platform.OS === 'android' ? { channelId: CHANNEL_DAILY } : {}),
+      },
       trigger: { hour: 9, minute: 0, repeats: true } as any,
     });
 
@@ -169,7 +212,8 @@ async function reschedulePersonalizedNotification(phone: string, sessionToken: s
         content: {
           title: `⚠️ ${streakLine}`,
           body: `${firstName}, you haven't practiced today. Just one quiz keeps your streak alive 🔥`,
-          sound: 'default',
+          sound: 'streak.wav',
+          ...(Platform.OS === 'android' ? { channelId: CHANNEL_STREAK } : {}),
         },
         trigger: { hour: 22, minute: 0, repeats: true } as any,
       });
