@@ -1,10 +1,19 @@
 import * as SQLite from 'expo-sqlite';
 
+export const EXAM_TYPE_LABELS: Record<string, string> = {
+  first_incourse:  '1st In-Course Exam',
+  first_semester:  '1st Semester Exam',
+  second_incourse: '2nd In-Course Exam',
+  mock:            'Mock Exam',
+  final_jupeb:     'Final JUPEB Exam',
+};
+
+// Fallback for legacy groups stored without exam_type
 const PAPER_LABELS: Record<string, string> = {
   '001': '1st In-Course',
   '002': '1st Semester',
   '003': '2nd In-Course',
-  '004': '2nd Semester',
+  '004': '2nd In-Course',
   mock: 'Full Mock',
 };
 
@@ -23,6 +32,7 @@ export interface DBQuizGroup {
   subjectName: string;
   paper: string;
   paperLabel: string;
+  examType: string | null;
   questionType: string;
   year: number | null;
   questionCount: number;
@@ -76,6 +86,7 @@ async function initializeDB(db: SQLite.SQLiteDatabase): Promise<void> {
       subject_name TEXT NOT NULL,
       paper TEXT NOT NULL,
       paper_label TEXT NOT NULL,
+      exam_type TEXT,
       question_type TEXT NOT NULL,
       year INTEGER,
       question_count INTEGER NOT NULL DEFAULT 0,
@@ -138,16 +149,22 @@ export async function saveQuizGroup(group: {
   subjectCode: string;
   subjectName: string;
   paper: string;
+  examType?: string;
   questionType: string;
   year: number | null;
   questionCount: number;
 }): Promise<void> {
   const db = await getDB();
+  // Migrate: add exam_type column if it doesn't exist yet (safe to retry)
+  try {
+    await db.execAsync('ALTER TABLE quiz_groups ADD COLUMN exam_type TEXT;');
+  } catch { /* column already exists */ }
   await db.runAsync(
-    'INSERT OR REPLACE INTO quiz_groups (id, subject_id, subject_code, subject_name, paper, paper_label, question_type, year, question_count, synced_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT OR REPLACE INTO quiz_groups (id, subject_id, subject_code, subject_name, paper, paper_label, exam_type, question_type, year, question_count, synced_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     [
       group.id, group.subjectId, group.subjectCode, group.subjectName,
       group.paper, PAPER_LABELS[group.paper] ?? group.paper,
+      group.examType ?? null,
       group.questionType, group.year, group.questionCount, new Date().toISOString(),
     ]
   );
@@ -155,22 +172,19 @@ export async function saveQuizGroup(group: {
 
 export async function getQuizGroups(subjectCode?: string): Promise<DBQuizGroup[]> {
   const db = await getDB();
+  const baseSelect = `SELECT id, subject_id as subjectId, subject_code as subjectCode,
+     subject_name as subjectName, paper, paper_label as paperLabel,
+     exam_type as examType, question_type as questionType, year,
+     question_count as questionCount, synced_at as syncedAt FROM quiz_groups`;
   if (subjectCode && subjectCode !== 'ALL') {
+    // Match exact ("CRS001") or prefix ("CRS" matches "CRS001")
     return db.getAllAsync<DBQuizGroup>(
-      `SELECT id, subject_id as subjectId, subject_code as subjectCode,
-       subject_name as subjectName, paper, paper_label as paperLabel,
-       question_type as questionType, year, question_count as questionCount,
-       synced_at as syncedAt FROM quiz_groups
-       WHERE subject_code = ? ORDER BY year DESC, paper ASC`,
-      [subjectCode]
+      `${baseSelect} WHERE subject_code = ? OR subject_code LIKE ? ORDER BY year DESC, exam_type ASC`,
+      [subjectCode, subjectCode + '%']
     );
   }
   return db.getAllAsync<DBQuizGroup>(
-    `SELECT id, subject_id as subjectId, subject_code as subjectCode,
-     subject_name as subjectName, paper, paper_label as paperLabel,
-     question_type as questionType, year, question_count as questionCount,
-     synced_at as syncedAt FROM quiz_groups
-     ORDER BY subject_code ASC, year DESC, paper ASC`
+    `${baseSelect} ORDER BY subject_code ASC, year DESC, exam_type ASC`
   );
 }
 

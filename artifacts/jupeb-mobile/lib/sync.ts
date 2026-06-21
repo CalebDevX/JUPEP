@@ -33,6 +33,7 @@ interface ApiQuestion {
   subjectId: number;
   subjectName: string;
   paper: string;
+  examType?: string | null;
   year: number;
   questionType: string;
   questionText: string;
@@ -41,6 +42,14 @@ interface ApiQuestion {
   explanation: string | null;
   marks: number;
 }
+
+// Fallback: derive examType from paper code when examType is not set on a question
+const PAPER_TO_EXAM_TYPE: Record<string, string> = {
+  '001': 'first_incourse',
+  '002': 'first_semester',
+  '003': 'second_incourse',
+  '004': 'second_incourse', // 004 belongs to the 2nd incourse syllabus period
+};
 
 export async function isStale(): Promise<boolean> {
   const lastSync = await getSyncLog('quiz_sync');
@@ -90,19 +99,23 @@ export async function syncQuizData(
 
       const groups = new Map<string, ApiQuestion[]>();
       for (const q of allQuestions) {
-        const key = `${subject.id}-${q.paper}-${q.questionType}-${q.year}`;
+        // Use examType for grouping; fall back to paper-derived exam type for legacy questions
+        const effectiveExamType = q.examType ?? PAPER_TO_EXAM_TYPE[q.paper] ?? q.paper;
+        const key = `${subject.id}-${effectiveExamType}-${q.questionType}-${q.year}`;
         if (!groups.has(key)) groups.set(key, []);
         groups.get(key)!.push(q);
       }
 
       for (const [groupId, qs] of groups.entries()) {
         const first = qs[0];
+        const effectiveExamType = first.examType ?? PAPER_TO_EXAM_TYPE[first.paper] ?? first.paper;
         await saveQuizGroup({
           id: groupId,
           subjectId: subject.id,
           subjectCode: subject.code,
           subjectName: subject.name,
           paper: first.paper,
+          examType: effectiveExamType,
           questionType: first.questionType,
           year: first.year ?? null,
           questionCount: qs.length,

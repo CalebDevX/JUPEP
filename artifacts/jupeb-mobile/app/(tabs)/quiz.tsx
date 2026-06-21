@@ -14,13 +14,14 @@ import { syncQuizData, forceSync } from '@/lib/sync';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 
 // ─── Exam type config ─────────────────────────────────────────────────────────
+// Codes match the DB exam_type field values
 const EXAM_TYPES = [
-  { code: 'ALL',   label: 'All',            icon: 'apps' as const,           color: Colors.primary },
-  { code: '001',   label: '1st In-Course',  icon: 'document-text' as const,  color: '#0891b2' },
-  { code: '002',   label: '1st Semester',   icon: 'school' as const,         color: '#7c3aed' },
-  { code: '003',   label: '2nd In-Course',  icon: 'document-text' as const,  color: '#059669' },
-  { code: 'mock',  label: 'Mock Exam',      icon: 'timer' as const,          color: '#d97706' },
-  { code: 'jupeb', label: 'JUPEB',          icon: 'trophy' as const,         color: '#dc2626' },
+  { code: 'ALL',             label: 'All',              icon: 'apps' as const,          color: Colors.primary },
+  { code: 'first_incourse',  label: '1st In-Course',    icon: 'document-text' as const, color: '#0891b2' },
+  { code: 'first_semester',  label: '1st Semester',     icon: 'school' as const,        color: '#7c3aed' },
+  { code: 'second_incourse', label: '2nd In-Course',    icon: 'document-text' as const, color: '#059669' },
+  { code: 'mock',            label: 'Mock Exam',        icon: 'timer' as const,         color: '#d97706' },
+  { code: 'final_jupeb',     label: 'JUPEB Final',      icon: 'trophy' as const,        color: '#dc2626' },
 ] as const;
 
 type ExamCode = typeof EXAM_TYPES[number]['code'];
@@ -101,10 +102,15 @@ export default function PracticeScreen() {
     setRefreshing(false);
   }
 
+  // Resolve effective exam type for a group (handles legacy groups without examType)
+  function effectiveExamType(g: DBQuizGroup): string {
+    return g.examType ?? g.paper;
+  }
+
   // Filter by exam type
   const filtered = examType === 'ALL'
     ? groups
-    : groups.filter(g => g.paper === examType);
+    : groups.filter(g => effectiveExamType(g) === examType);
 
   // Group by academic year, sorted newest first
   const yearMap = new Map<string, DBQuizGroup[]>();
@@ -121,7 +127,7 @@ export default function PracticeScreen() {
     ...et,
     count: et.code === 'ALL'
       ? groups.length
-      : groups.filter(g => g.paper === et.code).length,
+      : groups.filter(g => effectiveExamType(g) === et.code).length,
   }));
 
   return (
@@ -304,7 +310,8 @@ function PracticeCard({
   best: { score: number; total: number } | null | undefined;
   onStart: () => void;
 }) {
-  const et = EXAM_TYPES.find(e => e.code === group.paper);
+  const resolvedExamType = group.examType ?? group.paper;
+  const et = EXAM_TYPES.find(e => e.code === resolvedExamType);
   const typeColor = et?.color ?? Colors.primary;
   const pct = best ? Math.round((best.score / best.total) * 100) : null;
   const grade = pct !== null
