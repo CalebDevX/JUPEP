@@ -1,10 +1,33 @@
 const { getDefaultConfig } = require('expo/metro-config');
+const path = require('path');
 
-const config = getDefaultConfig(__dirname);
+const projectRoot = __dirname;
+const workspaceRoot = path.resolve(projectRoot, '../..');
+
+const config = getDefaultConfig(projectRoot);
+
+// pnpm monorepo: tell Metro to follow symlinks using the symlink path as the
+// canonical path. This prevents FallbackWatcher from traversing the .pnpm
+// virtual store and hitting ENOENT errors on temp-directory creation.
+config.resolver.unstable_enableSymlinks = true;
+
+// Expose packages from the monorepo workspace root (lib/*, etc.)
+config.resolver.nodeModulesPaths = [
+  path.resolve(projectRoot, 'node_modules'),
+  path.resolve(workspaceRoot, 'node_modules'),
+];
+
+// Also watch the workspace lib packages so Metro picks up local changes.
+config.watchFolders = [
+  path.resolve(workspaceRoot, 'lib'),
+];
 
 // On native platforms, react-native-web ships DOMRect with private class
-// fields (#x, #y) that Hermes cannot compile. Redirect it to react-native
-// so the web-only implementation never enters the native bundle.
+// fields (#x, #y) that Hermes cannot compile.
+// 1. Redirect the bare 'react-native-web' import → 'react-native' so the
+//    web-only code never enters native bundles.
+// 2. The transformIgnorePatterns below also ensures Babel transpiles any
+//    sub-path imports (e.g. react-native-web/src/…) as a safety net.
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (platform !== 'web' && moduleName === 'react-native-web') {
     return context.resolveRequest(context, 'react-native', platform);
@@ -12,12 +35,9 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   return context.resolveRequest(context, moduleName, platform);
 };
 
-// Standard Expo transform allowlist.
-// Both react-native-reanimated and react-native-gesture-handler match the
-// `react-native` prefix so Babel will compile their TypeScript/JSX source.
-// Do NOT add custom resolver overrides that point to lib/commonjs — those
-// paths may not exist depending on the package version and cause the
-// "Failed to get SHA-1" Metro error.
+// Transform allowlist: ensure Babel compiles these packages.
+// react-native-web is included so private class fields in DOMRect get
+// transpiled to ordinary property syntax before Hermes sees them.
 config.transformer.transformIgnorePatterns = [
   'node_modules/(?!(' +
     '(jest-)?react-native' +
@@ -33,6 +53,7 @@ config.transformer.transformIgnorePatterns = [
     '|native-base' +
     '|react-native-svg' +
     '|nativewind' +
+    '|react-native-web' +
   ').*)',
 ];
 

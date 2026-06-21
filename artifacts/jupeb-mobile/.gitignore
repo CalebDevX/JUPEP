@@ -8,7 +8,11 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
+# Native — managed by EAS via CNG (expo prebuild)
+# EAS Build regenerates android/ and ios/ from app.config.js on every build.
+# Do NOT commit these — they will be out of date when package versions change.
+/android
+/ios
 .kotlin/
 *.orig.*
 *.jks
