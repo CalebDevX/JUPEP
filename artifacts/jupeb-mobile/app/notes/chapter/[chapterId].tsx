@@ -380,6 +380,13 @@ export default function ChapterScreen() {
   const [scrolledDown, setScrolledDown]     = useState(false);
   const [completed, setCompleted]           = useState(false);
 
+  // AI Explain state
+  const [aiModal, setAiModal]           = useState(false);
+  const [aiText, setAiText]             = useState('');
+  const [aiExplanation, setAiExplanation] = useState('');
+  const [aiLoading, setAiLoading]       = useState(false);
+  const [aiMode, setAiMode]             = useState<'explain' | 'define' | 'examples'>('explain');
+
   const scrollRef        = useRef<ScrollView>(null);
   const contentHeight    = useRef(0);
   const viewHeight       = useRef(0);
@@ -402,7 +409,7 @@ export default function ChapterScreen() {
 
     setTtsLoading(true);
     try {
-      const text = chapter.sections.map(s => `${s.heading}. ${s.content}`).join(' ').slice(0, 900);
+      const text = chapter.sections.map(s => `${s.heading}. ${s.content}`).join(' ').slice(0, 4000);
       const base = getApiBase();
       const res = await fetch(`${base}/ai/yarngpt-tts`, {
         method: 'POST',
@@ -513,6 +520,35 @@ export default function ChapterScreen() {
     setVocabEntry(entry);
   }, []);
 
+  const handleAiExplain = useCallback(async (text: string, mode: 'explain' | 'define' | 'examples') => {
+    setAiText(text);
+    setAiMode(mode);
+    setAiExplanation('');
+    setAiModal(true);
+    setAiLoading(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const base = getApiBase();
+      const promptMap = {
+        explain: `Explain this passage clearly for a JUPEB student:\n\n"${text}"`,
+        define:  `List and define the key academic terms in this passage for a JUPEB student:\n\n"${text}"`,
+        examples: `Give 2-3 real-world examples or exam-relevant illustrations for the ideas in this passage:\n\n"${text}"`,
+      };
+      const res = await fetch(`${base}/ai/explain`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: promptMap[mode] }),
+      });
+      if (!res.ok) throw new Error('AI unavailable');
+      const { explanation } = await res.json();
+      setAiExplanation(explanation || 'No explanation returned.');
+    } catch {
+      setAiExplanation('Could not get AI response. Please check your connection and try again.');
+    } finally {
+      setAiLoading(false);
+    }
+  }, []);
+
   const handleFullDictionary = useCallback((term: string) => {
     router.push({ pathname: '/dictionary', params: { q: term } } as any);
   }, []);
@@ -563,6 +599,66 @@ export default function ChapterScreen() {
         onClose={() => setShowTOC(false)}
         onSelect={scrollToSection}
       />
+
+      {/* AI Explain Modal */}
+      <Modal transparent animationType="slide" visible={aiModal} onRequestClose={() => setAiModal(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }} onPress={() => setAiModal(false)}>
+          <Pressable onPress={e => e.stopPropagation()}>
+            <View style={{ backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36, maxHeight: '85%' }}>
+              <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: C.border, alignSelf: 'center', marginBottom: 16 }} />
+              {/* Mode tabs */}
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+                {(['explain', 'define', 'examples'] as const).map(m => (
+                  <TouchableOpacity
+                    key={m}
+                    onPress={() => { setAiMode(m); handleAiExplain(aiText, m); }}
+                    style={{
+                      flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center',
+                      backgroundColor: aiMode === m ? accent : C.muted,
+                      borderWidth: 1.5, borderColor: aiMode === m ? accent : 'transparent',
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={{ fontSize: 11, fontFamily: 'Inter_600SemiBold', color: aiMode === m ? '#fff' : C.mutedForeground }}>
+                      {m === 'explain' ? '💡 Explain' : m === 'define' ? '📖 Define' : '🔍 Examples'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Selected text preview */}
+              <View style={{ backgroundColor: `${accent}10`, borderRadius: 10, padding: 12, marginBottom: 14, borderLeftWidth: 3, borderLeftColor: accent }}>
+                <Text style={{ fontSize: 11, color: accent, fontFamily: 'Inter_600SemiBold', marginBottom: 4 }}>Selected passage</Text>
+                <Text style={{ fontSize: 12, color: C.mutedForeground, fontFamily: 'Inter_400Regular', lineHeight: 18 }} numberOfLines={3}>
+                  {aiText}
+                </Text>
+              </View>
+
+              {/* Response area */}
+              <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+                {aiLoading ? (
+                  <View style={{ alignItems: 'center', paddingVertical: 32, gap: 12 }}>
+                    <ActivityIndicator size="large" color={accent} />
+                    <Text style={{ fontSize: 13, color: C.mutedForeground, fontFamily: 'Inter_400Regular' }}>LexBot is thinking…</Text>
+                  </View>
+                ) : (
+                  <Text style={{ fontSize: styles.contentText.fontSize, color: C.foreground, fontFamily: 'Inter_400Regular', lineHeight: 24 }}>
+                    {aiExplanation}
+                  </Text>
+                )}
+              </ScrollView>
+
+              <TouchableOpacity
+                style={{ marginTop: 16, paddingVertical: 13, borderRadius: 14, backgroundColor: accent, alignItems: 'center' }}
+                onPress={() => setAiModal(false)}
+                activeOpacity={0.85}
+              >
+                <Text style={{ fontSize: 15, fontFamily: 'Inter_700Bold', color: '#fff' }}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <View style={[styles.header, { paddingTop: topPad + 10 }]}>
@@ -620,7 +716,7 @@ export default function ChapterScreen() {
           <Text style={styles.chapterMetaDot}>·</Text>
           <Text style={styles.chapterMetaText}>{chapter.keyTerms.length} key terms</Text>
           <Text style={styles.chapterMetaDot}>·</Text>
-          <Text style={[styles.vocabHintText, { color: accent }]}>tap coloured words</Text>
+          <Text style={[styles.vocabHintText, { color: accent }]}>tap coloured words · ✨ Ask AI per section</Text>
         </View>
 
         {fromCache && (
@@ -666,6 +762,20 @@ export default function ChapterScreen() {
                   </Text>
                 </View>
                 <Text style={[styles.sectionHeading, { flex: 1 }]}>{sec.heading}</Text>
+                {/* AI Explain button */}
+                <TouchableOpacity
+                  onPress={() => handleAiExplain(`${sec.heading}: ${sec.content.slice(0, 600)}`, 'explain')}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 4,
+                    paddingHorizontal: 10, paddingVertical: 5,
+                    backgroundColor: `${accent}15`, borderRadius: 8,
+                    borderWidth: 1, borderColor: `${accent}30`,
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <Text style={{ fontSize: 12 }}>✨</Text>
+                  <Text style={{ fontSize: 11, color: accent, fontFamily: 'Inter_600SemiBold' }}>Ask AI</Text>
+                </TouchableOpacity>
               </View>
               {renderContent(sec.content, styles, C, accent, handleWordPress)}
             </View>

@@ -78,6 +78,24 @@ export default function TabsLayout() {
             ),
           }}
         />
+        <Tabs.Screen
+          name="flashcards"
+          options={{
+            title: 'Flashcards',
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons name={focused ? 'albums' : 'albums-outline' as IoniconName} size={22} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="progress"
+          options={{
+            title: 'Progress',
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons name={focused ? 'bar-chart' : 'bar-chart-outline' as IoniconName} size={22} color={color} />
+            ),
+          }}
+        />
         {/* Hidden from nav bar — accessible via deep link / home quick actions */}
         <Tabs.Screen name="chat" options={{ href: null }} />
         <Tabs.Screen name="subjects" options={{ href: null }} />

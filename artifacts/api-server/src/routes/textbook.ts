@@ -55,4 +55,31 @@ router.get("/textbook/courses/:courseId/chapters/:chapterId", async (req, res) =
   }
 });
 
+// GET /textbook/flashcards — all key terms from all chapters as flashcards
+router.get("/textbook/flashcards", async (_req, res) => {
+  try {
+    const courses = await loadCourses();
+    const cards: { id: string; front: string; back: string; subject: string; source: string }[] = [];
+    for (const course of courses) {
+      const subject = (course.code ?? course.id ?? '').slice(0, 3).toUpperCase();
+      for (const chapter of (course.chapters ?? [])) {
+        for (const kt of (chapter.keyTerms ?? [])) {
+          if (kt.term && kt.definition) {
+            cards.push({
+              id: `${chapter.id}-${kt.term.toLowerCase().replace(/\s+/g, '-')}`,
+              front: kt.term,
+              back: kt.definition,
+              subject,
+              source: 'keyterm',
+            });
+          }
+        }
+      }
+    }
+    res.json(cards);
+  } catch (err: any) {
+    res.status(500).json({ error: "Failed to load flashcards", detail: err?.message });
+  }
+});
+
 export default router;
