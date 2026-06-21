@@ -123,3 +123,4 @@ packages = ["photofield", "python313Packages.pyngrok", "psmisc", "eas-cli"]
 [userenv.shared]
 BOT_SECRET = "jupeb-bot-secret-change-me"
 APP_URL = "https://prep.achek.com.ng"
+VITE_API_URL = "https://edu.achek.com.ng"

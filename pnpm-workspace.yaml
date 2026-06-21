@@ -37,6 +37,7 @@ minimumReleaseAgeExclude:
 packages:
   - artifacts/api-server
   - artifacts/jupeb-prep
+  - artifacts/jupeb-mobile
   - artifacts/crs003-textbook
   - artifacts/mockup-sandbox
   - lib/*
