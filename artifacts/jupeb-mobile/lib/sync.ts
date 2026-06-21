@@ -43,12 +43,16 @@ interface ApiQuestion {
   marks: number;
 }
 
-// Fallback: derive examType from paper code when examType is not set on a question
+// Fallback for legacy questions that have no exam_type set in the DB.
+// Papers 001 & 002 appear in BOTH 1st In-Course AND 1st Semester exams —
+// the exam_type field on each question is the only way to tell them apart.
+// Papers 003 & 004 appear in BOTH 2nd In-Course AND 2nd Semester exams.
+// Without exam_type we can only tell first-half from second-half papers.
 const PAPER_TO_EXAM_TYPE: Record<string, string> = {
-  '001': 'first_incourse',
-  '002': 'first_semester',
+  '001': 'first_incourse',   // best guess for legacy data; real split requires exam_type
+  '002': 'first_incourse',   // same — both 001+002 are used together in incourse & semester
   '003': 'second_incourse',
-  '004': 'second_incourse', // 004 belongs to the 2nd incourse syllabus period
+  '004': 'second_incourse',
 };
 
 export async function isStale(): Promise<boolean> {
