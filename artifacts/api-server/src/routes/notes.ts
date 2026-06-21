@@ -9,7 +9,11 @@ router.get("/notes", async (req, res) => {
   try {
     const { subjectId, paper } = req.query;
     const conditions: any[] = [];
-    if (subjectId) conditions.push(eq(notesTable.subjectId, parseInt(subjectId as string)));
+    if (subjectId) {
+      const parsed = parseInt(subjectId as string);
+      if (isNaN(parsed)) return res.status(400).json({ error: "Invalid subjectId" });
+      conditions.push(eq(notesTable.subjectId, parsed));
+    }
     if (paper) conditions.push(eq(notesTable.paper, paper as string));
 
     const notes = await db
@@ -49,6 +53,7 @@ router.post("/notes", async (req, res) => {
 router.get("/notes/:noteId", async (req, res) => {
   try {
     const id = parseInt(req.params.noteId);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid noteId" });
     const [n] = await db
       .select({
         id: notesTable.id,
@@ -74,6 +79,7 @@ router.get("/notes/:noteId", async (req, res) => {
 router.patch("/notes/:noteId", async (req, res) => {
   try {
     const id = parseInt(req.params.noteId);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid noteId" });
     const { title, content, tags } = req.body;
     const updates: any = { updatedAt: new Date() };
     if (title !== undefined) updates.title = title;
@@ -91,6 +97,7 @@ router.patch("/notes/:noteId", async (req, res) => {
 router.delete("/notes/:noteId", async (req, res) => {
   try {
     const id = parseInt(req.params.noteId);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid noteId" });
     await db.delete(notesTable).where(eq(notesTable.id, id));
     res.status(204).send();
   } catch (err) {

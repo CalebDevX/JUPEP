@@ -278,6 +278,8 @@ function AppShell() {
               <Stack.Screen name="notes/[courseId]" />
               <Stack.Screen name="notes/chapter/[chapterId]" />
               <Stack.Screen name="past-questions" />
+              <Stack.Screen name="wrong-answers" />
+              <Stack.Screen name="dictionary" />
             </Stack>
           </AuthProvider>
         </QueryClientProvider>

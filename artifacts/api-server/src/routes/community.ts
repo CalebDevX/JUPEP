@@ -120,7 +120,7 @@ router.post("/communities/:slug/posts/:postId/comments", async (req, res) => {
     }).returning();
 
     await db.update(communityPostsTable)
-      .set({ commentCount: db.$count(postCommentsTable, eq(postCommentsTable.postId, postId)) as any })
+      .set({ commentCount: sql`${communityPostsTable.commentCount} + 1` })
       .where(eq(communityPostsTable.id, postId));
 
     res.status(201).json(comment);

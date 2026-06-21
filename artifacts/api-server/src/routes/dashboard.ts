@@ -22,17 +22,20 @@ router.get("/dashboard/summary", async (req, res) => {
     const [lastQuiz] = await db.select({ percentage: quizSessionsTable.percentage }).from(quizSessionsTable).where(eq(quizSessionsTable.status, "completed")).orderBy(desc(quizSessionsTable.completedAt)).limit(1);
 
     const subjects = await db.select().from(subjectsTable);
-    const subjectBreakdown = await Promise.all(subjects.map(async (s) => {
-      const [{ qCount }] = await db.select({ qCount: count() }).from(questionsTable).where(eq(questionsTable.subjectId, s.id));
-      const [{ nCount }] = await db.select({ nCount: count() }).from(notesTable).where(eq(notesTable.subjectId, s.id));
-      return { subjectName: s.name, questionCount: Number(qCount), noteCount: Number(nCount), color: s.color };
+    const [qBySubject, nBySubject] = await Promise.all([
+      db.select({ subjectId: questionsTable.subjectId, qCount: count() }).from(questionsTable).groupBy(questionsTable.subjectId),
+      db.select({ subjectId: notesTable.subjectId, nCount: count() }).from(notesTable).groupBy(notesTable.subjectId),
+    ]);
+    const qMap: Record<number, number> = Object.fromEntries(qBySubject.map(r => [r.subjectId, Number(r.qCount)]));
+    const nMap: Record<number, number> = Object.fromEntries(nBySubject.map(r => [r.subjectId, Number(r.nCount)]));
+    const subjectBreakdown = subjects.map(s => ({
+      subjectName: s.name, questionCount: qMap[s.id] ?? 0, noteCount: nMap[s.id] ?? 0, color: s.color,
     }));
 
     const papers = ["001", "002", "003", "004"];
-    const paperBreakdown = await Promise.all(papers.map(async (p) => {
-      const [{ qCount }] = await db.select({ qCount: count() }).from(questionsTable).where(eq(questionsTable.paper, p));
-      return { paper: p, paperLabel: PAPER_LABELS[p], questionCount: Number(qCount) };
-    }));
+    const qByPaper = await db.select({ paper: questionsTable.paper, qCount: count() }).from(questionsTable).groupBy(questionsTable.paper);
+    const qPaperMap: Record<string, number> = Object.fromEntries(qByPaper.map(r => [r.paper, Number(r.qCount)]));
+    const paperBreakdown = papers.map(p => ({ paper: p, paperLabel: PAPER_LABELS[p], questionCount: qPaperMap[p] ?? 0 }));
 
     res.json({
       totalQuestions: Number(totalQuestions),
@@ -92,48 +95,53 @@ router.get("/dashboard/recent-activity", async (req, res) => {
 
 router.get("/progress", async (req, res) => {
   try {
-    const subjects = await db.select().from(subjectsTable);
+    const [subjects, allCompleted] = await Promise.all([
+      db.select().from(subjectsTable),
+      db.select({
+        subjectId: quizSessionsTable.subjectId,
+        paper: quizSessionsTable.paper,
+        percentage: quizSessionsTable.percentage,
+        questionIds: quizSessionsTable.questionIds,
+      }).from(quizSessionsTable).where(eq(quizSessionsTable.status, "completed")),
+    ]);
 
-    const subjectProgress = await Promise.all(subjects.map(async (s) => {
-      const sessions = await db.select().from(quizSessionsTable).where(eq(quizSessionsTable.subjectId, s.id));
-      const completed = sessions.filter(ses => ses.status === "completed");
-      const totalAnswered = completed.reduce((acc, ses) => acc + (ses.questionIds as number[]).length, 0);
-      const avgPct = completed.length > 0
-        ? completed.reduce((acc, ses) => acc + (ses.percentage ?? 0), 0) / completed.length
+    const subjectProgress = subjects.map(s => {
+      const sessions = allCompleted.filter(ses => ses.subjectId === s.id);
+      const totalAnswered = sessions.reduce((acc, ses) => acc + (ses.questionIds as number[]).length, 0);
+      const avgPct = sessions.length > 0
+        ? sessions.reduce((acc, ses) => acc + (ses.percentage ?? 0), 0) / sessions.length
         : 0;
       return {
         subjectId: s.id,
         subjectName: s.name,
         averageScore: Math.round(avgPct * 10) / 10,
-        quizzesTaken: completed.length,
+        quizzesTaken: sessions.length,
         questionsAnswered: totalAnswered,
       };
-    }));
+    });
 
     const papers = ["001", "002", "003", "004"];
-    const paperProgress = await Promise.all(papers.map(async (p) => {
-      const sessions = await db.select().from(quizSessionsTable).where(eq(quizSessionsTable.paper, p));
-      const completed = sessions.filter(s => s.status === "completed");
-      const avgPct = completed.length > 0
-        ? completed.reduce((acc, s) => acc + (s.percentage ?? 0), 0) / completed.length
+    const paperProgress = papers.map(p => {
+      const sessions = allCompleted.filter(ses => ses.paper === p);
+      const avgPct = sessions.length > 0
+        ? sessions.reduce((acc, ses) => acc + (ses.percentage ?? 0), 0) / sessions.length
         : 0;
       return {
         paper: p,
         paperLabel: PAPER_LABELS[p],
         averageScore: Math.round(avgPct * 10) / 10,
-        quizzesTaken: completed.length,
+        quizzesTaken: sessions.length,
       };
-    }));
+    });
 
-    const [allSessions] = await db.select({ total: count() }).from(quizSessionsTable).where(eq(quizSessionsTable.status, "completed"));
-    const [avgAll] = await db.select({ avg: avg(quizSessionsTable.percentage) }).from(quizSessionsTable).where(eq(quizSessionsTable.status, "completed"));
-
-    const totalAnswered = (await db.select().from(quizSessionsTable).where(eq(quizSessionsTable.status, "completed")))
-      .reduce((acc, s) => acc + (s.questionIds as number[]).length, 0);
+    const totalAnswered = allCompleted.reduce((acc, s) => acc + (s.questionIds as number[]).length, 0);
+    const avgAll = allCompleted.length > 0
+      ? allCompleted.reduce((acc, s) => acc + (s.percentage ?? 0), 0) / allCompleted.length
+      : 0;
 
     res.json({
-      totalQuizzes: Number(allSessions.total),
-      averageScore: avgAll.avg ? Math.round(Number(avgAll.avg) * 10) / 10 : 0,
+      totalQuizzes: allCompleted.length,
+      averageScore: Math.round(avgAll * 10) / 10,
       subjectProgress,
       paperProgress,
       streakDays: 0,

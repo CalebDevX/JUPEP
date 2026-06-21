@@ -60,20 +60,27 @@ export default function MockExam() {
     if (!sessionId) return;
     setSubmitting(true);
     if (timerRef.current) clearInterval(timerRef.current);
-    const answerList = questions.map(q => ({
-      questionId: q.id,
-      selectedOption: answers[q.id] ?? null,
-    }));
-    const r = await fetch(`${BASE}/api/quiz/sessions/${sessionId}/submit`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ answers: answerList, phone: profile?.phone }),
-    });
-    if (r.ok) {
-      const data = await r.json();
-      setResult(data);
-      setPhase("result");
+    try {
+      const answerList = questions.map(q => ({
+        questionId: q.id,
+        selectedOption: answers[q.id] ?? null,
+      }));
+      const r = await fetch(`${BASE}/api/quiz/sessions/${sessionId}/submit`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: answerList, phone: profile?.phone }),
+      });
+      if (r.ok) {
+        const data = await r.json();
+        setResult(data);
+        setPhase("result");
+      } else {
+        alert("Failed to submit. Please try again.");
+      }
+    } catch {
+      alert("Network error. Check your connection and try again.");
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   }, [sessionId, questions, answers, profile]);
 
   useEffect(() => {
@@ -94,25 +101,30 @@ export default function MockExam() {
   async function startMock() {
     if (!selectedSubjectId || !profile?.phone) return;
     setStarting(true);
-    const r = await fetch(`${BASE}/api/quiz/start`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        subjectId: parseInt(selectedSubjectId),
-        paper: "mock",
-        questionType: "objective",
-        limit: 100,
-        phone: profile.phone,
-      }),
-    });
-    if (r.ok) {
-      const data = await r.json();
-      setSessionId(data.id);
-      setQuestions(data.questions ?? []);
-      setPhase("exam");
-    } else {
-      alert("Not enough questions available for a full mock exam. Add more questions first.");
+    try {
+      const r = await fetch(`${BASE}/api/quiz/start`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subjectId: parseInt(selectedSubjectId),
+          paper: "mock",
+          questionType: "objective",
+          limit: 100,
+          phone: profile.phone,
+        }),
+      });
+      if (r.ok) {
+        const data = await r.json();
+        setSessionId(data.id);
+        setQuestions(data.questions ?? []);
+        setPhase("exam");
+      } else {
+        alert("Not enough questions available for a full mock exam. Add more questions first.");
+      }
+    } catch {
+      alert("Network error. Check your connection and try again.");
+    } finally {
+      setStarting(false);
     }
-    setStarting(false);
   }
 
   const answeredCount = Object.keys(answers).length;

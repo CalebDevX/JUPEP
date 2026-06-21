@@ -164,6 +164,7 @@ router.get("/quiz/sessions", async (req, res) => {
 router.get("/quiz/sessions/:sessionId", async (req, res) => {
   try {
     const id = parseInt(req.params.sessionId);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid sessionId" });
     const [session] = await db
       .select({
         id: quizSessionsTable.id,
@@ -199,6 +200,7 @@ router.get("/quiz/sessions/:sessionId", async (req, res) => {
 router.post("/quiz/sessions/:sessionId/submit", async (req, res) => {
   try {
     const id = parseInt(req.params.sessionId);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid sessionId" });
     const { answers } = req.body as { answers: { questionId: number; selectedOption?: string; theoryAnswer?: string }[] };
 
     const [session] = await db.select().from(quizSessionsTable).where(eq(quizSessionsTable.id, id));
