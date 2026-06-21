@@ -48,7 +48,6 @@ config.transformer.transformIgnorePatterns = [
     '|native-base' +
     '|react-native-svg' +
     '|nativewind' +
-    '|react-native-worklets' +
     ').*',
 ];
 
