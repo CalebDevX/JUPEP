@@ -35,6 +35,18 @@ cd artifacts/jupeb-mobile && EAS_NO_VCS=1 EAS_SKIP_AUTO_FINGERPRINT=1 eas build 
 
 **Why:** The jupeb-mobile project has peer dependency conflicts (React 19 + older Expo peer expectations). `npm ci` always fails because the lockfile format and peer constraints can't reconcile without `--legacy-peer-deps`. Running `npm install` with the flag set via npmrc + env var is the only path that works.
 
+## Android Kotlin version (REQUIRED)
+- **`android/build.gradle` must pin `kotlinVersion = "2.1.20"`** in `buildscript { ext { ... } }` and reference it in the classpath: `classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")`
+- Without the explicit version, Gradle resolves Kotlin to 2.0.21 which Expo SDK 56 rejects with: "Kotlin 2.0.21 is not supported by Expo modules. The minimum supported Kotlin version is 2.1.20."
+- **`runtimeVersion` in `app.config.js` must be a hardcoded string** like `"1.0.0"` — bare workflow does NOT support `{ policy: 'appVersion' }`.
+
+## Google Sign-In (Android)
+- Uses `expo-auth-session/providers/google` with `androidClientId`
+- **Do NOT set an explicit `redirectUri`** — expo-auth-session auto-generates the correct reverse-DNS redirect URI from the androidClientId
+- **Do NOT add `jupeb://` custom schemes** to Google Cloud Console Web clients — Google rejects non-HTTPS URIs there
+- Android OAuth client verification is done via **package name + SHA-1**, not redirect URIs; no Cloud Console redirect URI registration needed
+- SHA-1 of release keystore (keystore/jupeb-release.keystore, alias jupeb-release): `2E:8C:8E:77:34:BF:8D:0A:EA:6B:5F:1A:78:75:12:50:E9:FA:5E:EB`
+
 ## Checking build status
 ```bash
 cd artifacts/jupeb-mobile && EAS_NO_VCS=1 eas build:list --platform android --limit 1 --non-interactive
