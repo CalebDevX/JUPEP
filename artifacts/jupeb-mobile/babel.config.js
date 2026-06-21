@@ -5,15 +5,9 @@ module.exports = function (api) {
   const plugins = [];
 
   if (!isWeb) {
-    // react-native-worklets must come BEFORE react-native-reanimated/plugin
-    // (required by Reanimated 4.x — worklets runtime is separate from reanimated)
-    try {
-      require.resolve('react-native-worklets/plugin', { paths: [__dirname] });
-      plugins.push('react-native-worklets/plugin');
-    } catch {
-      // worklets plugin not available
-    }
-
+    // react-native-reanimated 4.x bundles react-native-worklets internally.
+    // Adding react-native-worklets/plugin separately causes a fatal Babel duplicate.
+    // Only include reanimated/plugin — it covers worklets too.
     try {
       require.resolve('react-native-reanimated/plugin', { paths: [__dirname] });
       plugins.push('react-native-reanimated/plugin');

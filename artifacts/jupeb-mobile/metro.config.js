@@ -6,11 +6,6 @@ const workspaceRoot = path.resolve(projectRoot, '../..');
 
 const config = getDefaultConfig(projectRoot);
 
-// pnpm monorepo: tell Metro to follow symlinks using the symlink path as the
-// canonical path. This prevents FallbackWatcher from traversing the .pnpm
-// virtual store and hitting ENOENT errors on temp-directory creation.
-config.resolver.unstable_enableSymlinks = true;
-
 // Expose packages from the monorepo workspace root (lib/*, etc.)
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
